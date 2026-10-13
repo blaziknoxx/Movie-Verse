@@ -16,137 +16,138 @@ const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 interface ResolvedCredentials {
   token?: string;
   apiKey?: string;
-  matchedKey?: string;
-  source?: string;
-  availableKeyNames: string[];
+  authType: 'bearer_token' | 'api_key' | 'none';
 }
 
 /**
- * Robustly inspects all Cloudflare environment binding sources (env, process.env, globalThis)
- * to locate TMDB_READ_TOKEN or TMDB_API_KEY regardless of casing or formatting.
+ * Clean and sanitize a token or API key string (strips Bearer prefix, quotes, whitespace).
  */
-function resolveCredentials(env: any, request?: any, ctx?: any): ResolvedCredentials {
-  const sources: Array<{ name: string; data: any }> = [
-    { name: 'env', data: env },
-    { name: 'process.env', data: typeof process !== 'undefined' ? process.env : undefined },
-    { name: 'globalThis', data: typeof globalThis !== 'undefined' ? globalThis : undefined },
-    { name: 'env.secrets', data: env?.secrets },
-    { name: 'env.env', data: env?.env },
-    { name: 'request.env', data: (request as any)?.env },
-    { name: 'ctx.env', data: (ctx as any)?.env },
+function sanitizeSecret(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value
+    .replace(/^Bearer\s+/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+/**
+ * Resolves TMDB authentication credentials with direct property priority on Cloudflare's `env`.
+ * Bypasses Object.keys() limitations on workerd host binding objects and prototype descriptors.
+ */
+function resolveCredentials(env: Env | undefined, request?: Request, ctx?: any): ResolvedCredentials {
+  // 1. Direct priority check on Cloudflare Worker env parameter (standard binding location)
+  if (env && typeof env === 'object') {
+    // Check TMDB Read Access Token (Bearer Token)
+    const directToken = sanitizeSecret(
+      env.TMDB_READ_TOKEN ||
+      env.TMDB_TOKEN ||
+      env.TMDB_API_READ_ACCESS_TOKEN ||
+      env.TMDB_READ_ACCESS_TOKEN ||
+      env.TMDB_ACCESS_TOKEN ||
+      env.TMDB_BEARER_TOKEN ||
+      env.TMDB_BEARER ||
+      env['tmdb_read_token'] ||
+      env['tmdb_token']
+    );
+
+    if (directToken) {
+      return { token: directToken, authType: 'bearer_token' };
+    }
+
+    // Check TMDB API Key (v3 auth)
+    const directApiKey = sanitizeSecret(
+      env.TMDB_API_KEY ||
+      env.TMDB_KEY ||
+      env['tmdb_api_key'] ||
+      env['tmdb_key']
+    );
+
+    if (directApiKey) {
+      return { apiKey: directApiKey, authType: 'api_key' };
+    }
+  }
+
+  // 2. Secondary check across fallback scopes (process.env, globalThis, nested env objects)
+  const candidateScopes: any[] = [
+    typeof process !== 'undefined' ? process.env : undefined,
+    typeof globalThis !== 'undefined' ? globalThis : undefined,
+    (env as any)?.secrets,
+    (env as any)?.env,
+    (request as any)?.env,
+    (ctx as any)?.env,
   ];
 
-  const availableKeyNames: string[] = [];
-  const candidateMap: Map<string, { value: string; source: string; key: string }> = new Map();
+  for (const scope of candidateScopes) {
+    if (!scope || typeof scope !== 'object') continue;
 
-  for (const src of sources) {
-    if (!src.data || typeof src.data !== 'object') continue;
-    for (const rawKey of Object.keys(src.data)) {
-      const cleanKey = rawKey.trim();
-      const val = src.data[rawKey];
+    const scopedToken = sanitizeSecret(
+      scope.TMDB_READ_TOKEN ||
+      scope.TMDB_TOKEN ||
+      scope.TMDB_API_READ_ACCESS_TOKEN ||
+      scope.TMDB_ACCESS_TOKEN ||
+      scope['tmdb_read_token']
+    );
+    if (scopedToken) {
+      return { token: scopedToken, authType: 'bearer_token' };
+    }
 
-      if (typeof val === 'string' && val.trim().length > 0) {
-        if (!availableKeyNames.includes(cleanKey)) {
-          availableKeyNames.push(cleanKey);
+    const scopedApiKey = sanitizeSecret(
+      scope.TMDB_API_KEY ||
+      scope.TMDB_KEY ||
+      scope['tmdb_api_key']
+    );
+    if (scopedApiKey) {
+      return { apiKey: scopedApiKey, authType: 'api_key' };
+    }
+  }
+
+  // 3. Deep inspection of env object properties (including prototype chain and for...in)
+  if (env && typeof env === 'object') {
+    const inspectedKeys = new Set<string>();
+
+    let currentObj: any = env;
+    while (currentObj && currentObj !== Object.prototype) {
+      try {
+        for (const k of Object.getOwnPropertyNames(currentObj)) {
+          inspectedKeys.add(k);
         }
-        candidateMap.set(cleanKey.toUpperCase(), {
-          value: val.trim(),
-          source: src.name,
-          key: cleanKey,
-        });
-      } else if (val && typeof val === 'object' && cleanKey === 'ASSETS') {
-        if (!availableKeyNames.includes('ASSETS')) {
-          availableKeyNames.push('ASSETS');
+      } catch {
+        // Skip if restricted
+      }
+      currentObj = Object.getPrototypeOf(currentObj);
+    }
+
+    try {
+      for (const k in env) {
+        inspectedKeys.add(k);
+      }
+    } catch {
+      // Skip if restricted
+    }
+
+    for (const key of inspectedKeys) {
+      const upperKey = key.toUpperCase();
+      if (upperKey.includes('TMDB')) {
+        const val = sanitizeSecret((env as any)[key]);
+        if (val) {
+          if (val.length > 35 || upperKey.includes('TOKEN') || upperKey.includes('READ')) {
+            return { token: val, authType: 'bearer_token' };
+          } else {
+            return { apiKey: val, authType: 'api_key' };
+          }
         }
       }
     }
   }
 
-  // 1. Check known TMDB Read Token names
-  const tokenKeyNames = [
-    'TMDB_READ_TOKEN',
-    'TMDB_TOKEN',
-    'TMDB_API_READ_ACCESS_TOKEN',
-    'TMDB_READ_ACCESS_TOKEN',
-    'TMDB_ACCESS_TOKEN',
-    'TMDB_BEARER_TOKEN',
-    'TMDB_BEARER',
-    'VITE_TMDB_READ_TOKEN',
-  ];
-
-  for (const key of tokenKeyNames) {
-    const item = candidateMap.get(key);
-    if (item && item.value) {
-      const cleanVal = item.value
-        .replace(/^Bearer\s+/i, '')
-        .replace(/^["']|["']$/g, '')
-        .trim();
-      if (cleanVal) {
-        return {
-          token: cleanVal,
-          matchedKey: item.key,
-          source: item.source,
-          availableKeyNames,
-        };
-      }
-    }
-  }
-
-  // 2. Check known TMDB API Key names
-  const apiKeyNames = [
-    'TMDB_API_KEY',
-    'TMDB_KEY',
-    'VITE_TMDB_API_KEY',
-  ];
-
-  for (const key of apiKeyNames) {
-    const item = candidateMap.get(key);
-    if (item && item.value) {
-      const cleanVal = item.value.replace(/^["']|["']$/g, '').trim();
-      if (cleanVal) {
-        return {
-          apiKey: cleanVal,
-          matchedKey: item.key,
-          source: item.source,
-          availableKeyNames,
-        };
-      }
-    }
-  }
-
-  // 3. Fallback: Fuzzy scan for any key containing TMDB
-  for (const [upperKey, item] of candidateMap.entries()) {
-    if (upperKey.includes('TMDB')) {
-      const cleanVal = item.value
-        .replace(/^Bearer\s+/i, '')
-        .replace(/^["']|["']$/g, '')
-        .trim();
-      if (cleanVal.length > 40 || upperKey.includes('TOKEN') || upperKey.includes('READ')) {
-        return {
-          token: cleanVal,
-          matchedKey: item.key,
-          source: item.source,
-          availableKeyNames,
-        };
-      } else {
-        return {
-          apiKey: cleanVal,
-          matchedKey: item.key,
-          source: item.source,
-          availableKeyNames,
-        };
-      }
-    }
-  }
-
-  return { availableKeyNames };
+  return { authType: 'none' };
 }
 
 /**
  * Maps incoming Movie Verse proxy paths to canonical TMDB API endpoints.
  */
 function mapToTmdbEndpoint(pathname: string, searchParams: URLSearchParams): string {
-  // Strip /api/tmdb prefix
   const path = pathname.replace(/^\/api\/tmdb\/?/, '/');
 
   if (path === '/' || path === '') {
@@ -178,7 +179,6 @@ function mapToTmdbEndpoint(pathname: string, searchParams: URLSearchParams): str
     return '/discover/movie';
   }
 
-  // Details, credits, similar, recommendations (e.g. /movie/123, /movie/123/credits)
   return path.startsWith('/') ? path : `/${path}`;
 }
 
@@ -186,19 +186,31 @@ export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
 
-    // Handle /api/tmdb/* requests
+    // Handle CORS preflight for API requests
+    if (request.method === 'OPTIONS' && (url.pathname === '/api/tmdb' || url.pathname.startsWith('/api/tmdb/'))) {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
+
+    // Handle /api/tmdb and /api/tmdb/* requests
     if (url.pathname === '/api/tmdb' || url.pathname.startsWith('/api/tmdb/')) {
       const pathUnderTmdb = url.pathname.replace(/^\/api\/tmdb\/?/, '/');
 
-      // Status diagnostic check
+      // Status diagnostic endpoint (reports configured: true when secret exists, never reveals secret)
       if (pathUnderTmdb === '/status') {
         const creds = resolveCredentials(env, request, ctx);
+        const isConfigured = Boolean(creds.token || creds.apiKey);
+
         return new Response(JSON.stringify({
           status: 'ok',
-          configured: Boolean(creds.token || creds.apiKey),
-          authType: creds.token ? 'bearer_token' : creds.apiKey ? 'api_key' : 'none',
-          matchedKey: creds.matchedKey || null,
-          availableBindingKeys: creds.availableKeyNames,
+          configured: isConfigured,
           developer: 'Estiaq Mehedi',
           platform: 'Cloudflare Workers',
         }), {
@@ -210,13 +222,12 @@ export default {
         });
       }
 
-      // Resolve token or API key
+      // Resolve TMDB credentials from Cloudflare environment
       const creds = resolveCredentials(env, request, ctx);
       if (!creds.token && !creds.apiKey) {
         return new Response(JSON.stringify({
-          error: `TMDB_READ_TOKEN is not configured in Cloudflare Workers secrets. Available keys detected: [${creds.availableKeyNames.join(', ')}]. Please bind TMDB_READ_TOKEN in Cloudflare Dashboard (Workers & Pages -> movieverse -> Settings -> Variables and Secrets) or via 'npx wrangler secret put TMDB_READ_TOKEN'.`,
+          error: 'TMDB_READ_TOKEN is not configured in Cloudflare Workers secrets. Please add the secret binding via Cloudflare Dashboard or wrangler secret put TMDB_READ_TOKEN.',
           code: 'AUTH_REQUIRED',
-          availableKeys: creds.availableKeyNames,
         }), {
           status: 503,
           headers: {
@@ -230,9 +241,8 @@ export default {
       const canonicalEndpoint = mapToTmdbEndpoint(url.pathname, url.searchParams);
       const tmdbUrl = new URL(`${TMDB_BASE_URL}${canonicalEndpoint}`);
 
-      // Forward query parameters
+      // Forward allowed query parameters
       for (const [key, val] of url.searchParams.entries()) {
-        // Skip time_window since it's already encoded into canonical path for trending
         if (key === 'time_window' && canonicalEndpoint.startsWith('/trending/')) continue;
         tmdbUrl.searchParams.set(key, val);
       }

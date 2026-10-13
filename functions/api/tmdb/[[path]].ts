@@ -20,53 +20,51 @@ type PagesFunction<Env = any> = (context: EventContext<Env, any>) => Promise<Res
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
-function resolveCredentials(env: any, request?: any): { token?: string; apiKey?: string; matchedKey?: string; availableKeyNames: string[] } {
-  const sources: Array<{ name: string; data: any }> = [
-    { name: 'env', data: env },
-    { name: 'process.env', data: typeof process !== 'undefined' ? process.env : undefined },
-    { name: 'globalThis', data: typeof globalThis !== 'undefined' ? globalThis : undefined },
+function sanitizeSecret(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value
+    .replace(/^Bearer\s+/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+function resolveCredentials(env: any, request?: any): { token?: string; apiKey?: string } {
+  if (env && typeof env === 'object') {
+    const directToken = sanitizeSecret(
+      env.TMDB_READ_TOKEN ||
+      env.TMDB_TOKEN ||
+      env.TMDB_API_READ_ACCESS_TOKEN ||
+      env.TMDB_READ_ACCESS_TOKEN ||
+      env.TMDB_ACCESS_TOKEN ||
+      env.TMDB_BEARER_TOKEN ||
+      env.TMDB_BEARER
+    );
+    if (directToken) return { token: directToken };
+
+    const directApiKey = sanitizeSecret(
+      env.TMDB_API_KEY ||
+      env.TMDB_KEY
+    );
+    if (directApiKey) return { apiKey: directApiKey };
+  }
+
+  const fallbackScopes = [
+    typeof process !== 'undefined' ? process.env : undefined,
+    typeof globalThis !== 'undefined' ? globalThis : undefined,
+    (env as any)?.secrets,
+    (env as any)?.env,
   ];
 
-  const availableKeyNames: string[] = [];
-  const candidateMap: Map<string, { value: string; source: string; key: string }> = new Map();
-
-  for (const src of sources) {
-    if (!src.data || typeof src.data !== 'object') continue;
-    for (const rawKey of Object.keys(src.data)) {
-      const cleanKey = rawKey.trim();
-      const val = src.data[rawKey];
-      if (typeof val === 'string' && val.trim().length > 0) {
-        if (!availableKeyNames.includes(cleanKey)) availableKeyNames.push(cleanKey);
-        candidateMap.set(cleanKey.toUpperCase(), { value: val.trim(), source: src.name, key: cleanKey });
-      }
-    }
+  for (const scope of fallbackScopes) {
+    if (!scope || typeof scope !== 'object') continue;
+    const scopedToken = sanitizeSecret(scope.TMDB_READ_TOKEN || scope.TMDB_TOKEN);
+    if (scopedToken) return { token: scopedToken };
+    const scopedApiKey = sanitizeSecret(scope.TMDB_API_KEY || scope.TMDB_KEY);
+    if (scopedApiKey) return { apiKey: scopedApiKey };
   }
 
-  const tokenKeys = ['TMDB_READ_TOKEN', 'TMDB_TOKEN', 'TMDB_API_READ_ACCESS_TOKEN', 'TMDB_ACCESS_TOKEN', 'TMDB_BEARER'];
-  for (const k of tokenKeys) {
-    const item = candidateMap.get(k);
-    if (item && item.value) {
-      return {
-        token: item.value.replace(/^Bearer\s+/i, '').replace(/^["']|["']$/g, '').trim(),
-        matchedKey: item.key,
-        availableKeyNames,
-      };
-    }
-  }
-
-  const apiKeyNames = ['TMDB_API_KEY', 'TMDB_KEY'];
-  for (const k of apiKeyNames) {
-    const item = candidateMap.get(k);
-    if (item && item.value) {
-      return {
-        apiKey: item.value.replace(/^["']|["']$/g, '').trim(),
-        matchedKey: item.key,
-        availableKeyNames,
-      };
-    }
-  }
-
-  return { availableKeyNames };
+  return {};
 }
 
 function mapToTmdbEndpoint(path: string, searchParams: URLSearchParams): string {
@@ -89,7 +87,18 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env, params } = context;
   const url = new URL(request.url);
 
-  // Extract path under /api/tmdb/
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
   const pathSegments = params.path as string[] || [];
   const endpoint = '/' + pathSegments.join('/');
 
@@ -98,15 +107,13 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return new Response(JSON.stringify({
       status: 'ok',
       configured: Boolean(creds.token || creds.apiKey),
-      authType: creds.token ? 'bearer_token' : creds.apiKey ? 'api_key' : 'none',
-      matchedKey: creds.matchedKey || null,
-      availableBindingKeys: creds.availableKeyNames,
       developer: 'Estiaq Mehedi',
       platform: 'Cloudflare Pages Functions',
     }), {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   }
@@ -114,11 +121,14 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const creds = resolveCredentials(env, request);
   if (!creds.token && !creds.apiKey) {
     return new Response(JSON.stringify({
-      error: `TMDB_READ_TOKEN is not configured on Cloudflare. Available keys: [${creds.availableKeyNames.join(', ')}].`,
+      error: 'TMDB_READ_TOKEN is not configured in Cloudflare environment.',
       code: 'AUTH_REQUIRED',
     }), {
       status: 503,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     });
   }
 
@@ -176,7 +186,10 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       status: 500,
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     });
   }
 };

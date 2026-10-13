@@ -257,7 +257,7 @@ export const tmdbService = {
     try {
       const res = await fetch('/api/tmdb/status');
       if (!res.ok) return { configured: false, error: `HTTP ${res.status}` };
-      const data = await res.json();
+      const data: any = await res.json();
       return { configured: Boolean(data.configured) };
     } catch (err: any) {
       return { configured: false, error: err.message };
@@ -270,10 +270,10 @@ export const tmdbService = {
   async getTrending(timeWindow: 'day' | 'week' = 'week', page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const res = await fetch(`/api/tmdb/trending?time_window=${timeWindow}&page=${page}`);
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to fetch trending movies (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
     return { movies, totalPages: data.total_pages || 1 };
   },
@@ -284,10 +284,10 @@ export const tmdbService = {
   async getPopular(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const res = await fetch(`/api/tmdb/popular?page=${page}`);
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to fetch popular movies (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
     return { movies, totalPages: data.total_pages || 1 };
   },
@@ -298,10 +298,10 @@ export const tmdbService = {
   async getNowPlaying(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const res = await fetch(`/api/tmdb/now_playing?page=${page}`);
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to fetch now playing movies (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
     return { movies, totalPages: data.total_pages || 1 };
   },
@@ -312,10 +312,10 @@ export const tmdbService = {
   async getUpcoming(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const res = await fetch(`/api/tmdb/upcoming?page=${page}`);
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to fetch upcoming movies (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
     return { movies, totalPages: data.total_pages || 1 };
   },
@@ -326,10 +326,10 @@ export const tmdbService = {
   async getTopRated(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const res = await fetch(`/api/tmdb/top_rated?page=${page}`);
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to fetch top rated movies (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
     return { movies, totalPages: data.total_pages || 1 };
   },
@@ -350,10 +350,10 @@ export const tmdbService = {
       signal
     });
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to search movies (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
     return {
       movies,
@@ -373,12 +373,12 @@ export const tmdbService = {
     ]);
 
     if (!detailsRes.ok) {
-      const errorJson = await detailsRes.json().catch(() => ({}));
+      const errorJson: any = await detailsRes.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to fetch movie details for ID ${id}`);
     }
 
-    const detailsData = await detailsRes.json();
-    let creditsData = null;
+    const detailsData: any = await detailsRes.json();
+    let creditsData: any = null;
     if (creditsRes && creditsRes.ok) {
       creditsData = await creditsRes.json().catch(() => null);
     }
@@ -393,7 +393,7 @@ export const tmdbService = {
     const numericId = String(id).replace(/\D/g, '');
     const res = await fetch(`/api/tmdb/movie/${numericId}/similar?page=${page}`);
     if (!res.ok) return [];
-    const data = await res.json();
+    const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
   },
 
@@ -404,7 +404,7 @@ export const tmdbService = {
     const numericId = String(id).replace(/\D/g, '');
     const res = await fetch(`/api/tmdb/movie/${numericId}/recommendations?page=${page}`);
     if (!res.ok) return [];
-    const data = await res.json();
+    const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
   },
 
@@ -415,10 +415,10 @@ export const tmdbService = {
     const genreIds = MOOD_TO_GENRE_IDS[moodId] || '28';
     const res = await fetch(`/api/tmdb/discover?with_genres=${genreIds}&sort_by=popularity.desc&page=${page}`);
     if (!res.ok) {
-      const errorJson = await res.json().catch(() => ({}));
+      const errorJson: any = await res.json().catch(() => ({}));
       throw new Error(errorJson.error || `Failed to discover movies by mood (${res.status})`);
     }
-    const data = await res.json();
+    const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
   }
 };
