@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
-import { MOVIES, CONNECTIONS, WATCH_ORDERS } from '../../data/moviesData';
+import { CONNECTIONS, WATCH_ORDERS, MOVIES } from '../../data/moviesData';
+import { tmdbService } from '../../services/tmdbService';
 import { 
   X, Star, Bookmark, CheckCircle2, Network, ListOrdered, 
-  Tv, ExternalLink, Sparkles, User, Calendar, Clock, Film
+  Tv, ExternalLink, Sparkles, User, Calendar, Clock, Film,
+  Loader2, ThumbsUp
 } from 'lucide-react';
 
 interface MovieDetailModalProps {
@@ -33,25 +35,62 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onNavigateToWhereToWatch,
   onSelectMovie
 }) => {
-  if (!movie) return null;
+  const [detailedMovie, setDetailedMovie] = useState<Movie | null>(movie);
+  const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
+  const [recommendedMovies, setRecommendedMovies] = useState<Movie[]>([]);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  // Find connections related to this movie
+  useEffect(() => {
+    if (!movie) {
+      setDetailedMovie(null);
+      setSimilarMovies([]);
+      setRecommendedMovies([]);
+      return;
+    }
+
+    setDetailedMovie(movie);
+
+    // If ID is numeric (or contains numbers), fetch real TMDB details & recommendations
+    const numericId = String(movie.tmdbId || movie.id).replace(/\D/g, '');
+    if (numericId) {
+      setIsLoadingDetails(true);
+      Promise.all([
+        tmdbService.getMovieDetails(numericId).catch(() => null),
+        tmdbService.getSimilarMovies(numericId).catch(() => []),
+        tmdbService.getMovieRecommendations(numericId).catch(() => [])
+      ]).then(([details, similar, recommended]) => {
+        if (details) {
+          // Merge with any existing curated properties (like custom universeId/vibe tags)
+          setDetailedMovie({
+            ...details,
+            universeId: movie.universeId || details.universeId,
+            universeName: movie.universeName || details.universeName,
+            vibeTags: movie.vibeTags?.length ? movie.vibeTags : details.vibeTags,
+            streamingPlatforms: movie.streamingPlatforms?.length ? movie.streamingPlatforms : details.streamingPlatforms
+          });
+        }
+        if (similar && similar.length > 0) setSimilarMovies(similar.slice(0, 5));
+        if (recommended && recommended.length > 0) setRecommendedMovies(recommended.slice(0, 5));
+      }).finally(() => {
+        setIsLoadingDetails(false);
+      });
+    }
+  }, [movie]);
+
+  if (!movie) return null;
+  const current = detailedMovie || movie;
+
+  // Find connections related to this movie if curated
   const relatedConnections = CONNECTIONS.filter(
-    c => c.sourceMovieId === movie.id || c.targetMovieId === movie.id
+    c => c.sourceMovieId === current.id || c.targetMovieId === current.id
   );
 
   // Find watch order guides featuring this movie
   const relevantGuides = WATCH_ORDERS.filter(g => 
-    g.entries.some(e => e.movieId === movie.id)
+    g.entries.some(e => e.movieId === current.id)
   );
 
-  // Find same vibe movies
-  const sameVibeMovies = MOVIES.filter(m => m.id !== movie.id && (
-    m.moodIds.some(mood => movie.moodIds.includes(mood)) ||
-    m.vibeTags.some(tag => movie.vibeTags.includes(tag))
-  )).slice(0, 3);
-
-  const getMovie = (id: string) => MOVIES.find(m => m.id === id);
+  const getCuratedMovie = (id: string) => MOVIES.find(m => m.id === id);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-xl overflow-y-auto animate-fade-in">
@@ -69,8 +108,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
         {/* Hero Backdrop Banner */}
         <div className="relative aspect-[21/9] sm:aspect-[2.5/1] w-full overflow-hidden bg-[#0c0307]">
           <img
-            src={movie.backdropUrl}
-            alt={movie.title}
+            src={current.backdropUrl}
+            alt={current.title}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#14040c] via-[#14040c]/70 to-transparent" />
@@ -83,41 +122,56 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           {/* Top Row: Poster Thumbnail + Main Headings */}
           <div className="flex flex-col sm:flex-row sm:items-end gap-6">
             <img
-              src={movie.posterUrl}
-              alt={movie.title}
+              src={current.posterUrl}
+              alt={current.title}
               className="w-28 sm:w-36 aspect-[3/4] object-cover rounded-2xl border-2 border-white/10 shadow-2xl shrink-0 bg-rose-950/40"
             />
 
             <div className="space-y-2 flex-1">
-              {movie.universeName && (
+              {current.universeName ? (
                 <div className="text-xs font-bold uppercase tracking-wider text-rose-400">
-                  {movie.universeName}
+                  {current.universeName}
+                </div>
+              ) : (
+                <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                  TMDB Cinematic Profile
                 </div>
               )}
               
               <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-                {movie.title}
+                {current.title}
               </h1>
+
+              {current.originalTitle && current.originalTitle !== current.title && (
+                <div className="text-xs text-neutral-400 italic">
+                  Original Title: {current.originalTitle}
+                </div>
+              )}
 
               {/* Clean unboxed metadata */}
               <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-neutral-300 font-medium">
                 <span className="flex items-center gap-1 text-amber-400 font-bold tabular-nums">
                   <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  {movie.rating.toFixed(1)}
+                  {current.rating.toFixed(1)}
+                  {current.voteCount ? (
+                    <span className="text-[11px] text-neutral-400 font-normal ml-0.5">
+                      ({current.voteCount.toLocaleString()} votes)
+                    </span>
+                  ) : null}
                 </span>
                 <span aria-hidden="true" className="text-neutral-600">·</span>
-                <span>{movie.year}</span>
+                <span>{current.year}</span>
                 <span aria-hidden="true" className="text-neutral-600">·</span>
-                <span>{movie.duration}</span>
+                <span>{current.duration}</span>
                 <span aria-hidden="true" className="text-neutral-600">·</span>
-                <span className="text-rose-300">{movie.genres.join(', ')}</span>
+                <span className="text-rose-300">{current.genres.join(', ')}</span>
               </div>
             </div>
 
             {/* Quick Action Buttons */}
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => onToggleWatchlist(movie.id)}
+                onClick={() => onToggleWatchlist(current.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                   isWatchlisted
                     ? 'bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)]'
@@ -129,7 +183,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </button>
 
               <button
-                onClick={() => onToggleWatched(movie.id)}
+                onClick={() => onToggleWatched(current.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                   isWatched
                     ? 'bg-emerald-600/30 border border-emerald-500/40 text-emerald-300'
@@ -145,13 +199,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
           {/* Tagline & Overview */}
           <div className="space-y-2">
-            {movie.tagline && (
+            {current.tagline && (
               <div className="text-xs sm:text-sm italic text-rose-300/90 font-medium">
-                "{movie.tagline}"
+                "{current.tagline}"
               </div>
             )}
             <p className="text-sm sm:text-base text-neutral-300 leading-relaxed">
-              {movie.overview}
+              {current.overview}
             </p>
           </div>
 
@@ -159,11 +213,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-black/40 border border-white/5 text-xs">
             <div>
               <span className="text-neutral-400 font-semibold block mb-0.5">Director</span>
-              <span className="text-white font-medium">{movie.director}</span>
+              <span className="text-white font-medium">{current.director}</span>
             </div>
             <div>
-              <span className="text-neutral-400 font-semibold block mb-0.5">Key Cast</span>
-              <span className="text-white font-medium">{movie.cast.join(', ')}</span>
+              <span className="text-neutral-400 font-semibold block mb-0.5">Lead Cast</span>
+              <span className="text-white font-medium">{current.cast.join(', ')}</span>
             </div>
           </div>
 
@@ -177,7 +231,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               <button
                 onClick={() => {
                   onClose();
-                  onNavigateToSameVibe(movie.id);
+                  onNavigateToSameVibe(current.id);
                 }}
                 className="text-xs text-rose-400 hover:text-rose-300 font-medium flex items-center gap-1"
               >
@@ -187,25 +241,25 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             </div>
 
             <div className="text-xs text-rose-200 font-medium">
-              {movie.vibeTags.join(' · ')}
+              {current.vibeTags.join(' · ')}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-center text-xs">
               <div className="p-2 rounded-xl bg-black/30 border border-white/5">
                 <div className="text-[10px] text-neutral-400">Dark Tone</div>
-                <div className="font-bold text-white tabular-nums mt-0.5">{movie.vibeProfile.darkAtmosphere}/10</div>
+                <div className="font-bold text-white tabular-nums mt-0.5">{current.vibeProfile.darkAtmosphere}/10</div>
               </div>
               <div className="p-2 rounded-xl bg-black/30 border border-white/5">
                 <div className="text-[10px] text-neutral-400">Action Pacing</div>
-                <div className="font-bold text-white tabular-nums mt-0.5">{movie.vibeProfile.actionIntensity}/10</div>
+                <div className="font-bold text-white tabular-nums mt-0.5">{current.vibeProfile.actionIntensity}/10</div>
               </div>
               <div className="p-2 rounded-xl bg-black/30 border border-white/5">
                 <div className="text-[10px] text-neutral-400">Psychology</div>
-                <div className="font-bold text-white tabular-nums mt-0.5">{movie.vibeProfile.psychologicalComplexity}/10</div>
+                <div className="font-bold text-white tabular-nums mt-0.5">{current.vibeProfile.psychologicalComplexity}/10</div>
               </div>
               <div className="p-2 rounded-xl bg-black/30 border border-white/5">
                 <div className="text-[10px] text-neutral-400">Style</div>
-                <div className="font-medium text-white truncate mt-0.5">{movie.vibeProfile.visualStyle}</div>
+                <div className="font-medium text-white truncate mt-0.5">{current.vibeProfile.visualStyle}</div>
               </div>
             </div>
           </div>
@@ -228,8 +282,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {movie.streamingPlatforms.map((platform, idx) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {current.streamingPlatforms.map((platform, idx) => (
                 <a
                   key={idx}
                   href={platform.url}
@@ -241,7 +295,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     <div className="text-xs font-bold text-white group-hover:text-rose-300 transition-colors">
                       {platform.name}
                     </div>
-                    <div className="text-[10px] text-neutral-400">{platform.type}</div>
+                    <div className="text-[10px] text-neutral-400">{platform.type} (Region Dependent)</div>
                   </div>
                   <ExternalLink className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white" />
                 </a>
@@ -249,18 +303,18 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Connected Universe Relations */}
+          {/* Connected Universe Relations (If Curated) */}
           {relatedConnections.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
                   <Network className="w-4 h-4 text-rose-500" />
-                  <span>Narrative Connections ({relatedConnections.length})</span>
+                  <span>Curated Narrative Connections ({relatedConnections.length})</span>
                 </h3>
                 <button
                   onClick={() => {
                     onClose();
-                    onNavigateToConnections(movie.universeId);
+                    onNavigateToConnections(current.universeId);
                   }}
                   className="text-xs text-rose-400 hover:text-rose-300 font-medium"
                 >
@@ -270,8 +324,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
               <div className="space-y-2">
                 {relatedConnections.map(conn => {
-                  const partnerId = conn.sourceMovieId === movie.id ? conn.targetMovieId : conn.sourceMovieId;
-                  const partner = getMovie(partnerId);
+                  const partnerId = conn.sourceMovieId === current.id ? conn.targetMovieId : conn.sourceMovieId;
+                  const partner = getCuratedMovie(partnerId);
                   if (!partner) return null;
 
                   return (
@@ -321,7 +375,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               <button
                 onClick={() => {
                   onClose();
-                  onNavigateToWatchOrder(movie.universeId);
+                  onNavigateToWatchOrder(current.universeId);
                 }}
                 className="px-4 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold shrink-0"
               >
@@ -330,30 +384,71 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             </div>
           )}
 
-          {/* Similar Vibe Recommendations */}
-          {sameVibeMovies.length > 0 && (
+          {/* TMDB Recommendations Section */}
+          {recommendedMovies.length > 0 && (
             <div className="space-y-3 pt-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-rose-500" />
-                <span>Films Sharing Same Aesthetic Vibe</span>
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
+                  <ThumbsUp className="w-4 h-4 text-rose-500" />
+                  <span>Recommended Next Movies</span>
+                </h3>
+                <span className="text-[11px] text-neutral-400">Powered by TMDB</span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {sameVibeMovies.map(similar => (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {recommendedMovies.map(rec => (
+                  <div
+                    key={rec.id}
+                    onClick={() => onSelectMovie(rec)}
+                    className="p-2.5 rounded-xl bg-black/40 hover:bg-white/[0.05] border border-white/5 cursor-pointer flex flex-col transition-all group"
+                  >
+                    <img
+                      src={rec.posterUrl}
+                      alt={rec.title}
+                      className="w-full aspect-[3/4] object-cover rounded-lg border border-white/10 mb-2 group-hover:scale-102 transition-transform"
+                    />
+                    <div className="text-xs font-bold text-white truncate group-hover:text-rose-300 transition-colors">
+                      {rec.title}
+                    </div>
+                    <div className="text-[10px] text-neutral-400 flex items-center justify-between mt-0.5">
+                      <span>{rec.year}</span>
+                      <span className="text-amber-400 tabular-nums">★ {rec.rating.toFixed(1)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TMDB Similar Movies */}
+          {similarMovies.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-rose-500" />
+                  <span>Thematically Similar Films</span>
+                </h3>
+                <span className="text-[11px] text-neutral-400">Powered by TMDB</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {similarMovies.map(similar => (
                   <div
                     key={similar.id}
                     onClick={() => onSelectMovie(similar)}
-                    className="p-3 rounded-xl bg-black/40 hover:bg-white/[0.05] border border-white/5 cursor-pointer flex items-center gap-3 transition-colors"
+                    className="p-2.5 rounded-xl bg-black/40 hover:bg-white/[0.05] border border-white/5 cursor-pointer flex flex-col transition-all group"
                   >
                     <img
                       src={similar.posterUrl}
                       alt={similar.title}
-                      className="w-10 h-14 object-cover rounded border border-white/10 shrink-0"
+                      className="w-full aspect-[3/4] object-cover rounded-lg border border-white/10 mb-2 group-hover:scale-102 transition-transform"
                     />
-                    <div className="overflow-hidden">
-                      <div className="text-xs font-bold text-white truncate">{similar.title}</div>
-                      <div className="text-[10px] text-neutral-400">{similar.year} · {similar.genres[0]}</div>
-                      <div className="text-[10px] text-rose-300 truncate mt-1">{similar.vibeTags[0]}</div>
+                    <div className="text-xs font-bold text-white truncate group-hover:text-rose-300 transition-colors">
+                      {similar.title}
+                    </div>
+                    <div className="text-[10px] text-neutral-400 flex items-center justify-between mt-0.5">
+                      <span>{similar.year}</span>
+                      <span className="text-amber-400 tabular-nums">★ {similar.rating.toFixed(1)}</span>
                     </div>
                   </div>
                 ))}

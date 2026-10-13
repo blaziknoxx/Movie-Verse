@@ -1,17 +1,19 @@
-import React from 'react';
-import { Movie, MovieUniverse } from '../../types/movie';
-import { MOVIES, UNIVERSES, WHERE_TO_WATCH_DIRECTORY } from '../../data/moviesData';
+import React, { useState, useEffect } from 'react';
+import { Movie } from '../../types/movie';
+import { UNIVERSES, WHERE_TO_WATCH_DIRECTORY, MOVIES } from '../../data/moviesData';
+import { tmdbService } from '../../services/tmdbService';
 import { HeroBanner } from './HeroBanner';
 import { MoodBrowser } from './MoodBrowser';
 import { MovieCard } from '../discover/MovieCard';
 import { 
   ChevronRight, Network, ListOrdered, Sparkles, Tv, 
-  ExternalLink, ArrowRight, History, Bookmark
+  ExternalLink, ArrowRight, History, Flame, Film, 
+  RefreshCw, AlertCircle, TrendingUp, Clock, Award
 } from 'lucide-react';
 
 interface HomeViewProps {
   onSelectMovie: (movie: Movie) => void;
-  onExploreConnections: (movie?: Movie) => void;
+  onExploreConnections: (movieOrUniverse?: any) => void;
   onExploreWatchOrder: (universeId?: string) => void;
   onExploreSameVibe: (movieId?: string) => void;
   onExploreWhereToWatch: () => void;
@@ -21,6 +23,8 @@ interface HomeViewProps {
   selectedMoodId: string | null;
   onSelectMood: (moodId: string | null) => void;
 }
+
+type DiscoveryFeedType = 'trending' | 'popular' | 'now_playing' | 'top_rated' | 'upcoming';
 
 export const HomeView: React.FC<HomeViewProps> = ({
   onSelectMovie,
@@ -34,26 +38,85 @@ export const HomeView: React.FC<HomeViewProps> = ({
   selectedMoodId,
   onSelectMood
 }) => {
-  // Hero movie (Dune: Part Two)
-  const heroMovie = MOVIES.find(m => m.id === 'dune-part-2') || MOVIES[0];
+  const [activeFeed, setActiveFeed] = useState<DiscoveryFeedType>('trending');
+  const [feedMovies, setFeedMovies] = useState<Movie[]>([]);
+  const [heroMovie, setHeroMovie] = useState<Movie>(MOVIES[0]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Recently viewed movie objects
+  // Fetch real TMDB data based on active feed or mood selection
+  const fetchFeedData = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      if (selectedMoodId) {
+        const moodData = await tmdbService.discoverByMood(selectedMoodId);
+        setFeedMovies(moodData);
+        if (moodData.length > 0 && !heroMovie) {
+          setHeroMovie(moodData[0]);
+        }
+      } else {
+        let result: { movies: Movie[]; totalPages: number };
+        switch (activeFeed) {
+          case 'popular':
+            result = await tmdbService.getPopular(1);
+            break;
+          case 'now_playing':
+            result = await tmdbService.getNowPlaying(1);
+            break;
+          case 'top_rated':
+            result = await tmdbService.getTopRated(1);
+            break;
+          case 'upcoming':
+            result = await tmdbService.getUpcoming(1);
+            break;
+          case 'trending':
+          default:
+            result = await tmdbService.getTrending('week', 1);
+            break;
+        }
+
+        setFeedMovies(result.movies);
+        if (result.movies.length > 0) {
+          // Find a great hero candidate with a rich backdrop
+          const candidate = result.movies.find(m => m.backdropUrl && m.overview && m.overview.length > 60) || result.movies[0];
+          setHeroMovie(candidate);
+        }
+      }
+    } catch (err: any) {
+      console.error('[Movie Verse] TMDB Fetch Error:', err);
+      setErrorMsg(err.message || 'Unable to connect to TMDB API. Check your TMDB_READ_TOKEN.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFeedData();
+  }, [activeFeed, selectedMoodId]);
+
+  // Recently viewed movie objects from storage or fallback
   const recentMovies = recentMovieIds
-    .map(id => MOVIES.find(m => m.id === id))
+    .map(id => feedMovies.find(m => m.id === id) || MOVIES.find(m => m.id === id))
     .filter((m): m is Movie => m !== undefined);
 
-  // Filtered movies if mood is selected
-  const displayedMovies = selectedMoodId
-    ? MOVIES.filter(m => m.moodIds.includes(selectedMoodId))
-    : MOVIES;
-
   // Essential movies row
-  const essentialMovies = MOVIES.filter(m => m.rating >= 8.0).slice(0, 5);
+  const essentialMovies = (feedMovies.length > 0 ? feedMovies : MOVIES)
+    .filter(m => m.rating >= 7.8)
+    .slice(0, 5);
+
+  const feedTabs = [
+    { id: 'trending', label: 'Trending This Week', icon: Flame },
+    { id: 'popular', label: 'Popular Discoveries', icon: TrendingUp },
+    { id: 'now_playing', label: 'In Theaters Now', icon: Film },
+    { id: 'top_rated', label: 'All-Time Masterpieces', icon: Award },
+    { id: 'upcoming', label: 'Upcoming Releases', icon: Clock },
+  ];
 
   return (
     <div className="space-y-16 animate-fade-in">
       
-      {/* 1. Cinematic Hero Section */}
+      {/* 1. Cinematic Hero Section with Real TMDB Movie */}
       <HeroBanner
         movie={heroMovie}
         onExploreMovie={onSelectMovie}
@@ -68,7 +131,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         onSelectMood={onSelectMood}
       />
 
-      {/* 3. Continue Exploring (Stored locally) */}
+      {/* 3. Continue Exploring (Locally stored on device) */}
       {recentMovies.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -96,30 +159,105 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 4. Popular Discoveries (Horizontal Carousel) */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* 4. Real TMDB Live Feeds Section */}
+      <section className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-400 mb-1">
+              <Film className="w-3.5 h-3.5" />
+              <span>Real-Time Cinema Feed</span>
+            </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              {selectedMoodId ? 'Atmospheric Selection' : 'Popular Discoveries'}
+              {selectedMoodId ? 'Atmospheric Selection' : 'Real-Time TMDB Discovery'}
             </h2>
             <p className="text-xs sm:text-sm text-neutral-400 mt-0.5">
-              High-caliber cinema curated for immersive storytelling
+              Powered by official TMDB API endpoints with high-resolution artwork
             </p>
           </div>
+
+          {/* Feed Category Segmented Controls (Visible when no mood filter active) */}
+          {!selectedMoodId && (
+            <div className="flex gap-1.5 p-1 rounded-2xl liquid-glass overflow-x-auto no-scrollbar max-w-full">
+              {feedTabs.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeFeed === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveFeed(tab.id as DiscoveryFeedType)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-rose-600 text-white shadow-md shadow-rose-950/50'
+                        : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {displayedMovies.map(movie => (
-            <MovieCard
-              key={movie.id}
-              movie={movie}
-              onSelectMovie={onSelectMovie}
-              isWatchlisted={watchlist.includes(movie.id)}
-              onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-            />
-          ))}
-        </div>
+        {/* Error Notification with Friendly Retry */}
+        {errorMsg && (
+          <div className="p-6 rounded-3xl liquid-glass border border-rose-500/40 bg-rose-950/20 text-neutral-200 space-y-3">
+            <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+              <AlertCircle className="w-5 h-5" />
+              <span>TMDB API Connection Notice</span>
+            </div>
+            <p className="text-xs text-neutral-300 leading-relaxed max-w-2xl">
+              {errorMsg}
+            </p>
+            <div className="text-[11px] text-neutral-400">
+              Ensure <code className="px-1.5 py-0.5 rounded bg-black/60 text-rose-300">TMDB_READ_TOKEN</code> is bound in Cloudflare Worker secrets or local environment variables.
+            </div>
+            <button
+              onClick={fetchFeedData}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all mt-2"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Retry TMDB Connection</span>
+            </button>
+          </div>
+        )}
+
+        {/* Loading Skeletons */}
+        {isLoading && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="liquid-glass-card rounded-2xl overflow-hidden aspect-[3/4] animate-pulse flex flex-col justify-end p-4 border border-white/5"
+              >
+                <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
+                <div className="h-3 bg-white/5 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Movies Grid */}
+        {!isLoading && !errorMsg && feedMovies.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {feedMovies.map(movie => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                onSelectMovie={onSelectMovie}
+                isWatchlisted={watchlist.includes(movie.id)}
+                onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+              />
+            ))}
+          </div>
+        )}
+
+        {!isLoading && !errorMsg && feedMovies.length === 0 && (
+          <div className="p-12 rounded-3xl liquid-glass text-center text-neutral-400 text-sm">
+            No movies returned for the selected filter. Try another category.
+          </div>
+        )}
       </section>
 
       {/* 5. Connected Universes Banner Showcase */}

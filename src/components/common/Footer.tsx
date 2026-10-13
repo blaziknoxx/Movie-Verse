@@ -45,13 +45,21 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAbout }) => {
 
           {/* Legal & Attribution */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">Transparency & Notice</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">Transparency & Attribution</h4>
             <p className="text-[11px] text-neutral-400 leading-relaxed">
-              Movie Verse is a discovery guide and index. We do not host, store, or stream media. Availability information may vary across regions and platforms.
+              Movie Verse is a discovery guide and index. We do not host, store, or stream media.
             </p>
             <div className="pt-1 flex items-center gap-1.5 text-[11px] text-neutral-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
               <span>Independent & Curated Content</span>
+            </div>
+            <div className="pt-2 flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
+                TMDB
+              </span>
+              <p className="text-[10px] text-neutral-500 leading-tight">
+                This product uses the TMDB API but is not endorsed or certified by TMDB.
+              </p>
             </div>
           </div>
 

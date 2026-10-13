@@ -81,6 +81,16 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
+        {/* TMDB Attribution Box */}
+        <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 mb-6 flex items-center gap-3">
+          <div className="px-2 py-1 rounded bg-emerald-950/70 border border-emerald-500/30 text-xs font-bold text-emerald-400 shrink-0">
+            TMDB
+          </div>
+          <p className="text-[11px] text-neutral-400 leading-relaxed">
+            This product uses the TMDB API but is not endorsed or certified by TMDB. Movie metadata, cast lists, and poster imagery are sourced via The Movie Database.
+          </p>
+        </div>
+
         {/* Disclaimer */}
         <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] text-neutral-400">
           <Shield className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />

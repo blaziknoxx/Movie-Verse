@@ -59,6 +59,10 @@ export interface Movie {
   }[];
   featured?: boolean;
   moodIds: string[];
+  tmdbId?: number;
+  voteCount?: number;
+  originalTitle?: string;
+  releaseDate?: string;
 }
 
 export interface MovieUniverse {

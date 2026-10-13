@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
 import { MOVIES } from '../../data/moviesData';
 import { MovieCard } from '../discover/MovieCard';
@@ -19,6 +19,12 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
 }) => {
   const [seedMovieId, setSeedMovieId] = useState<string>(initialSeedMovieId || 'the-batman');
   const [selectedVibeTag, setSelectedVibeTag] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialSeedMovieId) {
+      setSeedMovieId(initialSeedMovieId);
+    }
+  }, [initialSeedMovieId]);
 
   const seedMovie = MOVIES.find(m => m.id === seedMovieId) || MOVIES[0];
 
