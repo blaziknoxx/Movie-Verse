@@ -78,9 +78,10 @@ async function fetchFromTMDB(endpoint: string, queryParams: Record<string, any> 
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token.trim()}`;
+    const cleanToken = token.replace(/^Bearer\s+/i, '').replace(/^["']|["']$/g, '').trim();
+    headers['Authorization'] = `Bearer ${cleanToken}`;
   } else if (apiKey) {
-    url.searchParams.set('api_key', apiKey.trim());
+    url.searchParams.set('api_key', apiKey.trim().replace(/^["']|["']$/g, ''));
   }
 
   const cacheKey = url.toString();
