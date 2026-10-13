@@ -1,0 +1,6 @@
+{
+  "name": "Movie Verse",
+  "description": "Cinematic movie discovery, universe connections, watch orders, similar vibes, and curated where-to-watch directory. Developer — Estiaq Mehedi",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

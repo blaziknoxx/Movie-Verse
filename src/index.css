@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #080204;
+    --bg-surface: rgba(24, 7, 14, 0.7);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --border-rose: rgba(244, 63, 94, 0.18);
+    --accent-crimson: #e11d48;
+    --accent-wine: #881337;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #070104;
+    color: #f5edf0;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom cinematic liquid-glass utilities */
+.liquid-glass {
+  background: rgba(22, 6, 13, 0.68);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.liquid-glass-card {
+  background: linear-gradient(145deg, rgba(28, 8, 17, 0.75) 0%, rgba(15, 3, 9, 0.82) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(244, 63, 94, 0.12);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.liquid-glass-card:hover {
+  border-color: rgba(244, 63, 94, 0.3);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.75), 0 0 25px -5px rgba(225, 29, 72, 0.2);
+}
+
+.liquid-glass-nav {
+  background: rgba(14, 3, 8, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.liquid-glass-panel {
+  background: rgba(20, 5, 12, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.liquid-glass-highlight {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.15) 0%, rgba(136, 19, 55, 0.08) 100%);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+/* Atmosphere ambient glow backdrops */
+.ambient-glow-crimson {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(225, 29, 72, 0.18) 0%, rgba(136, 19, 55, 0.08) 50%, transparent 70%);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.ambient-glow-wine {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(136, 19, 55, 0.22) 0%, rgba(76, 5, 25, 0.08) 50%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* Hide scrollbars while preserving scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #090205;
+}
+::-webkit-scrollbar-thumb {
+  background: #2b0b18;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a1228;
+}
