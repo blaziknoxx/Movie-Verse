@@ -221,7 +221,7 @@ export const storageService = {
   },
 
   getAllSites(): WhereToWatchSite[] {
-    const custom = this.getCustomSites();
+    const custom = this.getCustomSites().filter(s => s.isCustom && s.id !== 'site-hdhub4u' && s.id !== 'site-movielinkbd');
     return [...custom, ...WHERE_TO_WATCH_DIRECTORY];
   },
 

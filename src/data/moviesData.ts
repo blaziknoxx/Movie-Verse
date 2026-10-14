@@ -7,6 +7,7 @@
  */
 
 import { Movie, MovieUniverse, WatchOrderGuide, MoodCategory, WhereToWatchSite } from '../types/movie';
+import { HDHUB4U_BASE_URL, MOVIELINKBD_BASE_URL, getMovieStreamingPlatforms } from '../services/streamingProviders';
 
 // Generated cinematic visual assets for universe lore covers
 import heroSciFi from '../assets/images/hero_cinematic_scifi_1791913249885.jpg';
@@ -85,11 +86,11 @@ export const UNIVERSES: MovieUniverse[] = [
 ];
 
 const STANDARD_EXTERNAL_PLATFORMS = [
-  { name: 'HDHub4u', type: 'External Portal' as const, url: 'https://new7.hdhub4u.cl/?utm=mn1', verified: false },
-  { name: 'MovieLinkBD', type: 'External Portal' as const, url: 'https://movielinkbd.one/', verified: false }
+  { name: 'HDHub4u', type: 'External Portal' as const, url: HDHUB4U_BASE_URL, verified: false },
+  { name: 'MovieLinkBD', type: 'External Portal' as const, url: MOVIELINKBD_BASE_URL, verified: false }
 ];
 
-export const MOVIES: Movie[] = [
+const INITIAL_RAW_MOVIES: Movie[] = [
   {
     id: 'dune-part-2',
     tmdbId: 693134,
@@ -486,6 +487,11 @@ export const MOVIES: Movie[] = [
   }
 ];
 
+export const MOVIES: Movie[] = INITIAL_RAW_MOVIES.map(movie => ({
+  ...movie,
+  streamingPlatforms: getMovieStreamingPlatforms(movie.title)
+}));
+
 
 export const WATCH_ORDERS: WatchOrderGuide[] = [
   {
@@ -622,23 +628,23 @@ export const WHERE_TO_WATCH_DIRECTORY: WhereToWatchSite[] = [
   {
     id: 'site-hdhub4u',
     name: 'HDHub4u',
-    url: 'https://new7.hdhub4u.cl/?utm=mn1',
+    url: HDHUB4U_BASE_URL,
     description: 'External movie directory and entertainment portal. Catalogs international titles, multilingual releases, and trending cinema collections.',
     category: 'Movie Discovery and Availability Guides',
     availabilityType: 'External Entertainment Directory',
     region: 'Global / Multilingual',
     verified: false,
-    userExpectationNote: 'General external destination. Movie Verse does not host media or verify title-specific availability on external sites.'
+    userExpectationNote: 'General external destination. Search queries are generated dynamically per movie using URL and URLSearchParams APIs (/search.html?q=...). Movie Verse does not host media.'
   },
   {
     id: 'site-movielinkbd',
     name: 'MovieLinkBD',
-    url: 'https://movielinkbd.one/',
+    url: MOVIELINKBD_BASE_URL,
     description: 'External entertainment directory index and movie guide. Catalogs global titles, regional media links, and cinema collections.',
     category: 'Movie Discovery and Availability Guides',
     availabilityType: 'External Entertainment Directory',
     region: 'South Asia & Global',
     verified: false,
-    userExpectationNote: 'General external destination. Movie Verse does not host media or verify title-specific availability on external sites.'
+    userExpectationNote: 'Homepage directory index. MovieLinkBD utilizes proprietary internal content IDs that cannot be derived dynamically without an official search API.'
   }
 ];

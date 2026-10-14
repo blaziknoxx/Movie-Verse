@@ -6,6 +6,7 @@
 
 import { Movie } from '../types/movie';
 import { UNIVERSES } from '../data/moviesData';
+import { getMovieStreamingPlatforms } from './streamingProviders';
 
 // Known TMDB Universe associations mapping (links real TMDB IDs to Movie Verse curated universes)
 const TMDB_TO_UNIVERSE_MAP: Record<number, { universeId: string; universeName: string }> = {
@@ -264,20 +265,7 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
       pacing: actionIntensity >= 8 ? 'Propulsive' : darkAtmosphere >= 8 ? 'Methodical' : 'Balanced',
       visualStyle: `${genres[0] || 'Modern'} Cinematic Direction`
     },
-    streamingPlatforms: [
-      {
-        name: 'HDHub4u',
-        type: 'External Portal',
-        url: 'https://new7.hdhub4u.cl/?utm=mn1',
-        verified: false
-      },
-      {
-        name: 'MovieLinkBD',
-        type: 'External Portal',
-        url: 'https://movielinkbd.one/',
-        verified: false
-      }
-    ],
+    streamingPlatforms: getMovieStreamingPlatforms(title),
     moodIds,
     releaseDate: raw.release_date
   };

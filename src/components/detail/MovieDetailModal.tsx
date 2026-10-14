@@ -10,6 +10,7 @@ import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
+import { buildHDHub4uSearchUrl, getMovieLinkBDUrl, getMovieStreamingPlatforms } from '../../services/streamingProviders';
 import { 
   ArrowLeft, Star, Bookmark, CheckCircle2, Network, ListOrdered, 
   Tv, ExternalLink, Sparkles, User, Calendar, Clock, Film,
@@ -84,20 +85,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             universeId: movie.universeId || details.universeId,
             universeName: movie.universeName || details.universeName,
             vibeTags: movie.vibeTags?.length ? movie.vibeTags : details.vibeTags,
-            streamingPlatforms: [
-              {
-                name: 'HDHub4u',
-                type: 'External Portal',
-                url: 'https://new7.hdhub4u.cl/?utm=mn1',
-                verified: false
-              },
-              {
-                name: 'MovieLinkBD',
-                type: 'External Portal',
-                url: 'https://movielinkbd.one/',
-                verified: false
-              }
-            ]
+            streamingPlatforms: getMovieStreamingPlatforms(details.title || movie.title)
           };
           setDetailedMovie(merged);
           storageService.saveCachedMovie(merged);
@@ -131,19 +119,19 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   if (!movie) return null;
   const current = detailedMovie || movie;
 
-  // External streaming platforms strictly preserved per requirements
+  // External streaming platforms dynamically generated using movie title
   const externalStreamingPlatforms = [
     {
       name: 'HDHub4u',
       type: 'External Portal' as const,
-      url: 'https://new7.hdhub4u.cl/?utm=mn1',
-      description: 'External movie directory & entertainment index'
+      url: buildHDHub4uSearchUrl(current.title),
+      description: 'Search dynamic catalog on HDHub4u'
     },
     {
       name: 'MovieLinkBD',
       type: 'External Portal' as const,
-      url: 'https://movielinkbd.one/',
-      description: 'External global & regional cinema directory'
+      url: getMovieLinkBDUrl(),
+      description: 'External directory index (homepage fallback)'
     }
   ];
 
