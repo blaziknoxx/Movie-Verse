@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Movie } from './types/movie';
-import { MOVIES } from './data/moviesData';
 import { storageService } from './services/storageService';
 
 import { Header } from './components/common/Header';

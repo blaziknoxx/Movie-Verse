@@ -1,6 +1,14 @@
+/**
+ * Movie Verse — Curated Universe Lore & Watch Order Architecture
+ * Developer — Estiaq Mehedi
+ * 
+ * Defines universe connections, watch order guides, mood taxonomies, and external directory indexes.
+ * External destinations strictly preserved: HDHub4u and MovieLinkBD.
+ */
+
 import { Movie, MovieUniverse, MovieConnection, WatchOrderGuide, MoodCategory, WhereToWatchSite } from '../types/movie';
 
-// Generated cinematic visual assets
+// Generated cinematic visual assets for universe lore covers
 import heroSciFi from '../assets/images/hero_cinematic_scifi_1791913249885.jpg';
 import heroGothicNoir from '../assets/images/hero_gothic_noir_1791913249424.jpg';
 import posterCosmos from '../assets/images/poster_quantum_cosmos_1791913250357.jpg';
@@ -8,14 +16,14 @@ import posterNoirDetective from '../assets/images/poster_shadow_detective_179191
 import posterCyber from '../assets/images/poster_cyber_odyssey_1791913251262.jpg';
 
 export const MOODS: MoodCategory[] = [
-  { id: 'dark-gritty', name: 'Dark & Gritty', description: 'Visceral crime, rain-soaked streets, and morally gray antiheroes', accent: '#e11d48' },
-  { id: 'mind-bending', name: 'Mind-Bending', description: 'Fractured reality, temporal anomalies, and philosophical labyrinths', accent: '#f43f5e' },
-  { id: 'action-heavy', name: 'Action-Heavy', description: 'Relentless gun-fu, acrobatic set pieces, and pulse-pounding stakes', accent: '#fb7185' },
-  { id: 'sci-fi-epic', name: 'Sci-Fi Epic', description: 'Vast interstellar empires, mystical prophecy, and grand cosmic scale', accent: '#fda4af' },
-  { id: 'psychological', name: 'Psychological', description: 'Taut character studies descending into madness and obsession', accent: '#be123c' },
-  { id: 'feel-good', name: 'Feel-Good & Wonder', description: 'Vibrant multiversal journeys bursting with heart and artistry', accent: '#f43f5e' },
-  { id: 'mystery-suspense', name: 'Mystery & Suspense', description: 'Unfolding secrets, high-stakes investigations, and ticking clocks', accent: '#9f1239' },
-  { id: 'cyberpunk', name: 'Cyberpunk Dystopia', description: 'Synthetic rain, rogue cybernetics, and corporate neon dystopias', accent: '#e11d48' },
+  { id: 'dark-gritty', name: 'Dark & Gritty', description: 'Visceral crime, rain-soaked streets, and morally gray antiheroes', accent: '#EA6113' },
+  { id: 'mind-bending', name: 'Mind-Bending', description: 'Fractured reality, temporal anomalies, and philosophical labyrinths', accent: '#F88F22' },
+  { id: 'action-heavy', name: 'Action-Heavy', description: 'Relentless kinetic stuntwork, acrobatic set pieces, and high stakes', accent: '#FBB931' },
+  { id: 'sci-fi-epic', name: 'Sci-Fi Epic', description: 'Vast interstellar empires, mystical prophecy, and grand cosmic scale', accent: '#FFE3B3' },
+  { id: 'psychological', name: 'Psychological', description: 'Taut character studies descending into madness and obsession', accent: '#EA6113' },
+  { id: 'feel-good', name: 'Feel-Good & Wonder', description: 'Vibrant journeys bursting with heart and artistry', accent: '#F88F22' },
+  { id: 'mystery-suspense', name: 'Mystery & Suspense', description: 'Unfolding secrets, high-stakes investigations, and ticking clocks', accent: '#FBB931' },
+  { id: 'cyberpunk', name: 'Cyberpunk Dystopia', description: 'Synthetic rain, rogue cybernetics, and corporate neon dystopias', accent: '#EA6113' },
 ];
 
 export const UNIVERSES: MovieUniverse[] = [
@@ -76,9 +84,15 @@ export const UNIVERSES: MovieUniverse[] = [
   }
 ];
 
+const STANDARD_EXTERNAL_PLATFORMS = [
+  { name: 'HDHub4u', type: 'External Portal' as const, url: 'https://new7.hdhub4u.cl/?utm=mn1', verified: false },
+  { name: 'MovieLinkBD', type: 'External Portal' as const, url: 'https://movielinkbd.one/', verified: false }
+];
+
 export const MOVIES: Movie[] = [
   {
     id: 'dune-part-2',
+    tmdbId: 693134,
     title: 'Dune: Part Two',
     slug: 'dune-part-two',
     year: 2024,
@@ -104,15 +118,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Propulsive',
       visualStyle: 'Monumental Brutalist Desert Cinema'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true },
-      { name: 'JustWatch Guide', type: 'Free', url: 'https://www.justwatch.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['sci-fi-epic', 'mind-bending', 'action-heavy']
   },
   {
     id: 'dune-part-1',
+    tmdbId: 438631,
     title: 'Dune: Part One',
     slug: 'dune-part-one',
     year: 2021,
@@ -137,14 +148,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Slow-Burn',
       visualStyle: 'Cinematic Grandeur & Monolithic Design'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['sci-fi-epic', 'mind-bending']
   },
   {
     id: 'dune-prophecy',
+    tmdbId: 841,
     title: 'Dune: Prophecy',
     slug: 'dune-prophecy',
     year: 2024,
@@ -169,13 +178,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Methodical',
       visualStyle: 'Shadowy Feudal Palace Aesthetics'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['sci-fi-epic', 'psychological', 'mystery-suspense']
   },
   {
     id: 'the-batman',
+    tmdbId: 414906,
     title: 'The Batman',
     slug: 'the-batman',
     year: 2022,
@@ -201,14 +209,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Methodical',
       visualStyle: 'Gothic Amber & Wet Asphalt Fincher-esque Noir'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['dark-gritty', 'mystery-suspense', 'psychological']
   },
   {
     id: 'the-dark-knight',
+    tmdbId: 155,
     title: 'The Dark Knight',
     slug: 'the-dark-knight',
     year: 2008,
@@ -233,14 +239,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Propulsive',
       visualStyle: 'Expansive IMAX Architectural Crime Epic'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['dark-gritty', 'action-heavy', 'psychological']
   },
   {
     id: 'the-penguin',
+    tmdbId: 194764,
     title: 'The Penguin',
     slug: 'the-penguin',
     year: 2024,
@@ -265,13 +269,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Balanced',
       visualStyle: 'Gritty New York-Style Mafia Realism'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['dark-gritty', 'psychological']
   },
   {
     id: 'interstellar',
+    tmdbId: 157336,
     title: 'Interstellar',
     slug: 'interstellar',
     year: 2014,
@@ -297,14 +300,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Balanced',
       visualStyle: 'Scientific Photorealism & Vast Deep Space Silence'
     },
-    streamingPlatforms: [
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true },
-      { name: 'Paramount+', type: 'Subscription', url: 'https://www.paramountplus.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['sci-fi-epic', 'mind-bending', 'emotional']
   },
   {
     id: 'oppenheimer',
+    tmdbId: 872585,
     title: 'Oppenheimer',
     slug: 'oppenheimer',
     year: 2023,
@@ -329,14 +330,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Propulsive',
       visualStyle: 'Monochrome vs Vibrant 65mm IMAX Psychological Montage'
     },
-    streamingPlatforms: [
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true },
-      { name: 'Peacock', type: 'Subscription', url: 'https://www.peacocktv.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['psychological', 'mind-bending', 'mystery-suspense']
   },
   {
     id: 'inception',
+    tmdbId: 27205,
     title: 'Inception',
     slug: 'inception',
     year: 2010,
@@ -361,14 +360,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Propulsive',
       visualStyle: 'Shifting Gravitational Urban Landscapes'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['mind-bending', 'action-heavy', 'psychological']
   },
   {
     id: 'john-wick-4',
+    tmdbId: 603692,
     title: 'John Wick: Chapter 4',
     slug: 'john-wick-chapter-4',
     year: 2023,
@@ -394,14 +391,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Relentless',
       visualStyle: 'High-Saturation Crimson & Amber Stunt Ballet'
     },
-    streamingPlatforms: [
-      { name: 'Starz', type: 'Subscription', url: 'https://www.starz.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['action-heavy', 'dark-gritty']
   },
   {
     id: 'blade-runner-1982',
+    tmdbId: 78,
     title: 'Blade Runner',
     slug: 'blade-runner-1982',
     year: 1982,
@@ -414,7 +409,6 @@ export const MOVIES: Movie[] = [
     cast: ['Harrison Ford', 'Rutger Hauer', 'Sean Young', 'Edward James Olmos', 'Daryl Hannah'],
     posterUrl: posterCyber,
     backdropUrl: heroGothicNoir,
-    tmdbId: 78,
     universeId: 'cyber-dystopia',
     universeName: 'Cybernetic Futures',
     vibeTags: ['Vangelis Synth', 'Rain-Slicked Neon', 'Existential Tears in Rain', 'Cyberpunk Solitude'],
@@ -427,14 +421,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Methodical',
       visualStyle: 'Smoky Amber-Crimson Neon & Dystopian Cyberpunk Megacity'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['cyberpunk', 'action-heavy', 'dark-gritty']
   },
   {
     id: 'blade-runner-2049',
+    tmdbId: 335984,
     title: 'Blade Runner 2049',
     slug: 'blade-runner-2049',
     year: 2017,
@@ -459,14 +451,12 @@ export const MOVIES: Movie[] = [
       pacing: 'Slow-Burn',
       visualStyle: 'Orange Radioactive Dust & Monolithic Brutalist Wastelands'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['cyberpunk', 'sci-fi-epic', 'psychological']
   },
   {
     id: 'batman-begins',
+    tmdbId: 272,
     title: 'Batman Begins',
     slug: 'batman-begins',
     year: 2005,
@@ -479,7 +469,6 @@ export const MOVIES: Movie[] = [
     cast: ['Christian Bale', 'Michael Caine', 'Liam Neeson', 'Katie Holmes', 'Gary Oldman', 'Cillian Murphy'],
     posterUrl: posterNoirDetective,
     backdropUrl: heroGothicNoir,
-    tmdbId: 272,
     universeId: 'gotham-noir',
     universeName: 'Gotham Underworld',
     vibeTags: ['League of Shadows', 'Monastic Discipline', 'Fear Toxin Hallucinations', 'Theatrical Terror'],
@@ -492,10 +481,7 @@ export const MOVIES: Movie[] = [
       pacing: 'Propulsive',
       visualStyle: 'Grounded Gotham Realism & Himalayan Monastic Training'
     },
-    streamingPlatforms: [
-      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
-      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
-    ],
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['dark-gritty', 'action-heavy', 'psychological']
   }
 ];
@@ -677,7 +663,7 @@ export const WATCH_ORDERS: WatchOrderGuide[] = [
         orderNumber: 3,
         role: 'Dark Knight Genesis & Philosophy',
         priority: 'RECOMMENDED',
-        reason: 'Essential companion study into Bruce Wayne’s martial training, theatrical terror, and psychological roots.'
+        reason: 'Essential companion study into Bruce Wayne’s martial martial training, theatrical terror, and psychological roots.'
       }
     ]
   },
@@ -720,7 +706,7 @@ export const WHERE_TO_WATCH_DIRECTORY: WhereToWatchSite[] = [
     id: 'site-hdhub4u',
     name: 'HDHub4u',
     url: 'https://new7.hdhub4u.cl/?utm=mn1',
-    description: 'External movie directory and entertainment portal. Provides browsing for trending films, multilingual audio tracks, and international releases.',
+    description: 'External movie directory and entertainment portal. Catalogs international titles, multilingual releases, and trending cinema collections.',
     category: 'Movie Discovery and Availability Guides',
     availabilityType: 'External Entertainment Directory',
     region: 'Global / Multilingual',

@@ -1,6 +1,14 @@
+/**
+ * Movie Verse — Personal Movie Library
+ * Developer — Estiaq Mehedi
+ * 
+ * Privately stores genuine user selections on-device.
+ * Zero demo movies.
+ */
+
 import React, { useState } from 'react';
 import { Movie } from '../../types/movie';
-import { MOVIES } from '../../data/moviesData';
+import { storageService } from '../../services/storageService';
 import { MovieCard } from '../discover/MovieCard';
 import { Bookmark, CheckCircle2, History, Trash2, Film, ArrowRight } from 'lucide-react';
 
@@ -25,27 +33,36 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'watchlist' | 'watched' | 'recent'>('watchlist');
 
-  const watchlistedMovies = MOVIES.filter(m => watchlist.includes(m.id));
-  const watchedMovies = MOVIES.filter(m => watched.includes(m.id));
+  // Look up genuine movie objects from local device cache
+  const watchlistedMovies = watchlist
+    .map(id => storageService.getCachedMovie(id))
+    .filter((m): m is Movie => Boolean(m));
+
+  const watchedMovies = watched
+    .map(id => storageService.getCachedMovie(id))
+    .filter((m): m is Movie => Boolean(m));
+
   const recentMovies = recentMovieIds
-    .map(id => MOVIES.find(m => m.id === id))
-    .filter((m): m is Movie => m !== undefined);
+    .map(id => storageService.getCachedMovie(id))
+    .filter((m): m is Movie => Boolean(m));
 
   return (
-    <div className="space-y-10 animate-fade-in">
+    <div className="space-y-10 animate-fade-in w-full max-w-full overflow-x-hidden">
       
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Bookmark className="w-5 h-5 text-rose-500" />
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Personal Vault</span>
+            <Bookmark className="w-5 h-5 text-[#EA6113]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#FBB931]">
+              Personal Vault
+            </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             My Movie Library
           </h1>
-          <p className="text-sm text-neutral-400 mt-2">
-            Privately stored on your device. Track films to experience, completed viewings, and recently browsed universe entries.
+          <p className="text-sm text-neutral-300 mt-2">
+            Privately stored on your device. Track films to experience, completed viewings, and recently browsed titles.
           </p>
         </div>
 
@@ -68,7 +85,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           onClick={() => setActiveTab('watchlist')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'watchlist'
-              ? 'bg-rose-600 text-white shadow-md'
+              ? 'sunset-gradient-btn text-white shadow-md'
               : 'text-neutral-400 hover:text-white'
           }`}
         >
@@ -79,7 +96,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           onClick={() => setActiveTab('watched')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'watched'
-              ? 'bg-rose-600 text-white shadow-md'
+              ? 'sunset-gradient-btn text-white shadow-md'
               : 'text-neutral-400 hover:text-white'
           }`}
         >
@@ -90,7 +107,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           onClick={() => setActiveTab('recent')}
           className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'recent'
-              ? 'bg-rose-600 text-white shadow-md'
+              ? 'sunset-gradient-btn text-white shadow-md'
               : 'text-neutral-400 hover:text-white'
           }`}
         >
@@ -103,14 +120,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         <div>
           {watchlistedMovies.length === 0 ? (
             <div className="p-12 sm:p-16 rounded-3xl liquid-glass text-center border border-white/5 max-w-lg mx-auto">
-              <Film className="w-12 h-12 text-rose-500/60 mx-auto mb-4" />
+              <Film className="w-12 h-12 text-[#EA6113]/60 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-white mb-2">Your Watchlist is Empty</h3>
               <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-                Explore universes and tap the bookmark icon on any film card to curate your upcoming viewing list.
+                Explore movies and tap the bookmark icon on any film card to curate your upcoming viewing list.
               </p>
               <button
                 onClick={onGoToDiscover}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl sunset-gradient-btn text-white text-xs font-semibold transition-all"
               >
                 <span>Discover Movies</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -154,7 +171,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               </p>
               <button
                 onClick={onGoToDiscover}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl sunset-gradient-btn text-white text-xs font-semibold transition-all"
               >
                 <span>Explore Movies</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -177,7 +194,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     </span>
                     <button
                       onClick={() => onToggleWatched(movie.id)}
-                      className="text-neutral-500 hover:text-rose-400 transition-colors"
+                      className="text-neutral-500 hover:text-red-400 transition-colors"
                     >
                       Remove
                     </button>

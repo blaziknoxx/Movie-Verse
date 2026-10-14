@@ -1,13 +1,22 @@
+/**
+ * Movie Verse — Homepage Experience
+ * Developer — Estiaq Mehedi
+ * 
+ * Powered by live TMDB feeds.
+ * Strictly zero fake trending lists, zero placeholder rows, zero fabricated recommendations.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Movie, MoodCategory } from '../../types/movie';
-import { UNIVERSES, WHERE_TO_WATCH_DIRECTORY, MOVIES, MOODS } from '../../data/moviesData';
+import { UNIVERSES, WHERE_TO_WATCH_DIRECTORY, MOODS } from '../../data/moviesData';
 import { tmdbService } from '../../services/tmdbService';
+import { storageService } from '../../services/storageService';
 import { HeroBanner } from './HeroBanner';
 import { MovieCard } from '../discover/MovieCard';
 import { 
   ChevronRight, Network, ListOrdered, Sparkles, Tv, 
   ExternalLink, ArrowRight, History, Flame, Film, 
-  RefreshCw, AlertCircle, TrendingUp, Clock, Award, Bookmark, Play
+  RefreshCw, AlertCircle, TrendingUp, Clock, Award, Bookmark, Play, Search, Loader2
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -48,72 +57,159 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
   const [topRatedMovies, setTopRatedMovies] = useState<Movie[]>([]);
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]);
+  const [moodMovies, setMoodMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMood, setIsLoadingMood] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // Fetch initial data feeds from TMDB (with graceful fallback to curated library)
+  const fetchFeeds = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const [trendRes, popRes, topRes, upRes] = await Promise.all([
+        tmdbService.getTrending('week', 1),
+        tmdbService.getPopular(1),
+        tmdbService.getTopRated(1),
+        tmdbService.getUpcoming(1)
+      ]);
+
+      const allFetched = [
+        ...trendRes.movies,
+        ...popRes.movies,
+        ...topRes.movies,
+        ...upRes.movies
+      ];
+      storageService.saveMultipleCachedMovies(allFetched);
+
+      setTrendingMovies(trendRes.movies);
+      setPopularMovies(popRes.movies);
+      setTopRatedMovies(topRes.movies);
+      setUpcomingMovies(upRes.movies);
+    } catch (err: any) {
+      console.error('[HomeView] TMDB live feed fetch error:', err);
+      setApiError(err.message || 'Unable to connect to TMDB API. Please verify TMDB_READ_TOKEN configuration.');
+      setTrendingMovies([]);
+      setPopularMovies([]);
+      setTopRatedMovies([]);
+      setUpcomingMovies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-    const fetchFeeds = async () => {
-      setIsLoading(true);
+    fetchFeeds();
+  }, []);
+
+  // When a mood is selected, fetch genuine live movies for that mood from TMDB
+  useEffect(() => {
+    if (!selectedMoodId) {
+      setMoodMovies([]);
+      return;
+    }
+
+    let isCancelled = false;
+    const fetchMoodMovies = async () => {
+      setIsLoadingMood(true);
       try {
-        const [trendRes, popRes, topRes, upRes] = await Promise.all([
-          tmdbService.getTrending('week', 1).catch(() => ({ movies: [] })),
-          tmdbService.getPopular(1).catch(() => ({ movies: [] })),
-          tmdbService.getTopRated(1).catch(() => ({ movies: [] })),
-          tmdbService.getUpcoming(1).catch(() => ({ movies: [] }))
-        ]);
-
-        if (!isMounted) return;
-
-        // If TMDB returned results, use them; otherwise populate from offline MOVIES
-        setTrendingMovies(trendRes.movies.length > 0 ? trendRes.movies : MOVIES.slice(0, 8));
-        setPopularMovies(popRes.movies.length > 0 ? popRes.movies : [...MOVIES].reverse().slice(0, 8));
-        setTopRatedMovies(topRes.movies.length > 0 ? topRes.movies : [...MOVIES].sort((a, b) => b.rating - a.rating).slice(0, 8));
-        setUpcomingMovies(upRes.movies.length > 0 ? upRes.movies : MOVIES.slice(4, 12));
+        const results = await tmdbService.discoverByMood(selectedMoodId, 1);
+        if (!isCancelled) {
+          storageService.saveMultipleCachedMovies(results);
+          setMoodMovies(results);
+        }
       } catch (err) {
-        console.warn('Using offline curated feeds:', err);
-        if (isMounted) {
-          setTrendingMovies(MOVIES.slice(0, 8));
-          setPopularMovies([...MOVIES].reverse().slice(0, 8));
-          setTopRatedMovies([...MOVIES].sort((a, b) => b.rating - a.rating).slice(0, 8));
-          setUpcomingMovies(MOVIES.slice(4, 12));
+        console.warn('Mood discover error:', err);
+        if (!isCancelled) {
+          setMoodMovies([]);
         }
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoadingMood(false);
+        }
       }
     };
 
-    fetchFeeds();
+    fetchMoodMovies();
     return () => {
-      isMounted = false;
+      isCancelled = true;
     };
-  }, []);
+  }, [selectedMoodId]);
 
-  // Continue watching / recently viewed movies
+  // Continue watching / recently viewed movies (strictly mapped from genuine cache, zero fake defaults)
   const continueWatchingMovies = recentMovieIds
-    .map(id => MOVIES.find(m => m.id === id) || trendingMovies.find(m => m.id === id))
-    .filter(Boolean) as Movie[];
+    .map(id => storageService.getCachedMovie(id))
+    .filter((m): m is Movie => Boolean(m));
 
-  // If user has watchlist movies, gather them for "My List"
+  // If user has watchlist movies, gather them from genuine cache
   const watchlistMovies = watchlist
-    .map(id => MOVIES.find(m => m.id === id) || trendingMovies.find(m => m.id === id))
-    .filter(Boolean) as Movie[];
-
-  const heroCandidates = trendingMovies.length > 0 ? trendingMovies : MOVIES;
+    .map(id => storageService.getCachedMovie(id))
+    .filter((m): m is Movie => Boolean(m));
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in w-full max-w-full overflow-x-hidden">
       
-      {/* 1. Featured Movie Carousel matching Reference 1 */}
-      <HeroBanner
-        movies={heroCandidates}
-        onSelectMovie={onSelectMovie}
-        isWatchlisted={(id) => watchlist.includes(id)}
-        onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-        onOpenTrailer={onOpenTrailer}
-      />
+      {/* 1. Featured Movie Carousel matching Reference 1 (Only if trending movies exist) */}
+      {trendingMovies.length > 0 ? (
+        <HeroBanner
+          movies={trendingMovies}
+          onSelectMovie={onSelectMovie}
+          isWatchlisted={(id) => watchlist.includes(id)}
+          onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+          onOpenTrailer={onOpenTrailer}
+        />
+      ) : isLoading ? (
+        <div className="w-full aspect-[16/8] sm:aspect-[21/9] rounded-3xl liquid-glass border border-white/5 animate-pulse flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-[#FBB931] animate-spin" />
+        </div>
+      ) : (
+        /* Cinematic Welcome Hub if API is not yet configured or returned an error */
+        <div className="relative rounded-3xl p-6 sm:p-10 border border-[#F88F22]/30 bg-gradient-to-br from-[#241108]/90 via-[#160B05]/95 to-[#0D0704] shadow-2xl overflow-hidden">
+          <div className="max-w-2xl space-y-3 relative z-10">
+            <span className="text-[11px] font-bold text-[#FBB931] uppercase tracking-widest flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#EA6113]" />
+              <span>Cinematic Discovery Platform</span>
+            </span>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Welcome to Movie Verse
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+              Explore cinematic universe lineages, watch orders, reproducible vibe matching, and external streaming directories.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={onOpenSearch}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl sunset-gradient-btn text-white font-bold text-xs"
+              >
+                <Search className="w-4 h-4" />
+                <span>Search Movies</span>
+              </button>
+              <button
+                onClick={fetchFeeds}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#FBB931]" />
+                <span>Retry TMDB Connection</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* 2. Category Navigation Tabs matching Reference 1: "All  Movies  Drama  TV Show  Webseries" */}
+      {/* API Notice Banner if TMDB returned an error */}
+      {apiError && (
+        <div className="p-4 rounded-2xl bg-[#1E0B05] border border-red-500/30 flex items-start gap-3 text-xs text-neutral-200">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold text-white">Live TMDB Catalog Notice: </span>
+            <span>{apiError}</span>
+            <div className="text-[11px] text-neutral-400">
+              Per strict data integrity guidelines, Movie Verse displays live TMDB responses and does not substitute fake placeholder movie arrays.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Category Navigation Tabs matching Reference 1 */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-touch py-1 px-1 -mx-1">
         {[
           { id: 'all', label: 'All' },
@@ -128,7 +224,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={() => setActiveTab(tab.id as CategoryTab)}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
               activeTab === tab.id
-                ? 'bg-red-600 text-white shadow-[0_2px_12px_rgba(229,9,20,0.5)]'
+                ? 'sunset-gradient-btn text-white shadow-lg'
                 : 'bg-white/[0.05] hover:bg-white/10 text-neutral-400 hover:text-white border border-white/5'
             }`}
           >
@@ -140,51 +236,50 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={() => onExploreVibeMatch()}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-rose-950/40 border border-rose-500/30 text-rose-300 hover:bg-rose-900/50 flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0"
         >
-          <Sparkles className="w-3 h-3 text-rose-400" />
+          <Sparkles className="w-3 h-3 text-[#EA6113]" />
           <span>Vibe Match</span>
         </button>
 
         <button
           onClick={() => onExploreConnections()}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-rose-950/40 border border-rose-500/30 text-rose-300 hover:bg-rose-900/50 flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0"
         >
-          <Network className="w-3 h-3 text-rose-400" />
+          <Network className="w-3 h-3 text-[#EA6113]" />
           <span>Connected</span>
         </button>
 
         <button
           onClick={onExploreWhereToWatch}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-rose-950/40 border border-rose-500/30 text-rose-300 hover:bg-rose-900/50 flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0"
         >
-          <Tv className="w-3.5 h-3.5 text-rose-400" />
+          <Tv className="w-3.5 h-3.5 text-[#EA6113]" />
           <span>Where to Watch</span>
         </button>
       </div>
 
-      {/* 3. Continue Watching / History Section matching Reference 1 (Only if history exists) */}
+      {/* 3. Continue Watching / History Section (Only if genuine user history exists) */}
       {continueWatchingMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <History className="w-4 h-4 text-red-500" />
+              <History className="w-4 h-4 text-[#EA6113]" />
               <span>Continue Watching</span>
             </h2>
-            <span className="text-xs text-neutral-400 font-semibold cursor-pointer hover:text-white">
-              View All
+            <span className="text-xs text-neutral-400 font-semibold">
+              {continueWatchingMovies.length} title{continueWatchingMovies.length !== 1 ? 's' : ''}
             </span>
           </div>
 
-          {/* Horizontal landscape cards matching Reference 1 */}
           <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
-            {continueWatchingMovies.slice(0, 5).map((movie, idx) => (
+            {continueWatchingMovies.slice(0, 6).map((movie, idx) => (
               <div
                 key={movie.id}
                 onClick={() => onSelectMovie(movie)}
                 className="w-[200px] sm:w-[240px] shrink-0 cursor-pointer group"
               >
-                <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/10 group-hover:border-red-500/50 bg-[#160610] shadow-md">
+                <div className="relative aspect-[16/10] rounded-2xl overflow-hidden border border-white/10 group-hover:border-[#F88F22]/60 bg-[#160610] shadow-md">
                   <img
                     src={movie.backdropUrl || movie.posterUrl}
                     alt={movie.title}
@@ -192,24 +287,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   
-                  {/* Center Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-9 h-9 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg">
+                    <div className="w-9 h-9 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-lg">
                       <Play className="w-4 h-4 fill-white translate-x-0.5" />
                     </div>
                   </div>
 
-                  {/* Red Progress Bar matching Reference 1 */}
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
                     <div 
-                      className="h-full bg-red-600" 
+                      className="h-full bg-gradient-to-r from-[#EA6113] to-[#F88F22]" 
                       style={{ width: `${(idx * 27 + 42) % 85 + 15}%` }} 
                     />
                   </div>
                 </div>
 
                 <div className="mt-2 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-white group-hover:text-red-300 truncate">
+                  <h3 className="text-xs font-semibold text-white group-hover:text-[#FFE3B3] truncate">
                     {movie.title}
                   </h3>
                   <span className="text-[10px] text-neutral-400 font-mono">
@@ -222,23 +315,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 4. Top Trending Section matching Reference 1 */}
-      {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && (
+      {/* 4. Top Trending Section (Only genuine TMDB movies) */}
+      {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && trendingMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Flame className="w-4 h-4 text-red-500" />
-              <span>Top Trending</span>
+              <Flame className="w-4 h-4 text-[#EA6113]" />
+              <span>Top Trending on TMDB</span>
             </h2>
             <button
               onClick={() => setActiveTab('trending')}
               className="text-xs font-semibold text-neutral-400 hover:text-white"
             >
-              View All
+              View All ({trendingMovies.length})
             </button>
           </div>
 
-          {/* Horizontal Poster Row: 3 visible + partial next-card peek matching Reference 1 */}
           <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
             {trendingMovies.map((movie) => (
               <div 
@@ -257,35 +349,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 5. Vibe Match Mood Pills matching Bottom Reference */}
+      {/* 5. Vibe Match Mood Pills */}
       <section className="space-y-3 pt-1">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-red-500" />
-            <span>Categories & Atmospheric Vibes</span>
+            <Sparkles className="w-4 h-4 text-[#EA6113]" />
+            <span>Atmospheric Vibe Categories</span>
           </h2>
           <button
             onClick={() => onExploreVibeMatch()}
             className="text-xs font-semibold text-neutral-400 hover:text-white"
           >
-            See all
+            Open Vibe Match
           </button>
         </div>
 
-        {/* Category Pills matching Reference */}
         <div className="flex gap-2.5 overflow-x-auto no-scrollbar scroll-touch py-1">
           {MOODS.map(mood => {
             const isSelected = selectedMoodId === mood.id;
             return (
               <button
                 key={mood.id}
-                onClick={() => {
-                  onSelectMood(isSelected ? null : mood.id);
-                  onExploreVibeMatch();
-                }}
+                onClick={() => onSelectMood(isSelected ? null : mood.id)}
                 className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs font-semibold shrink-0 transition-all ${
                   isSelected
-                    ? 'bg-red-600 text-white border-red-500 shadow-[0_2px_14px_rgba(229,9,20,0.4)]'
+                    ? 'sunset-gradient-btn text-white border-[#F88F22] shadow-md'
                     : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/5 text-neutral-300 hover:text-white'
                 }`}
               >
@@ -295,21 +383,54 @@ export const HomeView: React.FC<HomeViewProps> = ({
             );
           })}
         </div>
+
+        {/* Live Discover Movies by selected Mood */}
+        {selectedMoodId && (
+          <div className="pt-2 space-y-3">
+            <div className="text-xs font-semibold text-[#FBB931]">
+              Live titles discovered for {MOODS.find(m => m.id === selectedMoodId)?.name}:
+            </div>
+            {isLoadingMood ? (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="w-[120px] aspect-[2/3] rounded-2xl bg-white/5 animate-pulse shrink-0" />
+                ))}
+              </div>
+            ) : moodMovies.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+                {moodMovies.map(movie => (
+                  <div key={movie.id} className="w-[110px] sm:w-[135px] shrink-0">
+                    <MovieCard
+                      movie={movie}
+                      onSelectMovie={onSelectMovie}
+                      isWatchlisted={watchlist.includes(movie.id)}
+                      onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-neutral-400 p-4 rounded-xl liquid-glass">
+                No live titles found for this category via TMDB discover.
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
-      {/* 6. Popular on Movie Verse matching Reference 1 */}
-      {(activeTab === 'all' || activeTab === 'popular' || activeTab === 'movies') && (
+      {/* 6. Popular on Movie Verse */}
+      {(activeTab === 'all' || activeTab === 'popular' || activeTab === 'movies') && popularMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Film className="w-4 h-4 text-red-500" />
-              <span>Popular on Movie Verse</span>
+              <Film className="w-4 h-4 text-[#EA6113]" />
+              <span>Popular Movies on TMDB</span>
             </h2>
             <button
               onClick={() => setActiveTab('popular')}
               className="text-xs font-semibold text-neutral-400 hover:text-white"
             >
-              View All
+              View All ({popularMovies.length})
             </button>
           </div>
 
@@ -331,12 +452,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 7. My List / Saved Strip (If user has watchlisted items) */}
+      {/* 7. My List / Saved Strip (Only if genuine watchlisted items exist) */}
       {watchlistMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-red-500 fill-red-500" />
+              <Bookmark className="w-4 h-4 text-[#EA6113] fill-[#EA6113]" />
               <span>My List</span>
             </h2>
             <span className="text-xs text-neutral-400 font-semibold">
@@ -362,21 +483,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 8. Connected Universes Showcase (Dedicated Movie Verse Feature) */}
+      {/* 8. Connected Universes Showcase */}
       <section className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Network className="w-4 h-4 text-red-500" />
+              <Network className="w-4 h-4 text-[#EA6113]" />
               <span>Connected Universes & Franchises</span>
             </h2>
             <p className="text-[11px] text-neutral-400">
-              Untangle sequels, prequels, and overarching franchise mythology
+              Explore sequels, prequels, and overarching cinematic mythology
             </p>
           </div>
           <button
             onClick={() => onExploreConnections()}
-            className="text-xs font-semibold text-red-400 hover:text-red-300 shrink-0"
+            className="text-xs font-semibold text-[#FBB931] hover:text-[#FFE3B3] shrink-0"
           >
             All Lore
           </button>
@@ -387,17 +508,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div
               key={universe.id}
               onClick={() => onExploreConnections(universe as any)}
-              className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-red-500/40 cursor-pointer transition-all space-y-2 group"
+              className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-[#F88F22]/40 cursor-pointer transition-all space-y-2 group"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-[#FBB931] uppercase tracking-wider">
                   {universe.genres.join(' · ')}
                 </span>
                 <span className="text-[10px] text-neutral-400 font-medium">
                   {universe.movieCount} Films
                 </span>
               </div>
-              <h3 className="text-sm font-bold text-white group-hover:text-red-200 transition-colors">
+              <h3 className="text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors">
                 {universe.name}
               </h3>
               <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
@@ -409,18 +530,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </section>
 
       {/* 9. Top Rated Epics */}
-      {(activeTab === 'all' || activeTab === 'top_rated') && (
+      {(activeTab === 'all' || activeTab === 'top_rated') && topRatedMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-400" />
-              <span>Top Rated Masterpieces</span>
+              <span>Top Rated Masterpieces on TMDB</span>
             </h2>
             <button
               onClick={() => setActiveTab('top_rated')}
               className="text-xs font-semibold text-neutral-400 hover:text-white"
             >
-              View All
+              View All ({topRatedMovies.length})
             </button>
           </div>
 
@@ -443,23 +564,23 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* 10. Where to Watch Streaming Directory Banner */}
-      <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-red-950/40 to-black/80 border border-red-500/20 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#241108]/90 via-[#180C06] to-[#0A0402] border border-[#F88F22]/25 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-red-400 uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#FBB931] uppercase tracking-wider">
             <Tv className="w-3.5 h-3.5" />
             <span>Streaming Availability Hub</span>
           </div>
           <h3 className="text-base sm:text-lg font-bold text-white">
             Where to Watch Official Directory
           </h3>
-          <p className="text-xs text-neutral-400 max-w-lg leading-relaxed">
-            Direct viewing paths across Apple TV, Amazon Prime, Netflix, Disney+, Max, and JustWatch verified guides.
+          <p className="text-xs text-neutral-300 max-w-lg leading-relaxed">
+            Curated movie discovery portals, regional guides, and streaming destinations including HDHub4u and MovieLinkBD.
           </p>
         </div>
 
         <button
           onClick={onExploreWhereToWatch}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shrink-0 shadow-lg shadow-red-950/60 transition-all self-start sm:self-center active:scale-95"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl sunset-gradient-btn text-white font-bold text-xs shrink-0 shadow-lg transition-all self-start sm:self-center active:scale-95"
         >
           <span>Open Directory</span>
           <ArrowRight className="w-4 h-4" />
