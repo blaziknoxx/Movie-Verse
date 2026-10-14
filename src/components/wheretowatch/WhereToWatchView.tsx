@@ -144,35 +144,40 @@ export const WhereToWatchView: React.FC<WhereToWatchViewProps> = ({
       }
     } catch (err) {
       console.warn('[WhereToWatchView] Could not fetch quick movie:', err);
-      // Fallback synthetic minimal movie object with real title & year
-      setActiveMovie({
-        id: item.id,
-        tmdbId: Number(item.id),
-        title: item.title,
-        slug: item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        year: item.year,
-        duration: '2h',
-        rating: 8.0,
-        genres: ['Cinema'],
-        tagline: '',
-        overview: `Evaluating external viewing destinations for ${item.title} (${item.year}).`,
-        director: 'Featured Director',
-        cast: [],
-        posterUrl: '',
-        backdropUrl: '',
-        vibeTags: ['Cinema'],
-        vibeProfile: {
-          darkAtmosphere: 7,
-          actionIntensity: 7,
-          psychologicalComplexity: 7,
-          mysterySuspense: 7,
-          emotionalWeight: 7,
-          pacing: 'Balanced',
-          visualStyle: 'Cinematic'
-        },
-        streamingPlatforms: [],
-        moodIds: []
-      });
+      // Check static curated catalog before minimal fallback
+      const catalogMatch = MOVIES.find(m => String(m.tmdbId) === item.id);
+      if (catalogMatch) {
+        setActiveMovie(catalogMatch);
+      } else {
+        setActiveMovie({
+          id: item.id,
+          tmdbId: Number(item.id),
+          title: item.title,
+          slug: item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          year: item.year,
+          duration: '',
+          rating: 0,
+          genres: [],
+          tagline: '',
+          overview: `External streaming directory index for ${item.title} (${item.year}).`,
+          director: '',
+          cast: [],
+          posterUrl: '',
+          backdropUrl: '',
+          vibeTags: [],
+          vibeProfile: {
+            darkAtmosphere: 5,
+            actionIntensity: 5,
+            psychologicalComplexity: 5,
+            mysterySuspense: 5,
+            emotionalWeight: 5,
+            pacing: 'Balanced',
+            visualStyle: 'Cinematic'
+          },
+          streamingPlatforms: [],
+          moodIds: []
+        });
+      }
     } finally {
       setIsLoadingMovie(false);
     }

@@ -52,14 +52,6 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAbout }) => {
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
               <span>Independent & Curated Content</span>
             </div>
-            <div className="pt-2 flex items-center gap-2">
-              <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
-                TMDB
-              </span>
-              <p className="text-[10px] text-neutral-500 leading-tight">
-                This product uses the TMDB API but is not endorsed or certified by TMDB.
-              </p>
-            </div>
           </div>
 
         </div>

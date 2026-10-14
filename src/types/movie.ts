@@ -147,3 +147,21 @@ export interface UserPreferences {
   recentlyViewed: string[];
   customSites: WhereToWatchSite[];
 }
+
+export interface UserProfile {
+  displayName: string;
+  avatarId: string;
+  bio?: string;
+  preferredStreamingProvider?: 'all' | 'hdhub4u' | 'movielinkbd';
+  showTransparencyNotice?: boolean;
+  joinedTimestamp: number;
+}
+
+export interface CustomCollection {
+  id: string;
+  name: string;
+  description: string;
+  movieIds: string[];
+  createdAt: number;
+  colorAccent?: string;
+}

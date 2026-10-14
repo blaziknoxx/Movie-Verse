@@ -20,6 +20,7 @@ import { SameVibeView } from './components/samevibe/SameVibeView';
 import { VibeMatchView } from './components/vibematch/VibeMatchView';
 import { WhereToWatchView } from './components/wheretowatch/WhereToWatchView';
 import { LibraryView } from './components/library/LibraryView';
+import { CineProfileView } from './components/profile/CineProfileView';
 
 import { MovieDetailModal } from './components/detail/MovieDetailModal';
 import { SearchModal } from './components/search/SearchModal';
@@ -223,6 +224,18 @@ export default function App() {
               onToggleWatchlist={handleToggleWatchlist}
               onToggleWatched={handleToggleWatched}
               onGoToDiscover={() => setActiveTab('home')}
+              onOpenTrailer={handleOpenTrailer}
+            />
+          )}
+
+          {activeTab === 'profile' && (
+            <CineProfileView
+              onBack={() => setActiveTab('home')}
+              onSelectMovie={handleSelectMovie}
+              watchlist={watchlist}
+              watched={watched}
+              onToggleWatchlist={handleToggleWatchlist}
+              onToggleWatched={handleToggleWatched}
               onOpenTrailer={handleOpenTrailer}
             />
           )}

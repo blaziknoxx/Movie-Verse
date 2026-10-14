@@ -99,12 +99,16 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
-          {/* About / Info Modal Button */}
+          {/* My CineProfile Button */}
           <button
-            onClick={onOpenAbout}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/[0.05] hover:bg-white/10 text-neutral-300 hover:text-white border border-white/10 flex items-center justify-center transition-all"
-            title="About Movie Verse & Developer"
-            aria-label="About Movie Verse"
+            onClick={() => setActiveTab('profile')}
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all border ${
+              activeTab === 'profile'
+                ? 'sunset-gradient-btn text-white border-[#F88F22] shadow-[0_0_12px_rgba(234,97,19,0.5)]'
+                : 'bg-white/[0.05] hover:bg-white/10 text-neutral-300 hover:text-white border-white/10'
+            }`}
+            title="My CineProfile"
+            aria-label="My CineProfile"
           >
             <User className="w-4 h-4" />
           </button>

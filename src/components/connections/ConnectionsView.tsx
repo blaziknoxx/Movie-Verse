@@ -80,6 +80,14 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tagline: 'More human than human in a neon-drenched oblivion.',
     description: 'Dystopian cyberpunk sagas examining artificial consciousness, airborne spinners, and corporate monoliths.',
     genres: ['Cyberpunk', 'Sci-Fi', 'Neo-Noir']
+  },
+  {
+    id: 'avatar-saga',
+    name: 'Pandora & The Na\'vi Chronicles',
+    tmdbId: 76600, // Avatar: The Way of Water (TMDB Collection 87096)
+    tagline: 'The way of water connects all things, before your birth and after your death.',
+    description: 'James Cameron’s monumental sci-fi saga charting Pandora, RDA corporate colonization, and the interconnected ocean and forest clans.',
+    genres: ['Sci-Fi', 'Adventure', 'Action']
   }
 ];
 
@@ -233,7 +241,6 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
           // Check for shared director
           const sharesDirector = 
             anchor.director && 
-            anchor.director !== 'Cinematic Master' && 
             candidate.director && 
             candidate.director.toLowerCase() === anchor.director.toLowerCase();
 
@@ -582,12 +589,15 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                       <div className="text-[11px] text-neutral-400 truncate">
                         {source.year} · {source.genres?.[0] || 'Cinema'} · ★ {source.rating ? source.rating.toFixed(1) : '7.5'}
                       </div>
-                      <div className="text-sm font-bold text-white group-hover/card:text-[#FFE3B3] transition-colors truncate">
-                        {source.title}
-                      </div>
-                      <div className="text-[10px] text-neutral-400 truncate">
-                        Dir. {source.director}
-                      </div>
+                      {source.director ? (
+                        <div className="text-[10px] text-neutral-400 truncate">
+                          Dir. <strong className="text-white font-medium">{source.director}</strong>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-neutral-500 italic truncate">
+                          Director unavailable
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -626,9 +636,15 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                       <div className="text-sm font-bold text-white group-hover/card:text-[#FFE3B3] transition-colors truncate">
                         {target.title}
                       </div>
-                      <div className="text-[10px] text-neutral-400 truncate">
-                        Dir. {target.director}
-                      </div>
+                      {target.director ? (
+                        <div className="text-[10px] text-neutral-400 truncate">
+                          Dir. <strong className="text-white font-medium">{target.director}</strong>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-neutral-500 italic truncate">
+                          Director unavailable
+                        </div>
+                      )}
                     </div>
                     <img
                       src={target.posterUrl}

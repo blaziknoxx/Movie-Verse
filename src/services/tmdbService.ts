@@ -127,7 +127,7 @@ export function getBackdropUrl(backdropPath?: string | null, title = ''): string
  * Format runtime (e.g., 166 min -> "2h 46m")
  */
 function formatRuntime(minutes?: number | null): string {
-  if (!minutes || minutes <= 0) return '2h';
+  if (!minutes || minutes <= 0) return '';
   const hrs = Math.floor(minutes / 60);
   const mins = minutes % 60;
   if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
@@ -143,7 +143,7 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   const numericId = Number(raw.id);
   const title = raw.title || raw.original_title || 'Untitled';
   const year = raw.release_date ? parseInt(raw.release_date.slice(0, 4), 10) : 2024;
-  const rating = raw.vote_average ? Number(raw.vote_average.toFixed(1)) : 7.5;
+  const rating = raw.vote_average ? Number(raw.vote_average.toFixed(1)) : 0;
   const duration = formatRuntime(raw.runtime);
 
   // Extract genres
@@ -155,8 +155,8 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   }
   if (genres.length === 0) genres = ['Cinema'];
 
-  // Extract Cast and Crew
-  let director = 'Cinematic Master';
+  // Extract Cast and Crew (Dynamically resolved from credits response)
+  let director = '';
   let cast: string[] = [];
   let detailedCast: { name: string; character: string; profileUrl?: string }[] = [];
   let writers: string[] = [];
@@ -164,7 +164,7 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   if (credits) {
     if (Array.isArray(credits.crew)) {
       const dirObj = credits.crew.find((c: any) => c.job === 'Director');
-      if (dirObj) director = dirObj.name;
+      if (dirObj && dirObj.name) director = dirObj.name;
 
       writers = Array.from(
         new Set(
@@ -246,7 +246,7 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
     overview: raw.overview || 'No synopsis currently provided for this title.',
     director,
     writers,
-    cast: cast.length > 0 ? cast : ['Ensemble Cast'],
+    cast: cast.length > 0 ? cast : [],
     detailedCast,
     language,
     posterUrl: getPosterUrl(raw.poster_path, title),
@@ -436,6 +436,7 @@ export const tmdbService = {
 
   /**
    * Fetch connected franchise films from TMDB collection.
+   * Dynamically loads real credits for each part to ensure genuine director and cast names.
    */
   async getCollection(collectionId: number | string): Promise<Movie[]> {
     const numericId = String(collectionId).replace(/\D/g, '');
@@ -443,7 +444,42 @@ export const tmdbService = {
     const res = await fetch(`/api/tmdb/collection/${numericId}`);
     if (!res.ok) return [];
     const data: any = await res.json();
-    return (data.parts || []).map((m: any) => normalizeTMDBMovie(m));
+    const rawParts: any[] = data.parts || [];
+
+    // Fetch credits for each part in parallel so the genuine director (e.g. James Cameron) is resolved
+    const partsWithCredits = await Promise.all(
+      rawParts.map(async (part: any) => {
+        try {
+          const creditsRes = await fetch(`/api/tmdb/movie/${part.id}/credits`).catch(() => null);
+          let credits = null;
+          if (creditsRes && creditsRes.ok) {
+            credits = await creditsRes.json().catch(() => null);
+          }
+          return normalizeTMDBMovie(part, credits);
+        } catch {
+          return normalizeTMDBMovie(part);
+        }
+      })
+    );
+
+    return partsWithCredits;
+  },
+
+  /**
+   * Fetch real movie director dynamically by TMDB ID.
+   */
+  async getMovieDirector(id: string | number): Promise<string | null> {
+    const numericId = String(id).replace(/\D/g, '');
+    if (!numericId) return null;
+    try {
+      const res = await fetch(`/api/tmdb/movie/${numericId}/credits`);
+      if (!res.ok) return null;
+      const data: any = await res.json();
+      const dirObj = (data.crew || []).find((c: any) => c.job === 'Director');
+      return dirObj?.name || null;
+    } catch {
+      return null;
+    }
   },
 
   /**

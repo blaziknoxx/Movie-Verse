@@ -252,5 +252,177 @@ export const storageService = {
     } catch {
       return [];
     }
+  },
+
+  // -------------------------------------------------------------
+  // CineProfile & Personal Customization
+  // -------------------------------------------------------------
+  getProfile(): {
+    displayName: string;
+    avatarId: string;
+    bio?: string;
+    preferredStreamingProvider: 'all' | 'hdhub4u' | 'movielinkbd';
+    showTransparencyNotice: boolean;
+    joinedTimestamp: number;
+  } {
+    const DEFAULT_PROFILE = {
+      displayName: 'Cinephile',
+      avatarId: 'arachnid-hero',
+      bio: 'Exploring cinematic lore, narrative genealogy, and atmospheric cinema across universes.',
+      preferredStreamingProvider: 'all' as const,
+      showTransparencyNotice: true,
+      joinedTimestamp: 1718000000000 // Stable client baseline
+    };
+
+    try {
+      const data = localStorage.getItem('movieverse_profile_v2');
+      if (!data) return DEFAULT_PROFILE;
+      const parsed = JSON.parse(data);
+      return { ...DEFAULT_PROFILE, ...parsed };
+    } catch {
+      return DEFAULT_PROFILE;
+    }
+  },
+
+  saveProfile(profile: any): void {
+    try {
+      localStorage.setItem('movieverse_profile_v2', JSON.stringify(profile));
+    } catch (e) {
+      console.warn('Failed to save profile:', e);
+    }
+  },
+
+  // -------------------------------------------------------------
+  // Custom Collections
+  // -------------------------------------------------------------
+  getCollections(): {
+    id: string;
+    name: string;
+    description: string;
+    movieIds: string[];
+    createdAt: number;
+    colorAccent?: string;
+  }[] {
+    try {
+      const data = localStorage.getItem('movieverse_collections_v2');
+      if (!data) return [];
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveCollection(col: {
+    id: string;
+    name: string;
+    description: string;
+    movieIds: string[];
+    createdAt: number;
+    colorAccent?: string;
+  }): void {
+    const list = this.getCollections();
+    const existingIndex = list.findIndex(c => c.id === col.id);
+    let updated;
+    if (existingIndex >= 0) {
+      updated = [...list];
+      updated[existingIndex] = col;
+    } else {
+      updated = [col, ...list];
+    }
+    try {
+      localStorage.setItem('movieverse_collections_v2', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Failed to save collection:', e);
+    }
+  },
+
+  deleteCollection(id: string): void {
+    const list = this.getCollections().filter(c => c.id !== id);
+    try {
+      localStorage.setItem('movieverse_collections_v2', JSON.stringify(list));
+    } catch (e) {
+      console.warn('Failed to delete collection:', e);
+    }
+  },
+
+  addMovieToCollection(collectionId: string, movieId: string): void {
+    const list = this.getCollections();
+    const col = list.find(c => c.id === collectionId);
+    if (!col) return;
+    if (!col.movieIds.includes(movieId)) {
+      col.movieIds = [movieId, ...col.movieIds];
+      this.saveCollection(col);
+    }
+  },
+
+  removeMovieFromCollection(collectionId: string, movieId: string): void {
+    const list = this.getCollections();
+    const col = list.find(c => c.id === collectionId);
+    if (!col) return;
+    col.movieIds = col.movieIds.filter(id => id !== movieId);
+    this.saveCollection(col);
+  },
+
+  // -------------------------------------------------------------
+  // Cache Management & Backup Export / Import
+  // -------------------------------------------------------------
+  getCachedMoviesCount(): number {
+    try {
+      const data = localStorage.getItem(MOVIE_CACHE_KEY);
+      if (!data) return 0;
+      const cache = JSON.parse(data);
+      return Object.keys(cache).length;
+    } catch {
+      return 0;
+    }
+  },
+
+  clearMovieCache(): void {
+    try {
+      localStorage.removeItem(MOVIE_CACHE_KEY);
+    } catch (e) {
+      console.warn('Failed to clear movie cache:', e);
+    }
+  },
+
+  exportBackupJSON(): string {
+    const exportObject = {
+      version: 2,
+      exportDate: new Date().toISOString(),
+      profile: this.getProfile(),
+      watchlist: this.getWatchlist(),
+      watched: this.getWatched(),
+      recentMovieIds: this.getRecentMovies(),
+      collections: this.getCollections(),
+      customSites: this.getCustomSites()
+    };
+    return JSON.stringify(exportObject, null, 2);
+  },
+
+  importBackupJSON(jsonStr: string): boolean {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.profile) this.saveProfile(parsed.profile);
+      if (Array.isArray(parsed.watchlist)) {
+        localStorage.setItem(WATCHLIST_KEY, JSON.stringify(parsed.watchlist));
+      }
+      if (Array.isArray(parsed.watched)) {
+        localStorage.setItem(WATCHED_KEY, JSON.stringify(parsed.watched));
+      }
+      if (Array.isArray(parsed.recentMovieIds)) {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(parsed.recentMovieIds));
+      }
+      if (Array.isArray(parsed.collections)) {
+        localStorage.setItem('movieverse_collections_v2', JSON.stringify(parsed.collections));
+      }
+      if (Array.isArray(parsed.customSites)) {
+        localStorage.setItem(CUSTOM_SITES_KEY, JSON.stringify(parsed.customSites));
+      }
+      return true;
+    } catch (e) {
+      console.error('Failed to parse backup JSON:', e);
+      return false;
+    }
   }
 };
