@@ -6,7 +6,7 @@
  * External destinations strictly preserved: HDHub4u and MovieLinkBD.
  */
 
-import { Movie, MovieUniverse, MovieConnection, WatchOrderGuide, MoodCategory, WhereToWatchSite } from '../types/movie';
+import { Movie, MovieUniverse, WatchOrderGuide, MoodCategory, WhereToWatchSite } from '../types/movie';
 
 // Generated cinematic visual assets for universe lore covers
 import heroSciFi from '../assets/images/hero_cinematic_scifi_1791913249885.jpg';
@@ -486,89 +486,6 @@ export const MOVIES: Movie[] = [
   }
 ];
 
-export const CONNECTIONS: MovieConnection[] = [
-  {
-    id: 'conn-1',
-    sourceMovieId: 'dune-part-1',
-    targetMovieId: 'dune-part-2',
-    relationshipType: 'direct-sequel',
-    relationshipLabel: 'Direct Sequel & Climax',
-    description: 'Dune: Part Two immediately picks up hours after Part One, completing Paul Atreides’ tragic metamorphosis into the desert messiah Muad’Dib.',
-    isCanonical: true
-  },
-  {
-    id: 'conn-2',
-    sourceMovieId: 'dune-prophecy',
-    targetMovieId: 'dune-part-1',
-    relationshipType: 'prequel',
-    relationshipLabel: 'Ancestral Prequel',
-    description: 'Explores the foundational origins of the Bene Gesserit breeding program and genetic control 10,000 years prior to Paul’s birth.',
-    isCanonical: true
-  },
-  {
-    id: 'conn-3',
-    sourceMovieId: 'blade-runner-2049',
-    targetMovieId: 'dune-part-1',
-    relationshipType: 'story-related',
-    relationshipLabel: 'Director Lineage & Aesthetic Companion',
-    description: 'Both directed by Denis Villeneuve and scored by Hans Zimmer, sharing philosophical preoccupations with manufactured chosen ones and monumental architectural soundscapes.',
-    isCanonical: false
-  },
-  {
-    id: 'conn-4',
-    sourceMovieId: 'the-batman',
-    targetMovieId: 'the-penguin',
-    relationshipType: 'spin-off',
-    relationshipLabel: 'Direct Spin-Off & Narrative Bridge',
-    description: 'The Penguin takes place one week after the seawall explosion in The Batman, directly charting Oz Cobb’s rise to the apex of Gotham’s underworld.',
-    isCanonical: true
-  },
-  {
-    id: 'conn-5',
-    sourceMovieId: 'the-dark-knight',
-    targetMovieId: 'the-batman',
-    relationshipType: 'shared-characters',
-    relationshipLabel: 'Alternative Universe Reinterpretation',
-    description: 'Contrasting Christopher Nolan’s technological urban realism with Matt Reeves’ gritty, rain-slicked Fincher detective noir interpretation of the Caped Crusader.',
-    isCanonical: false
-  },
-  {
-    id: 'conn-6',
-    sourceMovieId: 'inception',
-    targetMovieId: 'interstellar',
-    relationshipType: 'story-related',
-    relationshipLabel: 'Thematic Sister Film',
-    description: 'Both delve into Nolan’s obsession with subjective temporal dilation, grief as an unstoppable gravitational force, and the cost of returning to one’s children.',
-    isCanonical: false
-  },
-  {
-    id: 'conn-7',
-    sourceMovieId: 'oppenheimer',
-    targetMovieId: 'interstellar',
-    relationshipType: 'story-related',
-    relationshipLabel: 'Theoretical Physics Companion',
-    description: 'Explores the dark consequences of theoretical physics unleashed upon human existence, moving from the atomic fire of Los Alamos to the cosmic horizon of Gargantua.',
-    isCanonical: false
-  },
-  {
-    id: 'conn-8',
-    sourceMovieId: 'batman-begins',
-    targetMovieId: 'the-dark-knight',
-    relationshipType: 'direct-sequel',
-    relationshipLabel: 'Direct Genesis & Predecessor',
-    description: 'Christopher Nolan’s opening chapter exploring Bruce Wayne’s transformative training with the League of Shadows directly leading to Gotham’s escalation.',
-    isCanonical: true
-  },
-  {
-    id: 'conn-9',
-    sourceMovieId: 'blade-runner-1982',
-    targetMovieId: 'blade-runner-2049',
-    relationshipType: 'direct-sequel',
-    relationshipLabel: 'Original Classic & 30-Year Sequel',
-    description: 'Denis Villeneuve’s 2049 directly continues Ridley Scott’s 1982 neo-noir sci-fi masterpiece, tracking Rick Deckard thirty years after his disappearance.',
-    isCanonical: true
-  }
-];
 
 export const WATCH_ORDERS: WatchOrderGuide[] = [
   {

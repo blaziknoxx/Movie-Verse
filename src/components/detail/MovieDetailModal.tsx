@@ -8,7 +8,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
-import { CONNECTIONS, WATCH_ORDERS } from '../../data/moviesData';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { 
