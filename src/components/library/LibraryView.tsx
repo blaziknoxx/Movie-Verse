@@ -20,6 +20,7 @@ interface LibraryViewProps {
   onToggleWatchlist: (movieId: string, e: React.MouseEvent) => void;
   onToggleWatched: (movieId: string) => void;
   onGoToDiscover: () => void;
+  onOpenTrailer?: (movie: Movie) => void;
 }
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
@@ -29,7 +30,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onSelectMovie,
   onToggleWatchlist,
   onToggleWatched,
-  onGoToDiscover
+  onGoToDiscover,
+  onOpenTrailer
 }) => {
   const [activeTab, setActiveTab] = useState<'watchlist' | 'watched' | 'recent'>('watchlist');
 
@@ -142,6 +144,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     onSelectMovie={onSelectMovie}
                     isWatchlisted={true}
                     onToggleWatchlist={onToggleWatchlist}
+                    onOpenTrailer={onOpenTrailer}
                   />
                   <div className="mt-2 flex items-center justify-between px-1">
                     <button
@@ -186,6 +189,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     onSelectMovie={onSelectMovie}
                     isWatchlisted={watchlist.includes(movie.id)}
                     onToggleWatchlist={onToggleWatchlist}
+                    onOpenTrailer={onOpenTrailer}
                   />
                   <div className="mt-2 flex items-center justify-between px-1 text-[11px]">
                     <span className="text-emerald-400 font-semibold flex items-center gap-1">
@@ -222,6 +226,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   onSelectMovie={onSelectMovie}
                   isWatchlisted={watchlist.includes(movie.id)}
                   onToggleWatchlist={onToggleWatchlist}
+                  onOpenTrailer={onOpenTrailer}
                 />
               ))}
             </div>

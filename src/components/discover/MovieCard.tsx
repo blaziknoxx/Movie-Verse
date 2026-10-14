@@ -9,6 +9,7 @@ interface MovieCardProps {
   onToggleWatchlist: (movieId: string, e: React.MouseEvent) => void;
   showUniverseTag?: boolean;
   aspectRatio?: 'poster' | 'landscape';
+  onOpenTrailer?: (movie: Movie) => void;
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({
@@ -17,7 +18,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   isWatchlisted,
   onToggleWatchlist,
   showUniverseTag = true,
-  aspectRatio = 'poster'
+  aspectRatio = 'poster',
+  onOpenTrailer
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -81,10 +83,23 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         </div>
 
         {/* Quick Play Hover / Touch Indicator */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/35 pointer-events-none">
-          <div className="w-9 h-9 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-            <Play className="w-4 h-4 fill-white translate-x-0.5" />
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 pointer-events-none">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenTrailer) {
+                onOpenTrailer(movie);
+              } else {
+                onSelectMovie(movie);
+              }
+            }}
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 hover:scale-110 active:scale-95 transition-all pointer-events-auto cursor-pointer"
+            title={`Play Trailer — ${movie.title}`}
+            aria-label={`Play Trailer for ${movie.title}`}
+          >
+            <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white translate-x-0.5" />
+          </button>
         </div>
       </div>
 

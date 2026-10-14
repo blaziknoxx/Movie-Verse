@@ -110,7 +110,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   e.stopPropagation();
                   onOpenTrailer(currentMovie);
                 }}
-                className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs sm:text-sm shadow-[0_4px_16px_rgba(225,29,72,0.4)] transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl sunset-gradient-btn text-white font-bold text-xs sm:text-sm shadow-[0_4px_16px_rgba(234,97,19,0.4)] transition-all active:scale-95"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>Play Trailer</span>

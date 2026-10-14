@@ -109,6 +109,7 @@ const INITIAL_RAW_MOVIES: Movie[] = [
     universeId: 'dune-universe',
     universeName: 'The Arrakis Chronicles',
     featured: true,
+    trailerKey: 'Way9Dexny3w',
     vibeTags: ['Epic Scale', 'Religious Fervor', 'Visceral Soundscapes', 'Philosophical Dread'],
     vibeProfile: {
       darkAtmosphere: 8,
@@ -200,6 +201,7 @@ const INITIAL_RAW_MOVIES: Movie[] = [
     universeId: 'gotham-noir',
     universeName: 'Gotham Underworld',
     featured: true,
+    trailerKey: 'mqqft2x_Aa4',
     vibeTags: ['Rain-Soaked Noir', 'Detective Procedure', 'Pounding Bass', 'Grim Realism'],
     vibeProfile: {
       darkAtmosphere: 10,
@@ -291,6 +293,7 @@ const INITIAL_RAW_MOVIES: Movie[] = [
     universeId: 'nolan-cosmos',
     universeName: 'The Quantum & Temporal Cosmos',
     featured: true,
+    trailerKey: 'zSWdZVtXT7E',
     vibeTags: ['Cosmic Isolation', 'Heart-Wrenching Grief', 'Gravitational Wonder', 'Hans Zimmer Organ'],
     vibeProfile: {
       darkAtmosphere: 7,

@@ -22,6 +22,7 @@ interface VibeMatchViewProps {
   watchlist: string[];
   onToggleWatchlist: (movieId: string, e: React.MouseEvent) => void;
   initialSeedMovieId?: string;
+  onOpenTrailer?: (movie: Movie) => void;
 }
 
 interface CalculatedMatch {
@@ -120,7 +121,8 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
   onSelectMovie,
   watchlist,
   onToggleWatchlist,
-  initialSeedMovieId
+  initialSeedMovieId,
+  onOpenTrailer
 }) => {
   const [seedMovie, setSeedMovie] = useState<Movie | null>(null);
   const [seedCandidates, setSeedCandidates] = useState<Movie[]>([]);
@@ -582,6 +584,7 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
                   onSelectMovie={onSelectMovie}
                   isWatchlisted={watchlist.includes(movie.id)}
                   onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+                  onOpenTrailer={onOpenTrailer}
                 />
                 
                 {/* Movie Verse Compatibility Score Badge (Clearly distinguished from official rating) */}

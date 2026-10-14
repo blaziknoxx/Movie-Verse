@@ -193,6 +193,7 @@ export default function App() {
               watchlist={watchlist}
               onToggleWatchlist={handleToggleWatchlist}
               initialSeedMovieId={targetSeedMovieId}
+              onOpenTrailer={handleOpenTrailer}
             />
           )}
 
@@ -202,6 +203,7 @@ export default function App() {
               watchlist={watchlist}
               onToggleWatchlist={handleToggleWatchlist}
               initialSeedMovieId={targetSeedMovieId}
+              onOpenTrailer={handleOpenTrailer}
             />
           )}
 
@@ -221,6 +223,7 @@ export default function App() {
               onToggleWatchlist={handleToggleWatchlist}
               onToggleWatched={handleToggleWatched}
               onGoToDiscover={() => setActiveTab('home')}
+              onOpenTrailer={handleOpenTrailer}
             />
           )}
         </main>
@@ -263,6 +266,10 @@ export default function App() {
         movie={trailerMovie}
         isOpen={isTrailerOpen}
         onClose={() => setIsTrailerOpen(false)}
+        onSelectMovie={handleSelectMovie}
+        isWatchlisted={trailerMovie ? watchlist.includes(trailerMovie.id) : false}
+        onToggleWatchlist={handleToggleWatchlist}
+        onNavigateToWhereToWatch={handleExploreWhereToWatch}
       />
 
       {/* Instant Search Modal */}

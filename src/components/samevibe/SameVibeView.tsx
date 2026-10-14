@@ -18,13 +18,15 @@ interface SameVibeViewProps {
   watchlist: string[];
   onToggleWatchlist: (movieId: string, e: React.MouseEvent) => void;
   initialSeedMovieId?: string;
+  onOpenTrailer?: (movie: Movie) => void;
 }
 
 export const SameVibeView: React.FC<SameVibeViewProps> = ({
   onSelectMovie,
   watchlist,
   onToggleWatchlist,
-  initialSeedMovieId
+  initialSeedMovieId,
+  onOpenTrailer
 }) => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [seedCandidates, setSeedCandidates] = useState<Movie[]>([]);
@@ -429,6 +431,7 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
                 onSelectMovie={onSelectMovie}
                 isWatchlisted={watchlist.includes(movie.id)}
                 onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+                onOpenTrailer={onOpenTrailer}
               />
             ))}
           </div>
