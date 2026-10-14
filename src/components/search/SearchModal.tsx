@@ -90,8 +90,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         setTotalResults(data.totalResults);
       } catch (err: any) {
         if (err.name === 'AbortError') return;
-        console.error('[SearchModal] TMDB search error:', err);
-        setErrorMsg(err.message || 'Failed to communicate with TMDB search API.');
+        console.error('[SearchModal] Movie search error:', err);
+        setErrorMsg(err.message || 'Failed to search movie catalog. Please check your connection.');
         setResults([]);
         setTotalPages(0);
         setTotalResults(0);
@@ -143,7 +143,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search TMDB movies by title, franchise, or keywords..."
+            placeholder="Search movies by title, franchise, or keywords..."
             className="w-full bg-transparent text-white placeholder-neutral-500 text-sm sm:text-base focus:outline-none"
           />
           {isLoading && (
@@ -173,11 +173,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             <div className="p-4 rounded-2xl bg-[#1E0B05] border border-red-500/30 text-xs text-neutral-200 space-y-1">
               <div className="flex items-center gap-2 text-red-400 font-bold">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Search API Notice</span>
+                <span>Search Notice</span>
               </div>
               <p className="text-neutral-300">{errorMsg}</p>
               <p className="text-[11px] text-neutral-400">
-                Movie Verse adheres strictly to real TMDB responses and never shows fabricated search results.
+                Movie Verse adheres strictly to verified catalog responses and never shows fabricated search results.
               </p>
             </div>
           )}
@@ -224,7 +224,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               {/* Discovery Prompt */}
               <div className="p-5 rounded-2xl liquid-glass border border-white/5 space-y-2 text-center">
                 <Film className="w-8 h-8 text-[#FBB931]/60 mx-auto" />
-                <h3 className="text-sm font-bold text-white">Live TMDB Catalog Search</h3>
+                <h3 className="text-sm font-bold text-white">Live Catalog Search</h3>
                 <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
                   Type any film title, franchise, director, or actor to search millions of international cinema releases directly.
                 </p>
@@ -236,7 +236,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               <Film className="w-10 h-10 mx-auto text-[#EA6113]/50" />
               <div className="text-sm font-semibold text-white">No movies found for "{query}"</div>
               <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-                No matching titles found on TMDB. Check spelling or try a broader search query.
+                No matching titles found in the catalog. Check spelling or try a broader search query.
               </p>
             </div>
           ) : (
@@ -244,7 +244,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
                 <span>
-                  Found {totalResults > 0 ? totalResults.toLocaleString() : results.length} movie{results.length !== 1 ? 's' : ''} on TMDB
+                  Found {totalResults > 0 ? totalResults.toLocaleString() : results.length} movie{results.length !== 1 ? 's' : ''}
                 </span>
                 {totalPages > 1 && (
                   <span>Page {currentPage} of {totalPages}</span>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Film, ShieldCheck, Heart, Info, ExternalLink } from 'lucide-react';
+import { DeveloperCard } from './DeveloperCard';
 
 interface FooterProps {
   onOpenAbout: () => void;
@@ -24,10 +25,8 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAbout }) => {
               A cinematic movie discovery and universe exploration platform. Navigating narrative continuity, watch orders, similar vibes, and verified streaming availability.
             </p>
 
-            <div className="pt-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-950/40 border border-rose-500/20 text-rose-200 font-medium text-xs">
-                <span>Developer — Estiaq Mehedi</span>
-              </div>
+            <div className="pt-2 max-w-sm">
+              <DeveloperCard variant="compact" />
             </div>
           </div>
 

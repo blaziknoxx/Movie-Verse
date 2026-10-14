@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Film, CheckCircle2, Shield, Sparkles, UserCheck } from 'lucide-react';
+import { X, Film, CheckCircle2, Shield } from 'lucide-react';
+import { DeveloperCard } from './DeveloperCard';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -70,15 +71,9 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           </ul>
         </div>
 
-        {/* Credits Box */}
-        <div className="p-4 rounded-2xl bg-rose-950/25 border border-rose-500/20 mb-6 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold text-white">Lead Architecture & Development</div>
-            <div className="text-sm font-bold text-rose-200 mt-0.5">Developer — Estiaq Mehedi</div>
-          </div>
-          <div className="w-8 h-8 rounded-full bg-rose-900/50 flex items-center justify-center text-rose-300 border border-rose-500/30">
-            <UserCheck className="w-4 h-4" />
-          </div>
+        {/* Developer Identity Card */}
+        <div className="mb-6">
+          <DeveloperCard variant="full" />
         </div>
 
         {/* TMDB Attribution Box */}

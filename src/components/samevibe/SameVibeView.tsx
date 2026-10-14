@@ -79,7 +79,7 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
       } catch (err: any) {
         if (!isCancelled) {
           console.error('[SameVibe] Failed to initialize seed movies:', err);
-          setApiError(err.message || 'Unable to connect to TMDB API. Please verify network or API token configuration.');
+          setApiError(err.message || 'Unable to connect to movie catalog. Please verify network or service configuration.');
           setSelectedMovie(null);
           setSeedCandidates([]);
         }
@@ -138,7 +138,7 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
       } catch (err: any) {
         if (!isCancelled) {
           console.error('[SameVibe] Error fetching same vibe recommendations:', err);
-          setApiError(err.message || 'Failed to fetch recommendations from TMDB.');
+          setApiError(err.message || 'Failed to fetch recommendations from movie catalog.');
           setSimilarList([]);
         }
       } finally {
@@ -210,7 +210,7 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
           Same Vibe Discovery
         </h1>
         <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed">
-          Powered by real-time TMDB thematic recommendations and similarity clustering. Pick any anchor film to discover works with comparable tone, pacing, and visual style.
+          Powered by real-time thematic recommendations and similarity clustering. Pick any anchor film to discover works with comparable tone, pacing, and visual style.
         </p>
       </div>
 
@@ -241,7 +241,7 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
         {searchResults.length > 0 && (
           <div className="p-2 rounded-2xl liquid-glass border border-[#F88F22]/30 space-y-1 max-h-60 overflow-y-auto shadow-2xl">
             <div className="text-[10px] font-bold text-[#FBB931] uppercase px-2 py-1">
-              Select TMDB Search Result to Anchor
+              Select Movie to Anchor
             </div>
             {searchResults.map(movie => (
               <button
@@ -300,22 +300,22 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
       {isLoadingSeeds && (
         <div className="p-12 rounded-3xl liquid-glass border border-white/5 text-center flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 text-[#FBB931] animate-spin" />
-          <div className="text-xs text-neutral-400">Loading movie anchors from TMDB...</div>
+          <div className="text-xs text-neutral-400">Loading movie anchors from catalog...</div>
         </div>
       )}
 
-      {/* API Error State */}
+      {/* Catalog Notice State */}
       {apiError && !isLoadingSeeds && (
         <div className="p-6 rounded-3xl bg-[#1E0B05] border border-red-500/30 text-neutral-200 space-y-3">
           <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
             <AlertCircle className="w-5 h-5 shrink-0" />
-            <span>TMDB API Feed Unavailable</span>
+            <span>Catalog Feed Unavailable</span>
           </div>
           <p className="text-xs text-neutral-300 leading-relaxed">
             {apiError}
           </p>
           <div className="text-[11px] text-neutral-400 bg-black/40 p-3 rounded-xl border border-white/5">
-            <strong>Genuine Data Discipline:</strong> Movie Verse does not substitute mock movies when TMDB requests fail. Please ensure your TMDB API token is configured in your server environment.
+            <strong>Genuine Data Discipline:</strong> Movie Verse does not substitute mock movies when catalog requests fail. Please ensure your movie catalog service is configured.
           </div>
         </div>
       )}

@@ -60,7 +60,7 @@ export const TrailerModal: React.FC<TrailerModalProps> = ({ movie, isOpen, onClo
               <div className="space-y-1">
                 <h4 className="text-base font-bold text-white">Trailer Currently Unavailable</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  An official video embed is not available from TMDB for this title, but verified streaming and rental options are ready below.
+                  An official video preview is not currently available for this title, but verified streaming and rental options are ready below.
                 </p>
               </div>
             </div>

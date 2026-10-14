@@ -13,6 +13,7 @@ import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { HeroBanner } from './HeroBanner';
 import { MovieCard } from '../discover/MovieCard';
+import { DeveloperCard } from '../common/DeveloperCard';
 import { 
   ChevronRight, Network, ListOrdered, Sparkles, Tv, 
   ExternalLink, ArrowRight, History, Flame, Film, 
@@ -86,8 +87,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setTopRatedMovies(topRes.movies);
       setUpcomingMovies(upRes.movies);
     } catch (err: any) {
-      console.error('[HomeView] TMDB live feed fetch error:', err);
-      setApiError(err.message || 'Unable to connect to TMDB API. Please verify TMDB_READ_TOKEN configuration.');
+      console.error('[HomeView] Live catalog fetch error:', err);
+      setApiError(err.message || 'Unable to connect to live movie catalog. Please verify connection.');
       setTrendingMovies([]);
       setPopularMovies([]);
       setTopRatedMovies([]);
@@ -188,22 +189,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-xs"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-[#FBB931]" />
-                <span>Retry TMDB Connection</span>
+                <span>Retry Connection</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* API Notice Banner if TMDB returned an error */}
+      {/* Catalog Notice Banner if live catalog returned an error */}
       {apiError && (
         <div className="p-4 rounded-2xl bg-[#1E0B05] border border-red-500/30 flex items-start gap-3 text-xs text-neutral-200">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <span className="font-bold text-white">Live TMDB Catalog Notice: </span>
+            <span className="font-bold text-white">Live Catalog Notice: </span>
             <span>{apiError}</span>
             <div className="text-[11px] text-neutral-400">
-              Per strict data integrity guidelines, Movie Verse displays live TMDB responses and does not substitute fake placeholder movie arrays.
+              Per strict data integrity guidelines, Movie Verse displays live cinematic responses and does not substitute fake placeholder movie arrays.
             </div>
           </div>
         </div>
@@ -321,7 +322,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Flame className="w-4 h-4 text-[#EA6113]" />
-              <span>Top Trending on TMDB</span>
+              <span>Top Trending Movies</span>
             </h2>
             <button
               onClick={() => setActiveTab('trending')}
@@ -411,7 +412,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
             ) : (
               <div className="text-xs text-neutral-400 p-4 rounded-xl liquid-glass">
-                No live titles found for this category via TMDB discover.
+                No live titles found for this category in the catalog.
               </div>
             )}
           </div>
@@ -424,7 +425,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Film className="w-4 h-4 text-[#EA6113]" />
-              <span>Popular Movies on TMDB</span>
+              <span>Popular Movies</span>
             </h2>
             <button
               onClick={() => setActiveTab('popular')}
@@ -535,7 +536,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="flex items-center justify-between">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Award className="w-4 h-4 text-amber-400" />
-              <span>Top Rated Masterpieces on TMDB</span>
+              <span>Top Rated Masterpieces</span>
             </h2>
             <button
               onClick={() => setActiveTab('top_rated')}
@@ -585,6 +586,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <span>Open Directory</span>
           <ArrowRight className="w-4 h-4" />
         </button>
+      </section>
+
+      {/* 11. Lead Developer Signature Identity */}
+      <section className="pt-2">
+        <DeveloperCard variant="full" />
       </section>
 
     </div>

@@ -99,7 +99,7 @@ function calculateVibeMatch(seed: Movie, candidate: Movie): CalculatedMatch {
 
   const sharedAtmosphereExplanation = explanationParts.length > 0
     ? explanationParts.join(' · ')
-    : `Curated thematic match via TMDB recommendation cluster`;
+    : `Curated thematic match via verified recommendation cluster`;
 
   return {
     movie: candidate,
@@ -180,7 +180,7 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
       } catch (err: any) {
         if (!isCancelled) {
           console.error('[VibeMatch] Failed to load initial movie seeds:', err);
-          setApiError(err.message || 'Unable to connect to TMDB API. Please verify network or API token configuration.');
+          setApiError(err.message || 'Unable to connect to cinema catalog. Please verify network or service configuration.');
           setSeedMovie(null);
           setSeedCandidates([]);
         }
@@ -247,7 +247,7 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
       } catch (err: any) {
         if (!isCancelled) {
           console.error('[VibeMatch] Error loading match candidates:', err);
-          setApiError(err.message || 'Error fetching vibe match candidates from TMDB API.');
+          setApiError(err.message || 'Error fetching vibe match candidates from live catalog.');
           setMatches([]);
         }
       } finally {
@@ -325,7 +325,7 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
           Vibe Match Engine
         </h1>
         <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed">
-          Powered exclusively by live TMDB movie taxonomy and verified metadata. We compute reproducible compatibility across genre architecture, release era, audience consensus, and atmospheric tone.
+          Powered by Movie Verse multi-dimensional vibe taxonomy and verified cinema metadata. We compute reproducible compatibility across genre architecture, release era, audience consensus, and atmospheric tone.
         </p>
       </div>
 
@@ -356,7 +356,7 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
         {anchorSearchResults.length > 0 && (
           <div className="p-2 rounded-2xl liquid-glass border border-[#F88F22]/30 space-y-1 max-h-60 overflow-y-auto shadow-2xl">
             <div className="text-[10px] font-bold text-[#FBB931] uppercase px-2 py-1">
-              Select TMDB Search Result to Anchor
+              Select Movie to Anchor
             </div>
             {anchorSearchResults.map(movie => (
               <button
@@ -415,22 +415,22 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
       {isLoadingSeed && (
         <div className="p-12 rounded-3xl liquid-glass border border-white/5 text-center flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 text-[#FBB931] animate-spin" />
-          <div className="text-xs text-neutral-400">Connecting to live TMDB catalog...</div>
+          <div className="text-xs text-neutral-400">Connecting to live movie catalog...</div>
         </div>
       )}
 
-      {/* API Error Banner if TMDB fails or requires token */}
+      {/* Catalog Notice Banner if catalog fails or requires configuration */}
       {apiError && !isLoadingSeed && (
         <div className="p-6 rounded-3xl bg-[#1E0B05] border border-red-500/30 text-neutral-200 space-y-3">
           <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
             <AlertCircle className="w-5 h-5 shrink-0" />
-            <span>Live TMDB API Notice</span>
+            <span>Live Catalog Notice</span>
           </div>
           <p className="text-xs text-neutral-300 leading-relaxed">
             {apiError}
           </p>
           <div className="text-[11px] text-neutral-400 bg-black/40 p-3 rounded-xl border border-white/5">
-            <strong>Genuine Data Discipline:</strong> Movie Verse does not substitute fabricated or hardcoded sample movies when an API error occurs. Please ensure your TMDB API token is configured in your server environment to query live titles.
+            <strong>Genuine Data Discipline:</strong> Movie Verse does not substitute fabricated or hardcoded sample movies when an error occurs. Please ensure your movie catalog service is configured to query live titles.
           </div>
         </div>
       )}
@@ -570,7 +570,7 @@ export const VibeMatchView: React.FC<VibeMatchViewProps> = ({
             <Compass className="w-8 h-8 text-[#FBB931]/60 mx-auto" />
             <div className="font-semibold text-white">No Compatible Movies Found</div>
             <p className="text-xs text-neutral-400 max-w-md mx-auto">
-              No genuine TMDB movies matched all active filters for this anchor title. Try clearing the tag filter or choosing another anchor movie.
+              No genuine titles matched all active filters for this anchor title. Try clearing the tag filter or choosing another anchor movie.
             </p>
           </div>
         ) : (

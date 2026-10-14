@@ -457,7 +457,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-[#EA6113]" />
-                    <span>Similar Vibe (TMDB Recommendations)</span>
+                    <span>Similar Vibe & Atmospheric Matches</span>
                   </h3>
                   <p className="text-[11px] text-neutral-400">
                     Films with matching tone, pacing, and critical consensus

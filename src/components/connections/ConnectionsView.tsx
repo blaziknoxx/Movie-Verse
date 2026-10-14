@@ -178,10 +178,10 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                   : 'Franchise Companion';
 
                 const description = isSequel
-                  ? `Official canonical continuation in the ${anchor.collection.name} on TMDB (${part.year}), building upon the overarching storyline.`
+                  ? `Official canonical continuation in the ${anchor.collection.name} (${part.year}), building upon the overarching storyline.`
                   : isPrequel
-                  ? `Official canonical predecessor in the ${anchor.collection.name} on TMDB (${part.year}), establishing narrative foundations and genesis.`
-                  : `Official companion release in the ${anchor.collection.name} on TMDB.`;
+                  ? `Official canonical predecessor in the ${anchor.collection.name} (${part.year}), establishing narrative foundations and genesis.`
+                  : `Official companion release in the ${anchor.collection.name}.`;
 
                 discoveredConnections.push({
                   id: `conn-coll-${part.id}`,
@@ -278,7 +278,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
               targetMovie: candidate,
               relationshipType: 'optional-companion',
               relationshipLabel: 'Thematic Sister Film',
-              description: `Verified thematic correlation sharing ${sharedGenres.slice(0, 2).join(' & ')} genre architecture, discovered via live TMDB recommendation algorithms.`,
+              description: `Verified thematic correlation sharing ${sharedGenres.slice(0, 2).join(' & ')} genre architecture, discovered via verified cinematic recommendation algorithms.`,
               isCanonical: false,
               connectionScore: 74
             });
@@ -290,7 +290,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
       } catch (err: any) {
         if (!isCancelled) {
           console.error('[ConnectedMovies] Failed to load genuine connections:', err);
-          setApiError(err.message || 'Error communicating with TMDB API. Please check your network or TMDB API token configuration.');
+          setApiError(err.message || 'Unable to communicate with movie catalog. Please check your connection.');
           setConnections([]);
         }
       } finally {
@@ -371,7 +371,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
           Connected Movies & Storyline Genealogy
         </h1>
         <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed">
-          Untangle how films correlate: canonical franchise sequels, ancestral prequels, director vision companions, and verified cast overlap. Driven exclusively by live TMDB collection and credit registries.
+          Untangle how films correlate: canonical franchise sequels, ancestral prequels, director vision companions, and verified cast overlap. Driven exclusively by verified franchise registries and official cast credits.
         </p>
       </div>
 
@@ -402,7 +402,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
         {searchResults.length > 0 && (
           <div className="p-2 rounded-2xl liquid-glass border border-[#F88F22]/30 space-y-1 max-h-60 overflow-y-auto shadow-2xl">
             <div className="text-[10px] font-bold text-[#FBB931] uppercase px-2 py-1">
-              Select TMDB Search Result to Explore Connections
+              Select Movie to Explore Connections
             </div>
             {searchResults.map(movie => (
               <button
@@ -489,18 +489,18 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
         </div>
       )}
 
-      {/* API Error State Banner */}
+      {/* Catalog Notice State Banner */}
       {apiError && !isLoading && (
         <div className="p-6 rounded-3xl bg-[#1E0B05] border border-red-500/30 text-neutral-200 space-y-3">
           <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
             <AlertCircle className="w-5 h-5 shrink-0" />
-            <span>TMDB Live Connection Notice</span>
+            <span>Catalog Connection Notice</span>
           </div>
           <p className="text-xs text-neutral-300 leading-relaxed">
             {apiError}
           </p>
           <div className="text-[11px] text-neutral-400 bg-black/40 p-3 rounded-xl border border-white/5">
-            <strong>Data Integrity Discipline:</strong> Movie Verse does not invent fake sequels, prequels, or fabricated connections. Please configure TMDB_READ_TOKEN in your server environment to query live franchise collections.
+            <strong>Data Integrity Discipline:</strong> Movie Verse does not invent fake sequels, prequels, or fabricated connections. Please ensure movie catalog service is connected to query live franchise collections.
           </div>
         </div>
       )}
