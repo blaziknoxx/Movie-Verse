@@ -65,6 +65,54 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Bulletproof scroll position reset for seamless mobile and desktop navigation
+  const resetScrollPosition = (behavior: ScrollBehavior = 'instant') => {
+    // 1. Reset browser window scroll
+    window.scrollTo({ top: 0, left: 0, behavior });
+    
+    // 2. Reset document root scrolling elements
+    if (document.scrollingElement) {
+      document.scrollingElement.scrollTop = 0;
+    }
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+    }
+
+    // 3. Reset main element and any nested containers with overflow
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTop = 0;
+
+    const scrollContainers = document.querySelectorAll('[data-scroll-root]');
+    scrollContainers.forEach(el => { el.scrollTop = 0; });
+
+    // 4. Delayed check on next frame for asynchronously rendered or reflowed content
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+      if (mainEl) mainEl.scrollTop = 0;
+    });
+  };
+
+  // Ensure scroll resets immediately whenever activeTab changes
+  useEffect(() => {
+    resetScrollPosition('instant');
+  }, [activeTab]);
+
+  const handleNavSelect = (tab: string) => {
+    if (tab === activeTab) {
+      // Tapping already-selected tab returns smoothly to top
+      resetScrollPosition('smooth');
+    } else {
+      setActiveTab(tab);
+      resetScrollPosition('instant');
+    }
+  };
+
   // Handlers
   const handleSelectMovie = (movie: Movie) => {
     setSelectedMovie(movie);
@@ -95,7 +143,7 @@ export default function App() {
       setTargetUniverseId(movieOrUniverse.id);
     }
     setActiveTab('connections');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    resetScrollPosition('instant');
   };
 
   const handleExploreWatchOrder = (universeId?: string) => {
@@ -103,7 +151,7 @@ export default function App() {
       setTargetUniverseId(universeId);
     }
     setActiveTab('watch-order');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    resetScrollPosition('instant');
   };
 
   const handleExploreSameVibe = (movieId?: string) => {
@@ -111,7 +159,7 @@ export default function App() {
       setTargetSeedMovieId(movieId);
     }
     setActiveTab('same-vibe');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    resetScrollPosition('instant');
   };
 
   const handleExploreVibeMatch = (movieId?: string) => {
@@ -119,7 +167,7 @@ export default function App() {
       setTargetSeedMovieId(movieId);
     }
     setActiveTab('vibe-match');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    resetScrollPosition('instant');
   };
 
   const handleExploreWhereToWatch = (movieId?: string) => {
@@ -127,7 +175,7 @@ export default function App() {
       setTargetWatchMovieId(movieId);
     }
     setActiveTab('where-to-watch');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    resetScrollPosition('instant');
   };
 
   return (
@@ -146,10 +194,7 @@ export default function App() {
         {/* Top Header matching Reference 1 */}
         <Header
           activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          setActiveTab={handleNavSelect}
           onOpenSearch={() => setIsSearchOpen(true)}
           onOpenAbout={() => setIsAboutOpen(true)}
           watchlistCount={watchlist.length}
@@ -247,10 +292,8 @@ export default function App() {
         {/* Mobile Fixed Bottom Navigation Bar matching Reference 1 */}
         <MobileNav
           activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          setActiveTab={handleNavSelect}
+          onResetScroll={() => resetScrollPosition('smooth')}
           onOpenSearch={() => setIsSearchOpen(true)}
           watchlistCount={watchlist.length}
         />

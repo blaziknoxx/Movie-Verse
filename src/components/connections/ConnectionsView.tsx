@@ -12,7 +12,7 @@ import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { 
   Network, ArrowRight, ArrowLeftRight, GitFork, BookOpen, Layers, 
-  CheckCircle2, Info, Search, Loader2, AlertCircle, RefreshCw, Star, ShieldAlert
+  CheckCircle2, Info, Search, Loader2, AlertCircle, RefreshCw, Star, ShieldAlert, X
 } from 'lucide-react';
 
 interface ConnectionsViewProps {
@@ -38,6 +38,7 @@ interface FranchisePreset {
   tagline: string;
   description: string;
   genres: string[];
+  imageUrl: string;
 }
 
 const FRANCHISE_PRESETS: FranchisePreset[] = [
@@ -47,7 +48,8 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tmdbId: 693134, // Dune: Part Two (TMDB Collection 722131)
     tagline: 'Power over spice is power over all.',
     description: 'Denis Villeneuve and Frank Herbert’s monumental saga spanning ancient sisterhoods, desert messiahs, and galactic jihad across the deep dunes.',
-    genres: ['Sci-Fi', 'Epic', 'Drama']
+    genres: ['Sci-Fi', 'Epic', 'Drama'],
+    imageUrl: 'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s520DRq.jpg'
   },
   {
     id: 'gotham-noir',
@@ -55,7 +57,8 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tmdbId: 414906, // The Batman (2022) / The Dark Knight
     tagline: 'Fear is a tool. When that light hits the sky, it is a warning.',
     description: 'From Christopher Nolan’s grounded vigilante trilogy to Matt Reeves’ rain-drenched detective noir and criminal dynasties.',
-    genres: ['Crime', 'Action', 'Neo-Noir']
+    genres: ['Crime', 'Action', 'Neo-Noir'],
+    imageUrl: 'https://image.tmdb.org/t/p/w780/b0PlSFdDwbyK0cf5RxwDpaOJQvQ.jpg'
   },
   {
     id: 'nolan-cosmos',
@@ -63,7 +66,8 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tmdbId: 157336, // Interstellar / Inception / Oppenheimer
     tagline: 'Time is not a straight line, but an ocean to survive.',
     description: 'Christopher Nolan’s cerebral explorations of time dilation, inverted entropy, architectural subconscious, and cosmic sacrifice.',
-    genres: ['Sci-Fi', 'Thriller', 'Drama']
+    genres: ['Sci-Fi', 'Thriller', 'Drama'],
+    imageUrl: 'https://image.tmdb.org/t/p/w780/rAiYTsqL07KWAFHaR4pGg8nZ68z.jpg'
   },
   {
     id: 'wick-continental',
@@ -71,7 +75,8 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tmdbId: 603692, // John Wick: Chapter 4 (TMDB Collection 404609)
     tagline: 'Si vis pacem, para bellum.',
     description: 'The mythic global underworld of blood oaths, gold markers, sovereign sanctuary hotels, and hyper-stylized kinetic violence.',
-    genres: ['Action', 'Thriller', 'Neo-Noir']
+    genres: ['Action', 'Thriller', 'Neo-Noir'],
+    imageUrl: 'https://image.tmdb.org/t/p/w780/7I6VUdPj6tQECNHdviJkUHD2389.jpg'
   },
   {
     id: 'cyber-dystopia',
@@ -79,7 +84,8 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tmdbId: 335984, // Blade Runner 2049 (TMDB Collection 424075)
     tagline: 'More human than human in a neon-drenched oblivion.',
     description: 'Dystopian cyberpunk sagas examining artificial consciousness, airborne spinners, and corporate monoliths.',
-    genres: ['Cyberpunk', 'Sci-Fi', 'Neo-Noir']
+    genres: ['Cyberpunk', 'Sci-Fi', 'Neo-Noir'],
+    imageUrl: 'https://image.tmdb.org/t/p/w780/ilRyAZwG5S9v9b2Y7w8FjK9kE1j.jpg'
   },
   {
     id: 'avatar-saga',
@@ -87,7 +93,8 @@ const FRANCHISE_PRESETS: FranchisePreset[] = [
     tmdbId: 76600, // Avatar: The Way of Water (TMDB Collection 87096)
     tagline: 'The way of water connects all things, before your birth and after your death.',
     description: 'James Cameron’s monumental sci-fi saga charting Pandora, RDA corporate colonization, and the interconnected ocean and forest clans.',
-    genres: ['Sci-Fi', 'Adventure', 'Action']
+    genres: ['Sci-Fi', 'Adventure', 'Action'],
+    imageUrl: 'https://image.tmdb.org/t/p/w780/kyeqWdyUXW608qlYkRqosgbbJyK.jpg'
   }
 ];
 
@@ -382,61 +389,18 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
         </p>
       </div>
 
-      {/* Franchise Switcher Bar & Search */}
+      {/* 1. Six Compact Cinematic Universe Cards Directly ABOVE Search Bar */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300">
-            Select Cinematic Universe or Search Any Title
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+            Cinematic Universes
           </label>
-
-          {/* Quick Search */}
-          <div className="relative w-full sm:w-72">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder="Search movie for connections..."
-              className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-[#140A05] border border-[#F88F22]/20 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#F88F22]"
-            />
-            {isSearching && (
-              <Loader2 className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[#FBB931] animate-spin" />
-            )}
-          </div>
+          <span className="text-[11px] text-[#FBB931] font-semibold">
+            6 Official Franchises
+          </span>
         </div>
 
-        {/* Autocomplete Search Dropdown */}
-        {searchResults.length > 0 && (
-          <div className="p-2 rounded-2xl liquid-glass border border-[#F88F22]/30 space-y-1 max-h-60 overflow-y-auto shadow-2xl">
-            <div className="text-[10px] font-bold text-[#FBB931] uppercase px-2 py-1">
-              Select Movie to Explore Connections
-            </div>
-            {searchResults.map(movie => (
-              <button
-                key={movie.id}
-                onClick={() => handleSelectSearchMovie(movie)}
-                className="w-full text-left p-2 rounded-xl hover:bg-white/10 flex items-center gap-3 transition-colors group"
-              >
-                <img
-                  src={movie.posterUrl}
-                  alt={movie.title}
-                  className="w-8 h-11 object-cover rounded shadow shrink-0"
-                />
-                <div className="truncate">
-                  <div className="text-xs font-bold text-white group-hover:text-[#FFE3B3] truncate">
-                    {movie.title}
-                  </div>
-                  <div className="text-[10px] text-neutral-400">
-                    {movie.year} · {movie.genres.join(', ')} · ★ {movie.rating ? movie.rating.toFixed(1) : '7.5'}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Preset Franchise Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
           {FRANCHISE_PRESETS.map((universe) => {
             const isSelected = selectedUniverseId === universe.id;
             return (
@@ -446,18 +410,104 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                   setSelectedUniverseId(universe.id);
                   setFilterType('all');
                 }}
-                className={`text-left p-4 rounded-2xl border transition-all ${
+                className={`group relative overflow-hidden rounded-2xl text-left transition-all aspect-[16/10] sm:aspect-[4/3] flex flex-col justify-end p-2.5 sm:p-3 border cursor-pointer active:scale-98 ${
                   isSelected
-                    ? 'bg-[#2A1308] border-[#F88F22] text-white shadow-[0_0_20px_rgba(234,97,19,0.35)]'
-                    : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/5 text-neutral-300'
+                    ? 'border-[#F88F22] ring-2 ring-[#F88F22]/70 shadow-[0_0_18px_rgba(234,97,19,0.45)] bg-[#2A1308]'
+                    : 'border-white/10 hover:border-[#F88F22]/40 bg-[#140804] hover:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
                 }`}
               >
-                <div className="text-xs font-bold text-[#FBB931] mb-1">{universe.genres.join(' · ')}</div>
-                <div className="text-sm font-semibold text-white line-clamp-1">{universe.name}</div>
-                <div className="text-[11px] text-neutral-400 mt-1 line-clamp-2 leading-relaxed">{universe.tagline}</div>
+                <img
+                  src={universe.imageUrl}
+                  alt={universe.name}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0402] via-[#0A0402]/65 to-transparent" />
+                
+                <div className="relative z-10 space-y-0.5">
+                  <span className="text-[10px] font-bold text-[#FBB931] uppercase tracking-wider block truncate">
+                    {universe.genres[0]}
+                  </span>
+                  <div className="text-xs sm:text-sm font-bold text-white line-clamp-1 group-hover:text-[#FFE3B3] transition-colors leading-tight">
+                    {universe.name}
+                  </div>
+                </div>
+
+                {isSelected && (
+                  <div className="absolute top-2 right-2 z-10 w-2 h-2 rounded-full bg-[#EA6113] ring-2 ring-white/60" />
+                )}
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* 2. Premium Search Bar Directly Below Universe Cards */}
+      <div className="space-y-2">
+        <div className="relative w-full">
+          <div className="relative flex items-center rounded-2xl liquid-glass border border-[#F88F22]/30 focus-within:border-[#F88F22] focus-within:shadow-[0_0_20px_rgba(234,97,19,0.35)] transition-all overflow-hidden">
+            <Search className="w-5 h-5 text-[#EA6113] ml-3.5 sm:ml-4 shrink-0 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search any movie to discover its connections..."
+              className="w-full pl-3 pr-10 py-3 sm:py-3.5 bg-transparent text-base sm:text-sm text-white placeholder-neutral-400 focus:outline-none"
+            />
+            {isSearching && (
+              <Loader2 className="w-4 h-4 mr-3.5 text-[#FBB931] animate-spin shrink-0" />
+            )}
+            {searchQuery && !isSearching && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className="p-1 mr-3 text-neutral-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Autocomplete Search Dropdown */}
+          {searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-2 z-30 p-2 rounded-2xl liquid-glass border border-[#F88F22]/40 space-y-1 max-h-72 overflow-y-auto shadow-2xl backdrop-blur-xl">
+              <div className="text-[10px] font-bold text-[#FBB931] uppercase px-2 py-1 tracking-wider">
+                Select Movie to Explore Connections
+              </div>
+              {searchResults.map(movie => (
+                <button
+                  key={movie.id}
+                  onClick={() => handleSelectSearchMovie(movie)}
+                  className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-3 transition-colors group cursor-pointer"
+                >
+                  <img
+                    src={movie.posterUrl}
+                    alt={movie.title}
+                    className="w-9 h-12 object-cover rounded-lg shadow shrink-0 border border-white/10"
+                  />
+                  <div className="truncate min-w-0">
+                    <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] truncate">
+                      {movie.title}
+                    </div>
+                    <div className="text-[11px] text-neutral-400 truncate">
+                      {movie.year} · {movie.genres.join(', ')} · ★ {movie.rating ? movie.rating.toFixed(1) : '7.5'}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Empty search state feedback */}
+          {searchQuery.trim().length > 1 && !isSearching && searchResults.length === 0 && (
+            <div className="absolute left-0 right-0 top-full mt-2 z-30 p-4 rounded-2xl liquid-glass border border-white/10 text-center text-xs text-neutral-400 shadow-2xl">
+              No matching movie titles found in the catalog for "{searchQuery}".
+            </div>
+          )}
         </div>
       </div>
 

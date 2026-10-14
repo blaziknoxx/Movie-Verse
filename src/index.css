@@ -38,6 +38,54 @@
     margin: 0;
     padding: 0;
   }
+
+  /* Universal iOS Safari auto-zoom prevention: inputs must compute to at least 16px */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth horizontal marquee animation for home movie row (streaming carousel glide) */
+@keyframes glideLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 0.375rem));
+  }
+}
+
+.animate-glide-row {
+  display: flex;
+  width: max-content;
+  animation: glideLeft 50s linear infinite;
+  will-change: transform;
+}
+
+.animate-glide-row:hover,
+.animate-glide-row:focus-within,
+.animate-glide-row.is-paused {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-glide-row {
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 .pb-safe {

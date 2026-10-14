@@ -319,7 +319,7 @@ export const WhereToWatchView: React.FC<WhereToWatchViewProps> = ({
                   value={movieSearchQuery}
                   onChange={(e) => setMovieSearchQuery(e.target.value)}
                   placeholder="Type any movie title (e.g. Oppenheimer, The Matrix, Gladiator)..."
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#160B05] text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#F88F22] border border-[#F88F22]/30"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#160B05] text-base sm:text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#F88F22] border border-[#F88F22]/30"
                   autoFocus
                 />
                 {isSearchingMovie && (
@@ -516,7 +516,7 @@ export const WhereToWatchView: React.FC<WhereToWatchViewProps> = ({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Filter directory entries by name or region..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#180C06] text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#F88F22] border border-[#F88F22]/20 shadow-inner"
+          className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#180C06] text-base sm:text-xs text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#F88F22] border border-[#F88F22]/20 shadow-inner"
         />
       </div>
 
@@ -563,7 +563,7 @@ export const WhereToWatchView: React.FC<WhereToWatchViewProps> = ({
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Cinema Vault"
-                  className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-white focus:outline-none focus:border-[#F88F22]"
+                  className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-base sm:text-xs text-white focus:outline-none focus:border-[#F88F22]"
                 />
               </div>
 
@@ -574,7 +574,7 @@ export const WhereToWatchView: React.FC<WhereToWatchViewProps> = ({
                   value={formUrl}
                   onChange={(e) => setFormUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-white focus:outline-none focus:border-[#F88F22]"
+                  className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-base sm:text-xs text-white focus:outline-none focus:border-[#F88F22]"
                 />
               </div>
 
@@ -585,7 +585,7 @@ export const WhereToWatchView: React.FC<WhereToWatchViewProps> = ({
                   onChange={(e) => setFormDescription(e.target.value)}
                   rows={3}
                   placeholder="Overview of this catalog..."
-                  className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-white focus:outline-none focus:border-[#F88F22]"
+                  className="w-full p-2.5 rounded-xl bg-black/50 border border-white/10 text-base sm:text-xs text-white focus:outline-none focus:border-[#F88F22]"
                 />
               </div>
 

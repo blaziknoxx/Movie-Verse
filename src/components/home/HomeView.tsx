@@ -17,7 +17,7 @@ import { DeveloperCard } from '../common/DeveloperCard';
 import { 
   ChevronRight, Network, ListOrdered, Sparkles, Tv, 
   ExternalLink, ArrowRight, History, Flame, Film, 
-  RefreshCw, AlertCircle, TrendingUp, Clock, Award, Bookmark, Play, Search, Loader2
+  RefreshCw, AlertCircle, TrendingUp, Clock, Award, Bookmark, Play, Search, Loader2, Pause
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -63,6 +63,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [isLoadingMood, setIsLoadingMood] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  // Session-stable dynamic hero candidates
+  const [heroMovies, setHeroMovies] = useState<Movie[]>(() => {
+    try {
+      const stored = sessionStorage.getItem('movieverse_session_hero_v2');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  // Smooth horizontal marquee animation controls
+  const [isGlidePaused, setIsGlidePaused] = useState(false);
+  const [isGlideHovered, setIsGlideHovered] = useState(false);
+
   const fetchFeeds = async () => {
     setIsLoading(true);
     setApiError(null);
@@ -86,6 +104,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setPopularMovies(popRes.movies);
       setTopRatedMovies(topRes.movies);
       setUpcomingMovies(upRes.movies);
+
+      // Select high-quality candidates with backdrops for dynamic hero carousel
+      const heroPool = [...trendRes.movies, ...popRes.movies].filter(m => m.backdropUrl && m.overview);
+      if (heroPool.length > 0) {
+        const selectedHeroes = heroPool.slice(0, 6);
+        setHeroMovies(selectedHeroes);
+        try {
+          sessionStorage.setItem('movieverse_session_hero_v2', JSON.stringify(selectedHeroes));
+        } catch {
+          // ignore
+        }
+      }
     } catch (err: any) {
       console.error('[HomeView] Live catalog fetch error:', err);
       setApiError(err.message || 'Unable to connect to live movie catalog. Please verify connection.');
@@ -149,10 +179,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in w-full max-w-full overflow-x-hidden">
       
-      {/* 1. Featured Movie Carousel matching Reference 1 (Only if trending movies exist) */}
-      {trendingMovies.length > 0 ? (
+      {/* 1. Featured Movie Carousel (Dynamic selection from genuine TMDB trending/popular candidates) */}
+      {(heroMovies.length > 0 || trendingMovies.length > 0) ? (
         <HeroBanner
-          movies={trendingMovies}
+          movies={heroMovies.length > 0 ? heroMovies : trendingMovies}
           onSelectMovie={onSelectMovie}
           isWatchlisted={(id) => watchlist.includes(id)}
           onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
@@ -325,7 +355,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 4. Top Trending Section (Only genuine TMDB movies) */}
+      {/* 4. Top Trending Section with Smooth Gliding Animation */}
       {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && trendingMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -333,29 +363,88 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <Flame className="w-4 h-4 text-[#EA6113]" />
               <span>Top Trending Movies</span>
             </h2>
-            <button
-              onClick={() => setActiveTab('trending')}
-              className="text-xs font-semibold text-neutral-400 hover:text-white"
-            >
-              View All ({trendingMovies.length})
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsGlidePaused(prev => !prev)}
+                className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-neutral-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                title={isGlidePaused ? 'Resume auto-glide' : 'Pause auto-glide'}
+                aria-label={isGlidePaused ? 'Resume auto-glide' : 'Pause auto-glide'}
+              >
+                {isGlidePaused ? (
+                  <>
+                    <Play className="w-3 h-3 text-[#FBB931]" />
+                    <span className="hidden sm:inline">Glide: Paused</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-3 h-3 text-[#EA6113]" />
+                    <span className="hidden sm:inline">Auto-Glide</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab('trending')}
+                className="text-xs font-semibold text-neutral-400 hover:text-white"
+              >
+                View All ({trendingMovies.length})
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
-            {trendingMovies.map((movie) => (
-              <div 
-                key={movie.id} 
-                className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
-              >
-                <MovieCard
-                  movie={movie}
-                  onSelectMovie={onSelectMovie}
-                  isWatchlisted={watchlist.includes(movie.id)}
-                  onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-                  onOpenTrailer={onOpenTrailer}
-                />
-              </div>
-            ))}
+          {/* Gliding Row Container with Edge Fades & Touch Hover Handling */}
+          <div 
+            className="relative w-full overflow-hidden rounded-2xl py-1 group/glider"
+            onMouseEnter={() => setIsGlideHovered(true)}
+            onMouseLeave={() => setIsGlideHovered(false)}
+            onTouchStart={() => setIsGlideHovered(true)}
+            onTouchEnd={() => setTimeout(() => setIsGlideHovered(false), 2000)}
+          >
+            {/* Subtle Gradient Masks on Edges for Cinematic Platform Depth */}
+            <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 sm:w-12 bg-gradient-to-r from-[#070104] to-transparent z-10" />
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 sm:w-12 bg-gradient-to-l from-[#070104] to-transparent z-10" />
+
+            {/* Seamless Double-Buffered Marquee Track */}
+            <div 
+              className={`animate-glide-row flex gap-3 ${
+                isGlidePaused || isGlideHovered ? 'is-paused' : ''
+              }`}
+            >
+              {/* Primary Movie Cards */}
+              {trendingMovies.map((movie) => (
+                <div 
+                  key={movie.id} 
+                  className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
+                >
+                  <MovieCard
+                    movie={movie}
+                    onSelectMovie={onSelectMovie}
+                    isWatchlisted={watchlist.includes(movie.id)}
+                    onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+                    onOpenTrailer={onOpenTrailer}
+                  />
+                </div>
+              ))}
+
+              {/* Duplicate Movie Cards for Infinite Gliding Loop with Unique Keys */}
+              {trendingMovies.map((movie) => (
+                <div 
+                  key={`${movie.id}-glide-clone`} 
+                  className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
+                  aria-hidden="true"
+                >
+                  <MovieCard
+                    movie={movie}
+                    onSelectMovie={onSelectMovie}
+                    isWatchlisted={watchlist.includes(movie.id)}
+                    onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
+                    onOpenTrailer={onOpenTrailer}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}

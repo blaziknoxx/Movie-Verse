@@ -6,13 +6,15 @@ interface MobileNavProps {
   setActiveTab: (tab: string) => void;
   onOpenSearch: () => void;
   watchlistCount: number;
+  onResetScroll?: () => void;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
   activeTab,
   setActiveTab,
   onOpenSearch,
-  watchlistCount
+  watchlistCount,
+  onResetScroll
 }) => {
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
@@ -32,6 +34,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           const handleClick = () => {
             if (item.isAction) {
               onOpenSearch();
+            } else if (isActive) {
+              // Tapping active tab scrolls back to top
+              if (onResetScroll) {
+                onResetScroll();
+              } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
             } else {
               setActiveTab(item.id);
             }

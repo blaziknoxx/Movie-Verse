@@ -14,6 +14,18 @@ const RECENT_KEY = 'movieverse_recent_v2';
 const CUSTOM_SITES_KEY = 'movieverse_custom_sites_v2';
 const WATCH_ORDER_PROGRESS_KEY = 'movieverse_watch_order_progress_v2';
 const MOVIE_CACHE_KEY = 'movieverse_cached_movies_v2';
+const RECENT_SEARCHES_KEY = 'movieverse_recent_searches_v1';
+
+export interface RecentSearchItem {
+  id: string;
+  query: string;
+  movieId?: string;
+  tmdbId?: number;
+  title?: string;
+  posterUrl?: string;
+  year?: number;
+  timestamp: number;
+}
 
 // Known legacy demo IDs that were erroneously pre-seeded in earlier builds
 const LEGACY_DEMO_IDS = new Set([
@@ -250,6 +262,64 @@ export const storageService = {
       this.saveCachedMovie(movieObj);
     }
     return updated;
+  },
+
+  // -------------------------------------------------------------
+  // Recent Searches History (Persistent query and movie searches)
+  // -------------------------------------------------------------
+  getRecentSearches(): RecentSearchItem[] {
+    try {
+      const data = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (!data) return [];
+      const parsed: RecentSearchItem[] = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+
+  addRecentSearch(item: Omit<RecentSearchItem, 'timestamp'>): RecentSearchItem[] {
+    const list = this.getRecentSearches();
+    const queryNorm = item.query.trim().toLowerCase();
+    
+    // Deduplicate by query or movieId
+    const filtered = list.filter(s => {
+      if (item.movieId && s.movieId && s.movieId === item.movieId) return false;
+      return s.query.trim().toLowerCase() !== queryNorm;
+    });
+
+    const newItem: RecentSearchItem = {
+      ...item,
+      query: item.query.trim(),
+      timestamp: Date.now()
+    };
+
+    const updated = [newItem, ...filtered].slice(0, 15);
+    try {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Storage error saving recent searches:', e);
+    }
+    return updated;
+  },
+
+  removeRecentSearch(idOrQuery: string): RecentSearchItem[] {
+    const list = this.getRecentSearches();
+    const updated = list.filter(s => s.id !== idOrQuery && s.query !== idOrQuery && s.movieId !== idOrQuery);
+    try {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Storage error removing recent search:', e);
+    }
+    return updated;
+  },
+
+  clearRecentSearches(): void {
+    try {
+      localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch (e) {
+      console.warn('Storage error clearing recent searches:', e);
+    }
   },
 
   // -------------------------------------------------------------

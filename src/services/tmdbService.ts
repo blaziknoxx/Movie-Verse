@@ -271,6 +271,39 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   };
 }
 
+// Client-side cache with TTL to prevent redundant network bursts and enable offline graceful fallback
+const clientMemoryCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+function getClientCache<T>(key: string): T | null {
+  const inMem = clientMemoryCache.get(key);
+  if (inMem && Date.now() - inMem.timestamp < inMem.ttl) {
+    return inMem.data as T;
+  }
+  try {
+    const raw = sessionStorage.getItem(`tmdb_cache_${key}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Date.now() - parsed.timestamp < parsed.ttl) {
+        clientMemoryCache.set(key, parsed);
+        return parsed.data as T;
+      }
+    }
+  } catch {
+    // Ignore storage quota or parsing errors
+  }
+  return null;
+}
+
+function setClientCache<T>(key: string, data: T, ttlMs: number = 10 * 60 * 1000) {
+  const entry = { data, timestamp: Date.now(), ttl: ttlMs };
+  clientMemoryCache.set(key, entry);
+  try {
+    sessionStorage.setItem(`tmdb_cache_${key}`, JSON.stringify(entry));
+  } catch {
+    // Ignore storage quota
+  }
+}
+
 export const tmdbService = {
   /**
    * Check proxy status and token configuration.
@@ -287,73 +320,128 @@ export const tmdbService = {
   },
 
   /**
-   * Fetch weekly or daily trending movies.
+   * Fetch weekly or daily trending movies with TTL caching.
    */
   async getTrending(timeWindow: 'day' | 'week' = 'week', page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const res = await fetch(`/api/tmdb/trending?time_window=${timeWindow}&page=${page}`);
-    if (!res.ok) {
-      const errorJson: any = await res.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Failed to fetch trending movies (${res.status})`);
+    const cacheKey = `trending_${timeWindow}_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/trending?time_window=${timeWindow}&page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch trending movies (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 15 * 60 * 1000); // 15 mins TTL
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
     }
-    const data: any = await res.json();
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch popular movies.
+   * Fetch popular movies with TTL caching.
    */
   async getPopular(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const res = await fetch(`/api/tmdb/popular?page=${page}`);
-    if (!res.ok) {
-      const errorJson: any = await res.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Failed to fetch popular movies (${res.status})`);
+    const cacheKey = `popular_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/popular?page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch popular movies (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 15 * 60 * 1000);
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
     }
-    const data: any = await res.json();
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch now playing movies.
+   * Fetch now playing movies with TTL caching.
    */
   async getNowPlaying(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const res = await fetch(`/api/tmdb/now_playing?page=${page}`);
-    if (!res.ok) {
-      const errorJson: any = await res.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Failed to fetch now playing movies (${res.status})`);
+    const cacheKey = `now_playing_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/now_playing?page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch now playing movies (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 15 * 60 * 1000);
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
     }
-    const data: any = await res.json();
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch upcoming movies.
+   * Fetch upcoming movies with TTL caching.
    */
   async getUpcoming(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const res = await fetch(`/api/tmdb/upcoming?page=${page}`);
-    if (!res.ok) {
-      const errorJson: any = await res.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Failed to fetch upcoming movies (${res.status})`);
+    const cacheKey = `upcoming_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/upcoming?page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch upcoming movies (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 15 * 60 * 1000);
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
     }
-    const data: any = await res.json();
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch top rated movies.
+   * Fetch top rated movies with TTL caching.
    */
   async getTopRated(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const res = await fetch(`/api/tmdb/top_rated?page=${page}`);
-    if (!res.ok) {
-      const errorJson: any = await res.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Failed to fetch top rated movies (${res.status})`);
+    const cacheKey = `top_rated_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/top_rated?page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch top rated movies (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 30 * 60 * 1000);
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
     }
-    const data: any = await res.json();
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
@@ -389,6 +477,10 @@ export const tmdbService = {
    */
   async getMovieDetails(id: string | number): Promise<Movie> {
     const numericId = String(id).replace(/\D/g, '');
+    const cacheKey = `movie_details_${numericId}`;
+    const cached = getClientCache<Movie>(cacheKey);
+    if (cached) return cached;
+
     const [detailsRes, creditsRes, videosRes] = await Promise.all([
       fetch(`/api/tmdb/movie/${numericId}`),
       fetch(`/api/tmdb/movie/${numericId}/credits`).catch(() => null),
@@ -420,6 +512,7 @@ export const tmdbService = {
     if (trailerKey) {
       movie.trailerKey = trailerKey;
     }
+    setClientCache(cacheKey, movie, 60 * 60 * 1000); // 1 hour TTL
     return movie;
   },
 
@@ -441,6 +534,10 @@ export const tmdbService = {
   async getCollection(collectionId: number | string): Promise<Movie[]> {
     const numericId = String(collectionId).replace(/\D/g, '');
     if (!numericId) return [];
+    const cacheKey = `collection_${numericId}`;
+    const cached = getClientCache<Movie[]>(cacheKey);
+    if (cached) return cached;
+
     const res = await fetch(`/api/tmdb/collection/${numericId}`);
     if (!res.ok) return [];
     const data: any = await res.json();
@@ -462,6 +559,7 @@ export const tmdbService = {
       })
     );
 
+    setClientCache(cacheKey, partsWithCredits, 60 * 60 * 1000);
     return partsWithCredits;
   },
 

@@ -102,6 +102,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               </span>
             </div>
 
+            {/* Synopsis / Overview */}
+            {currentMovie.overview && (
+              <p className="text-xs text-neutral-300 line-clamp-2 leading-relaxed max-w-xl hidden sm:block">
+                {currentMovie.overview}
+              </p>
+            )}
+
             {/* Action Buttons Row */}
             <div className="flex items-center gap-2.5 pt-1.5">
               {/* Prominent Play / Trailer Button */}

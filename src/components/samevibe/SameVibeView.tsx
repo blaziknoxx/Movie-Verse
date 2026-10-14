@@ -231,7 +231,7 @@ export const SameVibeView: React.FC<SameVibeViewProps> = ({
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search movie to match vibe..."
-              className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-[#140A05] border border-[#F88F22]/20 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#F88F22]"
+              className="w-full pl-8 pr-8 py-2 rounded-xl bg-[#140A05] border border-[#F88F22]/20 text-base sm:text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#F88F22]"
             />
             {isSearching && (
               <Loader2 className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[#FBB931] animate-spin" />
