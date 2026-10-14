@@ -72,7 +72,7 @@ export const UNIVERSES: MovieUniverse[] = [
     coverImage: posterCyber,
     movieCount: 2,
     genres: ['Cyberpunk', 'Sci-Fi', 'Neo-Noir'],
-    movieIds: ['neon-hunter', 'blade-runner-2049']
+    movieIds: ['blade-runner-1982', 'blade-runner-2049']
   }
 ];
 
@@ -401,34 +401,35 @@ export const MOVIES: Movie[] = [
     moodIds: ['action-heavy', 'dark-gritty']
   },
   {
-    id: 'neon-hunter',
-    title: 'Neon Hunter: The Final Run',
-    slug: 'neon-hunter-the-final-run',
-    year: 2024,
-    duration: '2h 18m',
-    rating: 8.3,
-    genres: ['Cyberpunk', 'Sci-Fi', 'Action'],
-    tagline: 'In the ruins of 2077, the hunt begins.',
-    overview: 'In a rain-drenched megalopolis governed by autonomous corporations, an exiled rogue pilot and a rogue cybernetics engineer uncover a classified directive engineered to purge memory implants across Sector 4.',
-    director: 'Alex Chen',
-    cast: ['Riley Reid', 'Kenji Tanaka', 'Solomon Ward', 'Elena Rostova'],
+    id: 'blade-runner-1982',
+    title: 'Blade Runner',
+    slug: 'blade-runner-1982',
+    year: 1982,
+    duration: '1h 57m',
+    rating: 8.1,
+    genres: ['Sci-Fi', 'Neo-Noir', 'Thriller'],
+    tagline: 'Man has made his match... now it\'s his problem.',
+    overview: 'In the smog-choked dystopian Los Angeles of 2019, blade runner Rick Deckard is called out of retirement to terminate four rogue synthetic humans known as replicants who have hijacked a ship in outer space and returned to Earth.',
+    director: 'Ridley Scott',
+    cast: ['Harrison Ford', 'Rutger Hauer', 'Sean Young', 'Edward James Olmos', 'Daryl Hannah'],
     posterUrl: posterCyber,
     backdropUrl: heroGothicNoir,
+    tmdbId: 78,
     universeId: 'cyber-dystopia',
     universeName: 'Cybernetic Futures',
-    vibeTags: ['Synthwave Pulse', 'Aerial Pursuit', 'Holographic Rain', 'Cybernetic Rebellion'],
+    vibeTags: ['Vangelis Synth', 'Rain-Slicked Neon', 'Existential Tears in Rain', 'Cyberpunk Solitude'],
     vibeProfile: {
-      darkAtmosphere: 9,
-      actionIntensity: 9,
-      psychologicalComplexity: 8,
-      mysterySuspense: 8,
-      emotionalWeight: 7,
-      pacing: 'Propulsive',
-      visualStyle: 'Smoky Crimson Neon & Dystopian Cyberpunk Megacity'
+      darkAtmosphere: 10,
+      actionIntensity: 6,
+      psychologicalComplexity: 10,
+      mysterySuspense: 9,
+      emotionalWeight: 9,
+      pacing: 'Methodical',
+      visualStyle: 'Smoky Amber-Crimson Neon & Dystopian Cyberpunk Megacity'
     },
     streamingPlatforms: [
-      { name: 'Tubi TV', type: 'Free', url: 'https://tubitv.com', verified: true },
-      { name: 'MUBI', type: 'Subscription', url: 'https://mubi.com', verified: true }
+      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
+      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
     ],
     moodIds: ['cyberpunk', 'action-heavy', 'dark-gritty']
   },
@@ -465,36 +466,37 @@ export const MOVIES: Movie[] = [
     moodIds: ['cyberpunk', 'sci-fi-epic', 'psychological']
   },
   {
-    id: 'night-crawler-detective',
-    title: 'Night Crawler: Shadow Detective',
-    slug: 'night-crawler-shadow-detective',
-    year: 2024,
-    duration: '2h 05m',
-    rating: 8.1,
-    genres: ['Neo-Noir', 'Mystery', 'Crime'],
-    tagline: 'He will face the shadows to find the truth.',
-    overview: 'A solitary private investigator operating under flickering crimson gas lamps in the city’s forgotten waterfront district is retained to locate a vanished prosecutor, only to find a conspiracy entrenched in the municipal judiciary.',
-    director: 'Vance Sterling',
-    cast: ['Marcus Kane', 'Aria Cruz', 'Julian Vance', 'Claire Monet'],
+    id: 'batman-begins',
+    title: 'Batman Begins',
+    slug: 'batman-begins',
+    year: 2005,
+    duration: '2h 20m',
+    rating: 8.2,
+    genres: ['Action', 'Crime', 'Drama'],
+    tagline: 'Evil fears the knight.',
+    overview: 'Driven by tragedy and guilt after his parents\' murder, Bruce Wayne journeys across the globe to learn the ways of the criminal underworld before being trained by the League of Shadows to wage war against corruption in Gotham City.',
+    director: 'Christopher Nolan',
+    cast: ['Christian Bale', 'Michael Caine', 'Liam Neeson', 'Katie Holmes', 'Gary Oldman', 'Cillian Murphy'],
     posterUrl: posterNoirDetective,
     backdropUrl: heroGothicNoir,
+    tmdbId: 272,
     universeId: 'gotham-noir',
     universeName: 'Gotham Underworld',
-    vibeTags: ['Rain-Soaked Trenchcoat', 'Femme Fatale', 'Shadow Play', 'Analog Detective Work'],
+    vibeTags: ['League of Shadows', 'Monastic Discipline', 'Fear Toxin Hallucinations', 'Theatrical Terror'],
     vibeProfile: {
       darkAtmosphere: 10,
-      actionIntensity: 6,
+      actionIntensity: 8,
       psychologicalComplexity: 9,
-      mysterySuspense: 10,
+      mysterySuspense: 9,
       emotionalWeight: 8,
-      pacing: 'Methodical',
-      visualStyle: 'High-Contrast Monochrome with Crimson Accent Neon'
+      pacing: 'Propulsive',
+      visualStyle: 'Grounded Gotham Realism & Himalayan Monastic Training'
     },
     streamingPlatforms: [
-      { name: 'Criterion Channel', type: 'Subscription', url: 'https://www.criterionchannel.com', verified: true },
-      { name: 'Pluto TV', type: 'Free', url: 'https://pluto.tv', verified: true }
+      { name: 'Max', type: 'Subscription', url: 'https://www.max.com', verified: true },
+      { name: 'Apple TV', type: 'Rent/Buy', url: 'https://tv.apple.com', verified: true }
     ],
-    moodIds: ['dark-gritty', 'mystery-suspense', 'psychological']
+    moodIds: ['dark-gritty', 'action-heavy', 'psychological']
   }
 ];
 
@@ -564,21 +566,21 @@ export const CONNECTIONS: MovieConnection[] = [
   },
   {
     id: 'conn-8',
-    sourceMovieId: 'night-crawler-detective',
-    targetMovieId: 'the-batman',
-    relationshipType: 'optional-companion',
-    relationshipLabel: 'Companion Neo-Noir Mystery',
-    description: 'Shares the methodical, notebook-scribbling detective pacing and oppressive rain-drenched urban decay.',
-    isCanonical: false
+    sourceMovieId: 'batman-begins',
+    targetMovieId: 'the-dark-knight',
+    relationshipType: 'direct-sequel',
+    relationshipLabel: 'Direct Genesis & Predecessor',
+    description: 'Christopher Nolan’s opening chapter exploring Bruce Wayne’s transformative training with the League of Shadows directly leading to Gotham’s escalation.',
+    isCanonical: true
   },
   {
     id: 'conn-9',
-    sourceMovieId: 'neon-hunter',
+    sourceMovieId: 'blade-runner-1982',
     targetMovieId: 'blade-runner-2049',
-    relationshipType: 'shared-universe',
-    relationshipLabel: 'Shared Cybernetic Atmosphere',
-    description: 'Explores the moral divide between synthetic life and ruthless mega-corporations in a perpetual nocturnal smog.',
-    isCanonical: false
+    relationshipType: 'direct-sequel',
+    relationshipLabel: 'Original Classic & 30-Year Sequel',
+    description: 'Denis Villeneuve’s 2049 directly continues Ridley Scott’s 1982 neo-noir sci-fi masterpiece, tracking Rick Deckard thirty years after his disappearance.',
+    isCanonical: true
   }
 ];
 
@@ -671,11 +673,11 @@ export const WATCH_ORDERS: WatchOrderGuide[] = [
         reason: 'Directly continues one week after the credits of The Batman, setting the stage for future theatrical installments.'
       },
       {
-        movieId: 'night-crawler-detective',
+        movieId: 'batman-begins',
         orderNumber: 3,
-        role: 'Waterfront Noir Companion',
-        priority: 'OPTIONAL',
-        reason: 'Deepens the aesthetic immersion into 1940s-inflected hard-boiled detective fiction.'
+        role: 'Dark Knight Genesis & Philosophy',
+        priority: 'RECOMMENDED',
+        reason: 'Essential companion study into Bruce Wayne’s martial training, theatrical terror, and psychological roots.'
       }
     ]
   },
@@ -715,102 +717,25 @@ export const WATCH_ORDERS: WatchOrderGuide[] = [
 
 export const WHERE_TO_WATCH_DIRECTORY: WhereToWatchSite[] = [
   {
-    id: 'site-criterion',
-    name: 'The Criterion Channel',
-    url: 'https://www.criterionchannel.com',
-    description: 'The definitive streaming destination for cinephiles, featuring classic, independent, and foreign cinema with exclusive supplementary features.',
-    category: 'Subscription Streaming',
-    availabilityType: 'Paid Monthly / Annual Subscription',
-    region: 'US, Canada (Global with DNS/VPN)',
-    verified: true,
-    userExpectationNote: 'World cinema, audio commentaries, masterclasses, and pristine 4K restorations.'
-  },
-  {
-    id: 'site-tubi',
-    name: 'Tubi TV',
-    url: 'https://tubitv.com',
-    description: 'Fox-owned completely free, 100% legal ad-supported streaming service hosting thousands of cult classics, horror, indie films, and hidden gems.',
-    category: 'Official Free Streaming',
-    availabilityType: '100% Free with Commercial Breaks (No Card Required)',
-    region: 'US, Canada, Mexico, Australia, UK',
-    verified: true,
-    userExpectationNote: 'No subscription needed. Excellent library of 70s-90s thrillers, martial arts, and genre classics.'
-  },
-  {
-    id: 'site-pluto',
-    name: 'Pluto TV',
-    url: 'https://pluto.tv',
-    description: 'Paramount Global’s ad-supported streaming television service featuring both live themed movie channels and on-demand titles.',
-    category: 'Ad-Supported Streaming',
-    availabilityType: 'Free Ad-Supported (FAST)',
-    region: 'Global (50+ Countries)',
-    verified: true,
-    userExpectationNote: 'Channel surfing experience plus generous on-demand selection across all genres.'
-  },
-  {
-    id: 'site-mubi',
-    name: 'MUBI',
-    url: 'https://mubi.com',
-    description: 'Curated streaming platform and distributor spotlighting emerging directors and festival masterworks.',
-    category: 'Subscription Streaming',
-    availabilityType: 'Subscription with Free 7-Day Trial',
-    region: 'Available Globally in 190+ Countries',
-    verified: true,
-    userExpectationNote: 'Hand-picked arthouse films with rotating daily releases and film criticism essays.'
-  },
-  {
-    id: 'site-kanopy',
-    name: 'Kanopy',
-    url: 'https://www.kanopy.com',
-    description: 'On-demand streaming video platform for public libraries and universities that offers quality films completely free to cardholders.',
-    category: 'Official Free Streaming',
-    availabilityType: 'Free via Participating Public Library or University Card',
-    region: 'US, Canada, Australia, UK, New Zealand',
-    verified: true,
-    userExpectationNote: 'Zero ads. Access to A24 films, documentaries, Criterion selections, and educational catalogs.'
-  },
-  {
-    id: 'site-justwatch',
-    name: 'JustWatch',
-    url: 'https://www.justwatch.com',
-    description: 'The universal international streaming search engine and availability guide tracking legal platform options in over 100 countries.',
+    id: 'site-hdhub4u',
+    name: 'HDHub4u',
+    url: 'https://new7.hdhub4u.cl/?utm=mn1',
+    description: 'External movie directory and entertainment portal. Provides browsing for trending films, multilingual audio tracks, and international releases.',
     category: 'Movie Discovery and Availability Guides',
-    availabilityType: 'Free Search Engine & Aggregator',
-    region: 'Global (100+ Countries with localized catalogs)',
-    verified: true,
-    userExpectationNote: 'Does not stream movies directly, but instantly informs you where any movie is streaming, renting, or buying legally.'
+    availabilityType: 'External Entertainment Directory',
+    region: 'Global / Multilingual',
+    verified: false,
+    userExpectationNote: 'General external destination. Movie Verse does not host media or verify title-specific availability on external sites.'
   },
   {
-    id: 'site-archive',
-    name: 'Internet Archive — Feature Films',
-    url: 'https://archive.org/details/feature_films',
-    description: 'Vast digital library of verified public-domain silent films, classic noir, early sci-fi, and historical cinema free to view and download.',
-    category: 'Free Public-Domain Films',
-    availabilityType: 'Free Public Domain (No Registration Required)',
-    region: 'Worldwide',
-    verified: true,
-    userExpectationNote: 'Legal public domain historical works from 1890s through 1960s with varying scan qualities.'
-  },
-  {
-    id: 'site-apple',
-    name: 'Apple TV & iTunes Store',
-    url: 'https://tv.apple.com',
-    description: 'High-bitrate digital storefront offering 4K HDR, Dolby Vision, and Dolby Atmos digital rentals and purchases across all major studios.',
-    category: 'Official Movie Platforms',
-    availabilityType: 'Pay-Per-View Rental & Purchase / TV+ Subscription',
-    region: 'Worldwide',
-    verified: true,
-    userExpectationNote: 'Industry-leading video and audio bitrates for digital rentals and purchases.'
-  },
-  {
-    id: 'site-max',
-    name: 'Max (Warner Bros. Discovery)',
-    url: 'https://www.max.com',
-    description: 'Home to Warner Bros. theatrical catalog, DC Universe, HBO originals, Studio Ghibli, and TCM cinema.',
-    category: 'Subscription Streaming',
-    availabilityType: 'Subscription (Ad-supported & Ad-free tiers)',
-    region: 'North America, Latin America, Europe (expanding)',
-    verified: true,
-    userExpectationNote: 'First-run theatrical premieres from Warner Bros., Dune, Batman, and prestige series.'
+    id: 'site-movielinkbd',
+    name: 'MovieLinkBD',
+    url: 'https://movielinkbd.one/',
+    description: 'External entertainment directory index and movie guide. Catalogs global titles, regional media links, and cinema collections.',
+    category: 'Movie Discovery and Availability Guides',
+    availabilityType: 'External Entertainment Directory',
+    region: 'South Asia & Global',
+    verified: false,
+    userExpectationNote: 'General external destination. Movie Verse does not host media or verify title-specific availability on external sites.'
   }
 ];

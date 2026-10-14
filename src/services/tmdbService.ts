@@ -157,13 +157,29 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   // Extract Cast and Crew
   let director = 'Cinematic Master';
   let cast: string[] = [];
+  let detailedCast: { name: string; character: string; profileUrl?: string }[] = [];
+  let writers: string[] = [];
+
   if (credits) {
     if (Array.isArray(credits.crew)) {
       const dirObj = credits.crew.find((c: any) => c.job === 'Director');
       if (dirObj) director = dirObj.name;
+
+      writers = Array.from(
+        new Set(
+          credits.crew
+            .filter((c: any) => ['Writer', 'Screenplay', 'Author', 'Story'].includes(c.job))
+            .map((c: any) => c.name)
+        )
+      ).slice(0, 3) as string[];
     }
     if (Array.isArray(credits.cast)) {
-      cast = credits.cast.slice(0, 5).map((c: any) => c.name);
+      cast = credits.cast.slice(0, 8).map((c: any) => c.name);
+      detailedCast = credits.cast.slice(0, 10).map((c: any) => ({
+        name: c.name,
+        character: c.character || 'Actor',
+        profileUrl: c.profile_path ? `${TMDB_IMAGE_BASE.posterW342}${c.profile_path}` : undefined,
+      }));
     }
   }
 
@@ -212,6 +228,8 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
     };
   }
 
+  const language = raw.spoken_languages?.[0]?.english_name || raw.original_language?.toUpperCase() || 'English';
+
   return {
     id,
     tmdbId: numericId,
@@ -226,7 +244,10 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
     tagline: raw.tagline || '',
     overview: raw.overview || 'No synopsis currently provided for this title.',
     director,
+    writers,
     cast: cast.length > 0 ? cast : ['Ensemble Cast'],
+    detailedCast,
+    language,
     posterUrl: getPosterUrl(raw.poster_path, title),
     backdropUrl: getBackdropUrl(raw.backdrop_path, title),
     universeId,
@@ -245,16 +266,16 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
     },
     streamingPlatforms: [
       {
-        name: 'JustWatch Guide',
-        type: 'Free',
-        url: `https://www.justwatch.com/us/search?q=${encodeURIComponent(title)}`,
-        verified: true
+        name: 'HDHub4u',
+        type: 'External Portal',
+        url: 'https://new7.hdhub4u.cl/?utm=mn1',
+        verified: false
       },
       {
-        name: 'Apple TV',
-        type: 'Rent/Buy',
-        url: `https://tv.apple.com/search?term=${encodeURIComponent(title)}`,
-        verified: true
+        name: 'MovieLinkBD',
+        type: 'External Portal',
+        url: 'https://movielinkbd.one/',
+        verified: false
       }
     ],
     moodIds,

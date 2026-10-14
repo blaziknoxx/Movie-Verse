@@ -8,7 +8,7 @@ export type RelationshipType =
   | 'story-related'
   | 'optional-companion';
 
-export type WatchPriority = 'MUST WATCH' | 'OPTIONAL' | 'SKIP FOR THIS STORY';
+export type WatchPriority = 'MUST WATCH' | 'OPTIONAL' | 'RECOMMENDED' | 'SKIP FOR THIS STORY';
 
 export type WatchOrderType = 
   | 'recommended-story' 
@@ -53,7 +53,7 @@ export interface Movie {
   };
   streamingPlatforms: {
     name: string;
-    type: 'Subscription' | 'Free' | 'Rent/Buy' | 'Public Domain';
+    type: 'Subscription' | 'Free' | 'Rent/Buy' | 'Public Domain' | 'External Portal';
     url: string;
     verified: boolean;
   }[];
@@ -70,6 +70,13 @@ export interface Movie {
     backdropPath?: string;
   };
   trailerKey?: string;
+  detailedCast?: {
+    name: string;
+    character: string;
+    profileUrl?: string;
+  }[];
+  writers?: string[];
+  language?: string;
 }
 
 export interface MovieUniverse {

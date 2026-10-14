@@ -2,12 +2,16 @@
 
 @layer base {
   :root {
-    --bg-primary: #080204;
-    --bg-surface: rgba(24, 7, 14, 0.7);
-    --border-glass: rgba(255, 255, 255, 0.08);
-    --border-rose: rgba(244, 63, 94, 0.18);
-    --accent-crimson: #e11d48;
-    --accent-wine: #881337;
+    /* Exact Reference Palette: Sunset */
+    --color-sunset-flame: #EA6113;
+    --color-sunset-orange: #F88F22;
+    --color-sunset-gold: #FBB931;
+    --color-sunset-cream: #FFE3B3;
+
+    --bg-primary: #0A0402;
+    --bg-surface: rgba(22, 11, 5, 0.85);
+    --border-glass: rgba(248, 143, 34, 0.18);
+    --border-gold: rgba(251, 185, 49, 0.35);
   }
 
   *, *::before, *::after {
@@ -24,8 +28,8 @@
 
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: #070104;
-    color: #f5edf0;
+    background-color: #0A0402;
+    color: #FFE3B3;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -49,61 +53,125 @@
   scroll-behavior: smooth;
 }
 
-/* Custom cinematic liquid-glass utilities */
+/* Custom cinematic Sunset liquid-glass utilities */
 .liquid-glass {
-  background: rgba(22, 6, 13, 0.68);
+  background: rgba(20, 9, 4, 0.78);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(248, 143, 34, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 227, 179, 0.08);
 }
 
 .liquid-glass-card {
-  background: linear-gradient(145deg, rgba(28, 8, 17, 0.75) 0%, rgba(15, 3, 9, 0.82) 100%);
+  background: linear-gradient(145deg, rgba(26, 12, 6, 0.85) 0%, rgba(14, 6, 3, 0.92) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(244, 63, 94, 0.12);
-  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(248, 143, 34, 0.18);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 227, 179, 0.06);
 }
 
 .liquid-glass-card:hover {
-  border-color: rgba(244, 63, 94, 0.3);
-  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.75), 0 0 25px -5px rgba(225, 29, 72, 0.2);
+  border-color: rgba(251, 185, 49, 0.45);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.85), 0 0 25px -4px rgba(248, 143, 34, 0.35);
 }
 
 .liquid-glass-nav {
-  background: rgba(14, 3, 8, 0.82);
+  background: rgba(12, 5, 2, 0.88);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(248, 143, 34, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
 .liquid-glass-panel {
-  background: rgba(20, 5, 12, 0.8);
+  background: rgba(18, 8, 4, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(248, 143, 34, 0.2);
 }
 
-.liquid-glass-highlight {
-  background: linear-gradient(135deg, rgba(225, 29, 72, 0.15) 0%, rgba(136, 19, 55, 0.08) 100%);
-  border: 1px solid rgba(244, 63, 94, 0.25);
+/* 6. PREMIUM NEON GLOW FOR EVERY MOVIE CARD (Derived from Sunset Reference Palette) */
+.sunset-card-glow {
+  position: relative;
+  border-radius: 1rem;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Layered ambient neon glow behind movie card */
+.sunset-card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at 50% 100%,
+    rgba(234, 97, 19, 0.35) 0%,
+    rgba(248, 143, 34, 0.2) 40%,
+    rgba(251, 185, 49, 0.08) 70%,
+    transparent 85%
+  );
+  filter: blur(10px);
+  opacity: 0.75;
+  z-index: -1;
+  pointer-events: none;
+  transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+}
+
+.sunset-card-glow:hover::before {
+  opacity: 1;
+  filter: blur(16px);
+  background: radial-gradient(
+    circle at 50% 60%,
+    rgba(251, 185, 49, 0.45) 0%,
+    rgba(248, 143, 34, 0.35) 45%,
+    rgba(234, 97, 19, 0.2) 75%,
+    transparent 90%
+  );
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sunset-card-glow, .sunset-card-glow::before {
+    transition: none !important;
+  }
+}
+
+/* Sunset Reference Palette Gradient Elements */
+.sunset-gradient-btn {
+  background: linear-gradient(135deg, #EA6113 0%, #F88F22 55%, #FBB931 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 18px -2px rgba(234, 97, 19, 0.45), 0 0 12px 0 rgba(248, 143, 34, 0.25);
+  transition: all 0.25s ease;
+}
+
+.sunset-gradient-btn:hover {
+  background: linear-gradient(135deg, #f06a1c 0%, #f99833 55%, #fcc146 100%);
+  box-shadow: 0 6px 24px 0 rgba(248, 143, 34, 0.6), 0 0 18px 2px rgba(251, 185, 49, 0.4);
+}
+
+.sunset-gradient-bar {
+  background: linear-gradient(90deg, #EA6113 0%, #F88F22 50%, #FBB931 100%);
+}
+
+.sunset-pill-active {
+  background: linear-gradient(135deg, #EA6113 0%, #F88F22 100%);
+  box-shadow: 0 0 14px rgba(234, 97, 19, 0.45);
+  color: #FFFFFF;
 }
 
 /* Atmosphere ambient glow backdrops */
-.ambient-glow-crimson {
+.ambient-glow-sunset-flame {
   position: absolute;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(225, 29, 72, 0.18) 0%, rgba(136, 19, 55, 0.08) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(234, 97, 19, 0.22) 0%, rgba(248, 143, 34, 0.1) 50%, transparent 70%);
   filter: blur(60px);
   pointer-events: none;
 }
 
-.ambient-glow-wine {
+.ambient-glow-sunset-gold {
   position: absolute;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(136, 19, 55, 0.22) 0%, rgba(76, 5, 25, 0.08) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(251, 185, 49, 0.2) 0%, rgba(234, 97, 19, 0.08) 50%, transparent 70%);
   filter: blur(80px);
   pointer-events: none;
 }
@@ -119,16 +187,16 @@
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #090205;
+  background: #0A0402;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2b0b18;
+  background: #2A1308;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4a1228;
+  background: #4A230E;
 }

@@ -26,11 +26,11 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   return (
     <div
       onClick={() => onSelectMovie(movie)}
-      className="group relative flex flex-col cursor-pointer transition-transform duration-300 active:scale-[0.98] hover:scale-[1.02] min-w-0 w-full"
+      className="group sunset-card-glow relative flex flex-col cursor-pointer transition-transform duration-300 active:scale-[0.98] hover:scale-[1.02] min-w-0 w-full select-none"
     >
-      {/* Poster Media Box */}
+      {/* Poster Media Box with Sunset Ambient Neon Lighting */}
       <div 
-        className={`relative w-full rounded-2xl overflow-hidden bg-[#160610] border border-white/[0.08] group-hover:border-rose-500/40 shadow-lg group-hover:shadow-[0_8px_24px_rgba(225,29,72,0.2)] transition-all ${
+        className={`relative w-full rounded-2xl overflow-hidden bg-[#160A05] border border-[#F88F22]/20 group-hover:border-[#FBB931]/60 shadow-lg group-hover:shadow-[0_0_24px_rgba(248,143,34,0.35)] transition-all z-10 ${
           isLandscape ? 'aspect-[16/10]' : 'aspect-[2/3]'
         }`}
       >
@@ -44,21 +44,21 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-3 bg-gradient-to-b from-rose-950/70 to-black text-center">
-            <Film className="w-6 h-6 text-rose-400 mb-1.5 opacity-60" />
-            <span className="text-[11px] font-semibold text-rose-200 line-clamp-2">{movie.title}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center p-3 bg-gradient-to-b from-[#2A1207] to-[#0A0402] text-center">
+            <Film className="w-6 h-6 text-[#F88F22] mb-1.5 opacity-60" />
+            <span className="text-[11px] font-semibold text-[#FFE3B3] line-clamp-2">{movie.title}</span>
             <span className="text-[9px] text-neutral-400 mt-0.5">{movie.year}</span>
           </div>
         )}
 
         {/* Ambient Dark Gradient Scrim */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25 pointer-events-none" />
 
         {/* Top Badges: Rating & Watchlist Toggle */}
         <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10 pointer-events-none">
           {/* Subtle Rating Badge */}
-          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold tabular-nums">
-            <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md border border-[#F88F22]/25 text-white text-[10px] font-bold tabular-nums">
+            <Star className="w-2.5 h-2.5 text-[#FBB931] fill-[#FBB931]" />
             <span>{movie.rating ? movie.rating.toFixed(1) : '7.5'}</span>
           </div>
 
@@ -70,8 +70,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             }}
             className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all pointer-events-auto ${
               isWatchlisted
-                ? 'bg-red-600 text-white shadow-[0_0_12px_rgba(229,9,20,0.6)]'
-                : 'bg-black/60 backdrop-blur-md text-neutral-300 hover:text-white hover:bg-black/80'
+                ? 'bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white shadow-[0_0_14px_rgba(234,97,19,0.7)]'
+                : 'bg-black/65 backdrop-blur-md text-neutral-300 hover:text-white hover:bg-black/85 border border-[#F88F22]/20'
             }`}
             title={isWatchlisted ? 'Remove from Watchlist' : 'Add to Watchlist'}
             aria-label={`Toggle watchlist for ${movie.title}`}
@@ -81,16 +81,16 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         </div>
 
         {/* Quick Play Hover / Touch Indicator */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
-          <div className="w-9 h-9 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/35 pointer-events-none">
+          <div className="w-9 h-9 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
             <Play className="w-4 h-4 fill-white translate-x-0.5" />
           </div>
         </div>
       </div>
 
       {/* Metadata Below Poster */}
-      <div className="pt-2 px-0.5 space-y-0.5">
-        <h3 className="text-xs sm:text-sm font-semibold text-white group-hover:text-rose-200 transition-colors truncate">
+      <div className="pt-2 px-0.5 space-y-0.5 z-10">
+        <h3 className="text-xs sm:text-sm font-semibold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
           {movie.title}
         </h3>
         <div className="flex items-center gap-1 text-[10px] text-neutral-400 font-medium">
@@ -98,7 +98,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           {movie.genres && movie.genres[0] && (
             <>
               <span className="text-neutral-600">·</span>
-              <span className="text-rose-300/80 truncate max-w-[90px]">{movie.genres[0]}</span>
+              <span className="text-[#FBB931]/90 truncate max-w-[95px]">{movie.genres[0]}</span>
             </>
           )}
         </div>
