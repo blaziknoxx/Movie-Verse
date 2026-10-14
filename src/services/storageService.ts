@@ -6,7 +6,7 @@
  */
 
 import { Movie, WhereToWatchSite } from '../types/movie';
-import { WHERE_TO_WATCH_DIRECTORY } from '../data/moviesData';
+import { WHERE_TO_WATCH_DIRECTORY, MOVIES } from '../data/moviesData';
 
 const WATCHLIST_KEY = 'movieverse_watchlist_v2';
 const WATCHED_KEY = 'movieverse_watched_v2';
@@ -15,7 +15,7 @@ const CUSTOM_SITES_KEY = 'movieverse_custom_sites_v2';
 const WATCH_ORDER_PROGRESS_KEY = 'movieverse_watch_order_progress_v2';
 const MOVIE_CACHE_KEY = 'movieverse_cached_movies_v2';
 
-// Known legacy demo IDs that were erroneously pre-seeded
+// Known legacy demo IDs that were erroneously pre-seeded in earlier builds
 const LEGACY_DEMO_IDS = new Set([
   'dune-part-2',
   'dune-part-1',
@@ -34,12 +34,74 @@ const LEGACY_DEMO_IDS = new Set([
 
 function purgeLegacyDemoEntries() {
   try {
-    // Clean up v1 keys if they were left over
+    // 1. Clean up legacy v1 storage keys and obsolete stats keys
     localStorage.removeItem('movieverse_watchlist_v1');
     localStorage.removeItem('movieverse_watched_v1');
     localStorage.removeItem('movieverse_recent_v1');
-  } catch {
-    // ignore
+    localStorage.removeItem('movieverse_stats');
+    localStorage.removeItem('movieverse_user_stats');
+    localStorage.removeItem('movieverse_profile_stats');
+
+    // 2. Safely purge fabricated/pre-seeded demo IDs from movieverse_watched_v2
+    const watchedRaw = localStorage.getItem(WATCHED_KEY);
+    if (watchedRaw) {
+      try {
+        const parsed = JSON.parse(watchedRaw);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(id => !LEGACY_DEMO_IDS.has(String(id)));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(WATCHED_KEY, JSON.stringify(cleaned));
+          }
+        }
+      } catch {
+        localStorage.removeItem(WATCHED_KEY);
+      }
+    }
+
+    // 3. Inspect movieverse_profile_v2 and remove fabricated viewing statistics while preserving legitimate user identity
+    const profileRaw = localStorage.getItem('movieverse_profile_v2');
+    if (profileRaw) {
+      try {
+        const profileParsed = JSON.parse(profileRaw);
+        if (profileParsed && typeof profileParsed === 'object') {
+          let hasFabricatedFields = false;
+          const fabricatedFields = [
+            'watchTime', 'hoursWatched', 'totalHours', 'completedCount',
+            'favouriteGenres', 'favoriteGenres', 'vibeDna', 'achievements',
+            'stats', 'badges'
+          ];
+          for (const key of fabricatedFields) {
+            if (key in profileParsed) {
+              delete profileParsed[key];
+              hasFabricatedFields = true;
+            }
+          }
+          if (hasFabricatedFields) {
+            localStorage.setItem('movieverse_profile_v2', JSON.stringify(profileParsed));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 4. Safely purge legacy demo IDs from recent movies
+    const recentRaw = localStorage.getItem(RECENT_KEY);
+    if (recentRaw) {
+      try {
+        const parsedRecent = JSON.parse(recentRaw);
+        if (Array.isArray(parsedRecent)) {
+          const cleanedRecent = parsedRecent.filter(id => !LEGACY_DEMO_IDS.has(String(id)));
+          if (cleanedRecent.length !== parsedRecent.length) {
+            localStorage.setItem(RECENT_KEY, JSON.stringify(cleanedRecent));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch (err) {
+    console.warn('Storage purge warning:', err);
   }
 }
 
@@ -53,11 +115,13 @@ export const storageService = {
   getCachedMovie(id: string | number): Movie | undefined {
     try {
       const data = localStorage.getItem(MOVIE_CACHE_KEY);
-      if (!data) return undefined;
-      const cache: Record<string, Movie> = JSON.parse(data);
-      return cache[String(id)];
+      if (data) {
+        const cache: Record<string, Movie> = JSON.parse(data);
+        if (cache[String(id)]) return cache[String(id)];
+      }
+      return MOVIES.find(m => m.id === String(id) || String(m.tmdbId) === String(id));
     } catch {
-      return undefined;
+      return MOVIES.find(m => m.id === String(id) || String(m.tmdbId) === String(id));
     }
   },
 
@@ -136,7 +200,8 @@ export const storageService = {
       const data = localStorage.getItem(WATCHED_KEY);
       if (!data) return [];
       const parsed: string[] = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(id => !LEGACY_DEMO_IDS.has(String(id)));
     } catch {
       return [];
     }
@@ -166,7 +231,8 @@ export const storageService = {
       const data = localStorage.getItem(RECENT_KEY);
       if (!data) return [];
       const parsed: string[] = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(id => !LEGACY_DEMO_IDS.has(String(id)));
     } catch {
       return [];
     }
@@ -278,7 +344,14 @@ export const storageService = {
       const data = localStorage.getItem('movieverse_profile_v2');
       if (!data) return DEFAULT_PROFILE;
       const parsed = JSON.parse(data);
-      return { ...DEFAULT_PROFILE, ...parsed };
+      return {
+        displayName: typeof parsed.displayName === 'string' && parsed.displayName.trim() ? parsed.displayName.trim() : DEFAULT_PROFILE.displayName,
+        avatarId: typeof parsed.avatarId === 'string' && parsed.avatarId ? parsed.avatarId : DEFAULT_PROFILE.avatarId,
+        bio: typeof parsed.bio === 'string' ? parsed.bio : DEFAULT_PROFILE.bio,
+        preferredStreamingProvider: parsed.preferredStreamingProvider || DEFAULT_PROFILE.preferredStreamingProvider,
+        showTransparencyNotice: parsed.showTransparencyNotice ?? DEFAULT_PROFILE.showTransparencyNotice,
+        joinedTimestamp: parsed.joinedTimestamp || DEFAULT_PROFILE.joinedTimestamp
+      };
     } catch {
       return DEFAULT_PROFILE;
     }
@@ -286,7 +359,16 @@ export const storageService = {
 
   saveProfile(profile: any): void {
     try {
-      localStorage.setItem('movieverse_profile_v2', JSON.stringify(profile));
+      // Whitelist only legitimate personal customization attributes
+      const cleanProfile = {
+        displayName: typeof profile.displayName === 'string' && profile.displayName.trim() ? profile.displayName.trim() : 'Cinephile',
+        avatarId: typeof profile.avatarId === 'string' && profile.avatarId ? profile.avatarId : 'arachnid-hero',
+        bio: typeof profile.bio === 'string' ? profile.bio : '',
+        preferredStreamingProvider: profile.preferredStreamingProvider || 'all',
+        showTransparencyNotice: profile.showTransparencyNotice ?? true,
+        joinedTimestamp: profile.joinedTimestamp || 1718000000000
+      };
+      localStorage.setItem('movieverse_profile_v2', JSON.stringify(cleanProfile));
     } catch (e) {
       console.warn('Failed to save profile:', e);
     }

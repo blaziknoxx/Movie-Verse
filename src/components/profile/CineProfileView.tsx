@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Movie, CustomCollection, UserProfile } from '../../types/movie';
 import { storageService } from '../../services/storageService';
+import { tmdbService } from '../../services/tmdbService';
 import { MovieCard } from '../discover/MovieCard';
 import { AVATAR_PRESETS, getAvatarById } from './avatarPresets';
 import { 
@@ -29,7 +30,7 @@ interface CineProfileViewProps {
   watchlist: string[];
   watched: string[];
   onToggleWatchlist: (movieId: string, e?: React.MouseEvent) => void;
-  onToggleWatched: (movieId: string) => void;
+  onToggleWatched: (movieId: string, movieObj?: Movie) => void;
   onOpenTrailer?: (movie: Movie) => void;
 }
 
@@ -90,58 +91,136 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
     setTimeout(() => setFeedbackMsg(null), 3500);
   };
 
-  // Resolve genuine cached Movie objects for watched & watchlist
-  const watchedMovies = useMemo(() => {
-    return watched
-      .map(id => storageService.getCachedMovie(id))
-      .filter((m): m is Movie => Boolean(m));
+  // Dynamic metadata cache for completed titles whose runtime/genres need asynchronous resolution
+  const [resolvedMetadata, setResolvedMetadata] = useState<Record<string, Movie>>({});
+
+  useEffect(() => {
+    let isCancelled = false;
+    const resolveMissingMetadata = async () => {
+      for (const id of watched) {
+        const cached = storageService.getCachedMovie(id) || resolvedMetadata[id];
+        // If not in cache or missing duration/genres, and ID is numeric, query TMDB details
+        if (!cached || !cached.duration || !cached.genres || cached.genres.length === 0) {
+          const numId = Number(id);
+          if (!isNaN(numId) && numId > 0) {
+            try {
+              const full = await tmdbService.getMovieDetails(numId);
+              if (full && !isCancelled) {
+                storageService.saveCachedMovie(full);
+                setResolvedMetadata(prev => ({ ...prev, [id]: full }));
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+    };
+    if (watched.length > 0) {
+      resolveMissingMetadata();
+    }
+    return () => {
+      isCancelled = true;
+    };
   }, [watched]);
 
+  // Resolve genuine cached Movie objects strictly for completed viewings
+  const watchedMovies = useMemo(() => {
+    return watched
+      .map(id => resolvedMetadata[id] || storageService.getCachedMovie(id))
+      .filter((m): m is Movie => Boolean(m));
+  }, [watched, resolvedMetadata]);
+
+  // Resolve genuine cached Movie objects for watchlist
   const watchlistMovies = useMemo(() => {
     return watchlist
       .map(id => storageService.getCachedMovie(id))
       .filter((m): m is Movie => Boolean(m));
   }, [watchlist]);
 
-  // Statistics Calculations (Part 6)
+  // Statistics Calculations: STRICTLY from genuine completed titles only
   const stats = useMemo(() => {
     const totalWatched = watched.length;
-    
-    // Count shows vs movies based on duration string (e.g. "Series" or "Eps")
+
+    // Zero State: If no verified completed viewings exist, show honest zeros
+    if (totalWatched === 0) {
+      return {
+        totalWatched: 0,
+        totalMovies: 0,
+        totalShows: 0,
+        totalHours: 0,
+        formattedHours: '0 hrs',
+        runtimeSubtext: 'No watch time recorded yet',
+        topGenre: 'Not enough data yet',
+        genreSubtext: 'Complete films to reveal your top genre',
+        badgeTitle: 'New Explorer',
+        badgeColor: 'text-neutral-400 border-white/10 bg-white/5'
+      };
+    }
+
     let showCount = 0;
     let totalMinutes = 0;
+    let titlesWithRuntime = 0;
+    let titlesMissingRuntime = 0;
 
     watchedMovies.forEach(m => {
-      if (m.duration && (m.duration.toLowerCase().includes('series') || m.duration.toLowerCase().includes('eps'))) {
+      if (!m.duration || m.duration.trim() === '') {
+        titlesMissingRuntime += 1;
+        return;
+      }
+
+      const durLower = m.duration.toLowerCase();
+      if (durLower.includes('series') || durLower.includes('eps')) {
         showCount += 1;
-        // Estimate series runtime (e.g. 8 eps * ~50 min)
-        const match = m.duration.match(/(\d+)\s*eps/i);
-        const eps = match ? parseInt(match[1], 10) : 6;
-        totalMinutes += eps * 50;
-      } else if (m.duration) {
-        // Parse "2h 46m" or "105m"
-        const hoursMatch = m.duration.match(/(\d+)\s*h/i);
-        const minsMatch = m.duration.match(/(\d+)\s*m/i);
+        const match = durLower.match(/(\d+)\s*eps/i);
+        const eps = match ? parseInt(match[1], 10) : 0;
+        if (eps > 0) {
+          totalMinutes += eps * 50;
+          titlesWithRuntime += 1;
+        } else {
+          titlesMissingRuntime += 1;
+        }
+      } else {
+        // Parse actual runtime: e.g. "2h 46m", "2h", "105m"
+        const hoursMatch = durLower.match(/(\d+)\s*h/i);
+        const minsMatch = durLower.match(/(\d+)\s*m/i);
         const h = hoursMatch ? parseInt(hoursMatch[1], 10) : 0;
         const min = minsMatch ? parseInt(minsMatch[1], 10) : 0;
-        totalMinutes += (h * 60) + min;
+        const parsedMins = (h * 60) + min;
+
+        if (parsedMins > 0) {
+          totalMinutes += parsedMins;
+          titlesWithRuntime += 1;
+        } else {
+          titlesMissingRuntime += 1;
+        }
       }
     });
 
-    const hours = (totalMinutes / 60).toFixed(1);
+    const hoursNumeric = totalMinutes > 0 ? parseFloat((totalMinutes / 60).toFixed(1)) : 0;
+    const formattedHours = `${hoursNumeric} hrs`;
 
-    // Calculate Favourite Genre from actual watched + watchlist movies
+    let runtimeSubtext = 'Summed from genuine runtime metadata';
+    if (titlesMissingRuntime > 0 && titlesWithRuntime > 0) {
+      runtimeSubtext = `Based on ${titlesWithRuntime} verified title${titlesWithRuntime === 1 ? '' : 's'} (${titlesMissingRuntime} unlisted)`;
+    } else if (titlesWithRuntime === 0) {
+      runtimeSubtext = 'Awaiting runtime metadata for completed titles';
+    }
+
+    // Calculate Favourite Genre strictly from completed (watched) titles
     const genreCounts: Record<string, number> = {};
-    [...watchedMovies, ...watchlistMovies].forEach(m => {
+    watchedMovies.forEach(m => {
       (m.genres || []).forEach(g => {
-        if (g && g !== 'Cinema') {
+        if (g && g !== 'Cinema' && g.trim() !== '') {
           genreCounts[g] = (genreCounts[g] || 0) + 1;
         }
       });
     });
 
-    let topGenre = 'None yet';
+    let topGenre = 'Not enough data yet';
+    let genreSubtext = 'Complete films to reveal your top genre';
     let maxCount = 0;
+
     Object.entries(genreCounts).forEach(([genre, count]) => {
       if (count > maxCount) {
         maxCount = count;
@@ -149,9 +228,13 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
       }
     });
 
-    // Dynamic Cinephile Badge (Part 5)
-    let badgeTitle = 'Film Novice';
-    let badgeColor = 'text-neutral-300 border-neutral-700 bg-neutral-900/50';
+    if (maxCount > 0) {
+      genreSubtext = `${maxCount} completed title${maxCount === 1 ? '' : 's'}`;
+    }
+
+    // Dynamic Cinephile Badge: Determined solely by verified completed movies
+    let badgeTitle = 'New Explorer';
+    let badgeColor = 'text-neutral-400 border-white/10 bg-white/5';
     if (totalWatched >= 36) {
       badgeTitle = 'Master Cinephile';
       badgeColor = 'text-[#FBB931] border-[#FBB931]/60 bg-[#2A1308]';
@@ -165,28 +248,30 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
       badgeTitle = 'Movie Buff';
       badgeColor = 'text-[#FFE3B3] border-[#F88F22]/40 bg-[#160B05]';
     } else if (totalWatched >= 1) {
-      badgeTitle = 'Curious Cinephile';
+      badgeTitle = 'Film Novice';
       badgeColor = 'text-amber-200 border-amber-500/30 bg-amber-950/30';
     }
 
     return {
       totalWatched,
-      totalMovies: totalWatched - showCount,
+      totalMovies: Math.max(0, totalWatched - showCount),
       totalShows: showCount,
-      totalHours: parseFloat(hours),
+      totalHours: hoursNumeric,
+      formattedHours,
+      runtimeSubtext,
       topGenre,
+      genreSubtext,
       badgeTitle,
       badgeColor
     };
-  }, [watched, watchedMovies, watchlistMovies]);
+  }, [watched, watchedMovies]);
 
-  // Vibe DNA Matrix (Part 7)
+  // Vibe DNA Matrix: Strictly from verified completed viewings
   const vibeMatrix = useMemo(() => {
-    const allTracked = [...watchedMovies, ...watchlistMovies];
-    const totalCount = allTracked.length;
+    const totalCount = watchedMovies.length;
 
     const categories = [
-      { id: 'sci-fi', name: 'Sci-Fi', matchKeys: ['sci-fi', 'space', 'cyberpunk', 'futuristic'] },
+      { id: 'sci-fi', name: 'Sci-Fi', matchKeys: ['sci-fi', 'science fiction', 'space', 'cyberpunk', 'futuristic'] },
       { id: 'thriller', name: 'Thriller', matchKeys: ['thriller', 'crime', 'tension', 'suspense'] },
       { id: 'mystery', name: 'Mystery', matchKeys: ['mystery', 'detective', 'puzzle', 'investigation'] },
       { id: 'dark', name: 'Dark & Atmospheric', matchKeys: ['dark', 'noir', 'gritty', 'horror', 'gothic'] },
@@ -203,7 +288,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
     let totalPoints = 0;
     const scoredCategories = categories.map(cat => {
       let score = 0;
-      allTracked.forEach(m => {
+      watchedMovies.forEach(m => {
         const textToSearch = [
           ...(m.genres || []),
           ...(m.vibeTags || []),
@@ -217,6 +302,10 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
       return { ...cat, count: score, rawScore: score };
     });
 
+    if (totalPoints === 0) {
+      return { hasData: false, categories: categories.map(c => ({ ...c, percentage: 0, count: 0 })) };
+    }
+
     const divisor = Math.max(1, totalPoints);
     const finalized = scoredCategories.map(cat => {
       const percentage = Math.min(100, Math.round((cat.count / divisor) * 100));
@@ -227,7 +316,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
     });
 
     return { hasData: true, categories: finalized };
-  }, [watchedMovies, watchlistMovies]);
+  }, [watchedMovies]);
 
   // Collections Handlers (Part 8)
   const handleCreateCollection = () => {
@@ -515,10 +604,10 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                 <Clock className="w-4 h-4 text-[#FBB931]" />
               </div>
               <div className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight tabular-nums">
-                {stats.totalHours} <span className="text-sm font-semibold text-neutral-400">hrs</span>
+                {stats.formattedHours}
               </div>
               <div className="text-[10px] text-neutral-400">
-                Summed from genuine runtime data
+                {stats.runtimeSubtext}
               </div>
             </div>
 
@@ -531,7 +620,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                 {stats.topGenre}
               </div>
               <div className="text-[10px] text-neutral-400">
-                Derived from user activity
+                {stats.genreSubtext}
               </div>
             </div>
 
@@ -559,11 +648,11 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                   <span>My Vibe DNA / Genre Matrix</span>
                 </h3>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Personalized atmospheric balance calculated from your tracked watchlist and completed history
+                  Personalized atmospheric balance calculated strictly from your completed viewing history
                 </p>
               </div>
               <span className="text-[10px] font-bold text-[#FBB931] uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[#2A1308] border border-[#F88F22]/30 self-start sm:self-auto">
-                Estimated From Activity
+                Verified From Completed Films
               </span>
             </div>
 
@@ -572,9 +661,9 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-[#241108] border border-[#F88F22]/30 flex items-center justify-center mx-auto text-[#FBB931]">
                   <Film className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-bold text-white">Vibe DNA Calibration Awaiting Activity</h4>
+                <h4 className="text-base font-bold text-white">Not Enough Data Yet</h4>
                 <p className="text-xs text-neutral-400 leading-relaxed">
-                  Start building your personalized cinema profile by saving films to your Watchlist or marking watched titles. Your genre matrix updates automatically.
+                  Mark movies or series as completed in your library or detail views to reveal your personalized Vibe DNA matrix powered by authentic TMDB genre metadata.
                 </p>
                 <button
                   onClick={onBack}
@@ -686,7 +775,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                   />
                   <div className="mt-2 flex items-center justify-between px-1">
                     <button
-                      onClick={() => onToggleWatched(movie.id)}
+                      onClick={() => onToggleWatched(movie.id, movie)}
                       className="text-[11px] text-neutral-400 hover:text-emerald-300 flex items-center gap-1 font-medium transition-colors"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />

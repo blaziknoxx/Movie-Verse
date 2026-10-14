@@ -83,8 +83,8 @@ export default function App() {
     setWatchlist(updated);
   };
 
-  const handleToggleWatched = (movieId: string) => {
-    const updated = storageService.toggleWatched(movieId);
+  const handleToggleWatched = (movieId: string, movieObj?: Movie) => {
+    const updated = storageService.toggleWatched(movieId, movieObj);
     setWatched(updated);
   };
 

@@ -23,7 +23,7 @@ interface MovieDetailModalProps {
   isWatchlisted: boolean;
   isWatched: boolean;
   onToggleWatchlist: (movieId: string) => void;
-  onToggleWatched: (movieId: string) => void;
+  onToggleWatched: (movieId: string, movieObj?: Movie) => void;
   onNavigateToConnections: (universeId?: string) => void;
   onNavigateToWatchOrder: (universeId?: string) => void;
   onNavigateToSameVibe: (movieId: string) => void;
@@ -279,7 +279,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="flex items-center justify-around py-3 border-y border-white/[0.08] text-xs">
             {/* Watched Button */}
             <button
-              onClick={() => onToggleWatched(current.id)}
+              onClick={() => onToggleWatched(current.id, current)}
               className={`flex flex-col items-center gap-1.5 transition-colors ${
                 isWatched ? 'text-[#FBB931] font-semibold' : 'text-neutral-400 hover:text-white'
               }`}
