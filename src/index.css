@@ -10,12 +10,43 @@
     --accent-wine: #881337;
   }
 
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     background-color: #070104;
     color: #f5edf0;
+    width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
+    overscroll-behavior-x: none;
+    position: relative;
+    margin: 0;
+    padding: 0;
   }
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 /* Custom cinematic liquid-glass utilities */

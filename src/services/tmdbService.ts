@@ -201,6 +201,17 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   const mysterySuspense = genres.includes('Mystery') || genres.includes('Thriller') ? 9 : 6;
   const emotionalWeight = genres.includes('Drama') ? 9 : 7;
 
+  // Extract Collection if part of franchise
+  let collection: { id: number; name: string; posterPath?: string; backdropPath?: string } | undefined = undefined;
+  if (raw.belongs_to_collection) {
+    collection = {
+      id: raw.belongs_to_collection.id,
+      name: raw.belongs_to_collection.name,
+      posterPath: raw.belongs_to_collection.poster_path ? `${TMDB_IMAGE_BASE.posterW500}${raw.belongs_to_collection.poster_path}` : undefined,
+      backdropPath: raw.belongs_to_collection.backdrop_path ? `${TMDB_IMAGE_BASE.backdropW1280}${raw.belongs_to_collection.backdrop_path}` : undefined,
+    };
+  }
+
   return {
     id,
     tmdbId: numericId,
@@ -220,6 +231,8 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
     backdropUrl: getBackdropUrl(raw.backdrop_path, title),
     universeId,
     universeName,
+    collection,
+    trailerKey: raw.trailerKey,
     vibeTags: vibeTags.slice(0, 4),
     vibeProfile: {
       darkAtmosphere,
@@ -363,13 +376,14 @@ export const tmdbService = {
   },
 
   /**
-   * Fetch detailed movie information including credits.
+   * Fetch detailed movie information including credits and official trailers.
    */
   async getMovieDetails(id: string | number): Promise<Movie> {
     const numericId = String(id).replace(/\D/g, '');
-    const [detailsRes, creditsRes] = await Promise.all([
+    const [detailsRes, creditsRes, videosRes] = await Promise.all([
       fetch(`/api/tmdb/movie/${numericId}`),
-      fetch(`/api/tmdb/movie/${numericId}/credits`).catch(() => null)
+      fetch(`/api/tmdb/movie/${numericId}/credits`).catch(() => null),
+      fetch(`/api/tmdb/movie/${numericId}/videos`).catch(() => null)
     ]);
 
     if (!detailsRes.ok) {
@@ -383,7 +397,44 @@ export const tmdbService = {
       creditsData = await creditsRes.json().catch(() => null);
     }
 
-    return normalizeTMDBMovie(detailsData, creditsData);
+    let trailerKey: string | undefined = undefined;
+    if (videosRes && videosRes.ok) {
+      const vids: any = await videosRes.json().catch(() => null);
+      if (vids && Array.isArray(vids.results)) {
+        const officialTrailer = vids.results.find((v: any) => v.site === 'YouTube' && v.type === 'Trailer') ||
+                                vids.results.find((v: any) => v.site === 'YouTube' && (v.type === 'Teaser' || v.type === 'Clip'));
+        if (officialTrailer) trailerKey = officialTrailer.key;
+      }
+    }
+
+    const movie = normalizeTMDBMovie(detailsData, creditsData);
+    if (trailerKey) {
+      movie.trailerKey = trailerKey;
+    }
+    return movie;
+  },
+
+  /**
+   * Fetch official trailers / videos for a movie.
+   */
+  async getMovieVideos(id: string | number): Promise<{ key: string; name: string; site: string; type: string }[]> {
+    const numericId = String(id).replace(/\D/g, '');
+    const res = await fetch(`/api/tmdb/movie/${numericId}/videos`);
+    if (!res.ok) return [];
+    const data: any = await res.json();
+    return data.results || [];
+  },
+
+  /**
+   * Fetch connected franchise films from TMDB collection.
+   */
+  async getCollection(collectionId: number | string): Promise<Movie[]> {
+    const numericId = String(collectionId).replace(/\D/g, '');
+    if (!numericId) return [];
+    const res = await fetch(`/api/tmdb/collection/${numericId}`);
+    if (!res.ok) return [];
+    const data: any = await res.json();
+    return (data.parts || []).map((m: any) => normalizeTMDBMovie(m));
   },
 
   /**

@@ -63,6 +63,13 @@ export interface Movie {
   voteCount?: number;
   originalTitle?: string;
   releaseDate?: string;
+  collection?: {
+    id: number;
+    name: string;
+    posterPath?: string;
+    backdropPath?: string;
+  };
+  trailerKey?: string;
 }
 
 export interface MovieUniverse {

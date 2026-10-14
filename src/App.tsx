@@ -12,11 +12,13 @@ import { Header } from './components/common/Header';
 import { MobileNav } from './components/common/MobileNav';
 import { Footer } from './components/common/Footer';
 import { AboutModal } from './components/common/AboutModal';
+import { TrailerModal } from './components/common/TrailerModal';
 
 import { HomeView } from './components/home/HomeView';
 import { ConnectionsView } from './components/connections/ConnectionsView';
 import { WatchOrderView } from './components/watchorder/WatchOrderView';
 import { SameVibeView } from './components/samevibe/SameVibeView';
+import { VibeMatchView } from './components/vibematch/VibeMatchView';
 import { WhereToWatchView } from './components/wheretowatch/WhereToWatchView';
 import { LibraryView } from './components/library/LibraryView';
 
@@ -26,6 +28,8 @@ import { SearchModal } from './components/search/SearchModal';
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [trailerMovie, setTrailerMovie] = useState<Movie | null>(null);
+  const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   
@@ -51,6 +55,7 @@ export default function App() {
       } else if (e.key === 'Escape') {
         setIsSearchOpen(false);
         setIsAboutOpen(false);
+        setIsTrailerOpen(false);
         setSelectedMovie(null);
       }
     };
@@ -64,6 +69,11 @@ export default function App() {
     setSelectedMovie(movie);
     const updatedRecents = storageService.addRecentMovie(movie.id);
     setRecentMovieIds(updatedRecents);
+  };
+
+  const handleOpenTrailer = (movie: Movie) => {
+    setTrailerMovie(movie);
+    setIsTrailerOpen(true);
   };
 
   const handleToggleWatchlist = (movieId: string, e?: React.MouseEvent) => {
@@ -103,23 +113,33 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleExploreVibeMatch = (movieId?: string) => {
+    if (movieId) {
+      setTargetSeedMovieId(movieId);
+    }
+    setActiveTab('vibe-match');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleExploreWhereToWatch = () => {
     setActiveTab('where-to-watch');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-[#070104] text-[#f4eff1] relative selection:bg-rose-900/60 selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-[#070104] text-[#f4eff1] relative selection:bg-red-900/60 selection:text-white flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       
-      {/* Cinematic Ambient Background Glows */}
-      <div className="ambient-glow-crimson top-0 left-1/4 w-[500px] h-[500px] -translate-x-1/2 opacity-35" />
-      <div className="ambient-glow-wine top-[35%] right-0 w-[600px] h-[600px] opacity-25" />
-      <div className="ambient-glow-crimson bottom-10 left-10 w-[450px] h-[450px] opacity-20" />
+      {/* Contained Ambient Background Glows — Overflow strictly isolated to prevent mobile drift */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="ambient-glow-crimson top-0 left-1/4 w-[380px] h-[380px] -translate-x-1/2 opacity-25" />
+        <div className="ambient-glow-wine top-[35%] right-0 w-[420px] h-[420px] opacity-20" />
+        <div className="ambient-glow-crimson bottom-10 left-10 w-[350px] h-[350px] opacity-15" />
+      </div>
 
       {/* Main App Container */}
-      <div className="relative z-10 w-full flex-grow flex flex-col">
+      <div className="relative z-10 w-full max-w-full flex-grow flex flex-col min-w-0">
         
-        {/* Top Header */}
+        {/* Top Header matching Reference 1 */}
         <Header
           activeTab={activeTab}
           setActiveTab={(tab) => {
@@ -127,23 +147,27 @@ export default function App() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenAbout={() => setIsAboutOpen(true)}
           watchlistCount={watchlist.length}
         />
 
         {/* Content Area */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
+        <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-7 w-full flex-grow pb-24 lg:pb-12 min-w-0 max-w-full overflow-x-hidden">
           {activeTab === 'home' && (
             <HomeView
               onSelectMovie={handleSelectMovie}
               onExploreConnections={handleExploreConnections}
               onExploreWatchOrder={handleExploreWatchOrder}
               onExploreSameVibe={handleExploreSameVibe}
+              onExploreVibeMatch={handleExploreVibeMatch}
               onExploreWhereToWatch={handleExploreWhereToWatch}
               watchlist={watchlist}
               onToggleWatchlist={handleToggleWatchlist}
               recentMovieIds={recentMovieIds}
               selectedMoodId={selectedMoodId}
               onSelectMood={setSelectedMoodId}
+              onOpenTrailer={handleOpenTrailer}
+              onOpenSearch={() => setIsSearchOpen(true)}
             />
           )}
 
@@ -157,6 +181,15 @@ export default function App() {
           {activeTab === 'watch-order' && (
             <WatchOrderView
               onSelectMovie={handleSelectMovie}
+            />
+          )}
+
+          {activeTab === 'vibe-match' && (
+            <VibeMatchView
+              onSelectMovie={handleSelectMovie}
+              watchlist={watchlist}
+              onToggleWatchlist={handleToggleWatchlist}
+              initialSeedMovieId={targetSeedMovieId}
             />
           )}
 
@@ -189,19 +222,20 @@ export default function App() {
         {/* Footer */}
         <Footer onOpenAbout={() => setIsAboutOpen(true)} />
 
-        {/* Mobile Fixed Bottom Navigation Bar */}
+        {/* Mobile Fixed Bottom Navigation Bar matching Reference 1 */}
         <MobileNav
           activeTab={activeTab}
           setActiveTab={(tab) => {
             setActiveTab(tab);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
+          onOpenSearch={() => setIsSearchOpen(true)}
           watchlistCount={watchlist.length}
         />
 
       </div>
 
-      {/* Global Modals & Overlays */}
+      {/* Global Movie Details Screen Modal matching Reference 2 */}
       <MovieDetailModal
         movie={selectedMovie}
         onClose={() => setSelectedMovie(null)}
@@ -212,16 +246,27 @@ export default function App() {
         onNavigateToConnections={handleExploreConnections}
         onNavigateToWatchOrder={handleExploreWatchOrder}
         onNavigateToSameVibe={handleExploreSameVibe}
+        onNavigateToVibeMatch={handleExploreVibeMatch}
         onNavigateToWhereToWatch={handleExploreWhereToWatch}
         onSelectMovie={handleSelectMovie}
+        onOpenTrailer={handleOpenTrailer}
       />
 
+      {/* Official Trailer Playback Modal */}
+      <TrailerModal
+        movie={trailerMovie}
+        isOpen={isTrailerOpen}
+        onClose={() => setIsTrailerOpen(false)}
+      />
+
+      {/* Instant Search Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectMovie={handleSelectMovie}
       />
 
+      {/* About Modal */}
       <AboutModal
         isOpen={isAboutOpen}
         onClose={() => setIsAboutOpen(false)}

@@ -4,7 +4,8 @@
  * Provides secure server-side TMDB API proxy with memory caching and Vite middleware in dev.
  */
 
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -15,7 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // TMDB API Base Configuration
@@ -258,6 +259,34 @@ app.get('/api/tmdb/movie/:id/recommendations', async (req: Request, res: Respons
     }
     const page = req.query.page || '1';
     const result = await fetchFromTMDB(`/movie/${id}/recommendations`, { page });
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Movie Videos (Official Trailers)
+app.get('/api/tmdb/movie/:id/videos', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric movie ID required' });
+    }
+    const result = await fetchFromTMDB(`/movie/${id}/videos`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Franchise Collection (Sequels, Prequels & Connected franchise entries)
+app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric collection ID required' });
+    }
+    const result = await fetchFromTMDB(`/collection/${id}`);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);

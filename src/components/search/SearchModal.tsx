@@ -75,8 +75,17 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         setTotalResults(data.totalResults);
       } catch (err: any) {
         if (err.name === 'AbortError') return;
-        console.error('Search error:', err);
-        setErrorMsg(err.message || 'Search request failed.');
+        console.warn('Search API fallback to local library:', err);
+        const lower = trimmed.toLowerCase();
+        const localMatches = MOVIES.filter(m => 
+          m.title.toLowerCase().includes(lower) ||
+          m.genres.some(g => g.toLowerCase().includes(lower)) ||
+          m.director.toLowerCase().includes(lower) ||
+          m.cast.some(c => c.toLowerCase().includes(lower))
+        );
+        setResults(localMatches);
+        setTotalPages(1);
+        setTotalResults(localMatches.length);
       } finally {
         setIsLoading(false);
       }
