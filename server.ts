@@ -303,17 +303,10 @@ app.get('/api/tmdb/genres', async (req: Request, res: Response) => {
   }
 });
 
-// Discover movies by genre, sort, etc.
+// Discover movies by genre, sort, language, country, etc.
 app.get('/api/tmdb/discover', async (req: Request, res: Response) => {
   try {
-    const { with_genres, sort_by, page, year, 'vote_average.gte': voteGte } = req.query;
-    const result = await fetchFromTMDB('/discover/movie', {
-      with_genres,
-      sort_by,
-      page,
-      year,
-      'vote_average.gte': voteGte,
-    });
+    const result = await fetchFromTMDB('/discover/movie', req.query);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);

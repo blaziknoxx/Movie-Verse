@@ -21,12 +21,14 @@ import { VibeMatchView } from './components/vibematch/VibeMatchView';
 import { WhereToWatchView } from './components/wheretowatch/WhereToWatchView';
 import { LibraryView } from './components/library/LibraryView';
 import { CineProfileView } from './components/profile/CineProfileView';
+import { CategoryListingView } from './components/listing/CategoryListingView';
 
 import { MovieDetailModal } from './components/detail/MovieDetailModal';
 import { SearchModal } from './components/search/SearchModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
+  const [listingCategory, setListingCategory] = useState<string>('trending');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [trailerMovie, setTrailerMovie] = useState<Movie | null>(null);
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
@@ -98,6 +100,32 @@ export default function App() {
     });
   };
 
+  // Synchronize browser history and refresh-safe URLs
+  useEffect(() => {
+    const handleUrlState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const view = params.get('view') || params.get('tab');
+        const cat = params.get('category');
+        if (view === 'listing' && cat) {
+          setListingCategory(cat);
+          setActiveTab('listing');
+        } else if (view && ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile'].includes(view)) {
+          if (view === 'connections') {
+            setTargetUniverseId(undefined);
+          }
+          setActiveTab(view);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    handleUrlState();
+    window.addEventListener('popstate', handleUrlState);
+    return () => window.removeEventListener('popstate', handleUrlState);
+  }, []);
+
   // Ensure scroll resets immediately whenever activeTab changes
   useEffect(() => {
     resetScrollPosition('instant');
@@ -108,9 +136,36 @@ export default function App() {
       // Tapping already-selected tab returns smoothly to top
       resetScrollPosition('smooth');
     } else {
+      if (tab === 'connections') {
+        setTargetUniverseId(undefined);
+      }
       setActiveTab(tab);
+      try {
+        window.history.pushState(
+          { tab },
+          '',
+          tab === 'home' ? '/' : `?tab=${tab}`
+        );
+      } catch {
+        // ignore
+      }
       resetScrollPosition('instant');
     }
+  };
+
+  const handleOpenCategoryListing = (categoryKey: string) => {
+    setListingCategory(categoryKey);
+    setActiveTab('listing');
+    try {
+      window.history.pushState(
+        { tab: 'listing', category: categoryKey },
+        '',
+        `?view=listing&category=${categoryKey}`
+      );
+    } catch {
+      // ignore
+    }
+    resetScrollPosition('instant');
   };
 
   // Handlers
@@ -217,6 +272,24 @@ export default function App() {
               onSelectMood={setSelectedMoodId}
               onOpenTrailer={handleOpenTrailer}
               onOpenSearch={() => setIsSearchOpen(true)}
+              onViewAll={handleOpenCategoryListing}
+            />
+          )}
+
+          {activeTab === 'listing' && (
+            <CategoryListingView
+              categoryKey={listingCategory}
+              onBack={() => {
+                if (window.history.length > 1 && window.history.state?.tab === 'listing') {
+                  window.history.back();
+                } else {
+                  handleNavSelect('home');
+                }
+              }}
+              onSelectMovie={handleSelectMovie}
+              watchlist={watchlist}
+              onToggleWatchlist={handleToggleWatchlist}
+              onOpenTrailer={handleOpenTrailer}
             />
           )}
 

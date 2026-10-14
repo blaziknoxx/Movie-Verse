@@ -29,7 +29,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       <div className="grid grid-cols-5 items-center h-16 max-w-md mx-auto px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = activeTab === item.id || (item.id === 'home' && activeTab === 'listing');
 
           const handleClick = () => {
             if (item.isAction) {

@@ -11,8 +11,8 @@ import { Movie, RelationshipType } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { 
-  Network, ArrowRight, ArrowLeftRight, GitFork, BookOpen, Layers, 
-  CheckCircle2, Info, Search, Loader2, AlertCircle, RefreshCw, Star, ShieldAlert, X
+  Network, ArrowRight, GitFork, Info, Search, Loader2, 
+  AlertCircle, Star, X, Film, CheckCircle2, Layers 
 } from 'lucide-react';
 
 interface ConnectionsViewProps {
@@ -34,67 +34,67 @@ export interface LiveMovieConnection {
 interface FranchisePreset {
   id: string;
   name: string;
+  categoryLabel: string;
   tmdbId: number;
   tagline: string;
   description: string;
   genres: string[];
-  imageUrl: string;
 }
 
 const FRANCHISE_PRESETS: FranchisePreset[] = [
   {
     id: 'dune-universe',
     name: 'The Arrakis Chronicles',
+    categoryLabel: 'Sci-Fi Epic',
     tmdbId: 693134, // Dune: Part Two (TMDB Collection 722131)
     tagline: 'Power over spice is power over all.',
     description: 'Denis Villeneuve and Frank Herbert’s monumental saga spanning ancient sisterhoods, desert messiahs, and galactic jihad across the deep dunes.',
-    genres: ['Sci-Fi', 'Epic', 'Drama'],
-    imageUrl: 'https://image.tmdb.org/t/p/w780/xOMo8BRK7PfcJv9JCnx7s520DRq.jpg'
+    genres: ['Sci-Fi', 'Epic', 'Drama']
   },
   {
     id: 'gotham-noir',
     name: 'Gotham Underworld',
-    tmdbId: 414906, // The Batman (2022) / The Dark Knight
+    categoryLabel: 'Crime Noir',
+    tmdbId: 414906, // The Batman (2022)
     tagline: 'Fear is a tool. When that light hits the sky, it is a warning.',
     description: 'From Christopher Nolan’s grounded vigilante trilogy to Matt Reeves’ rain-drenched detective noir and criminal dynasties.',
-    genres: ['Crime', 'Action', 'Neo-Noir'],
-    imageUrl: 'https://image.tmdb.org/t/p/w780/b0PlSFdDwbyK0cf5RxwDpaOJQvQ.jpg'
+    genres: ['Crime', 'Action', 'Neo-Noir']
   },
   {
     id: 'nolan-cosmos',
     name: 'The Quantum & Temporal Cosmos',
-    tmdbId: 157336, // Interstellar / Inception / Oppenheimer
+    categoryLabel: 'Cerebral / Time',
+    tmdbId: 157336, // Interstellar
     tagline: 'Time is not a straight line, but an ocean to survive.',
     description: 'Christopher Nolan’s cerebral explorations of time dilation, inverted entropy, architectural subconscious, and cosmic sacrifice.',
-    genres: ['Sci-Fi', 'Thriller', 'Drama'],
-    imageUrl: 'https://image.tmdb.org/t/p/w780/rAiYTsqL07KWAFHaR4pGg8nZ68z.jpg'
+    genres: ['Sci-Fi', 'Thriller', 'Drama']
   },
   {
     id: 'wick-continental',
     name: 'The High Table & Continental',
+    categoryLabel: 'Action Syndicate',
     tmdbId: 603692, // John Wick: Chapter 4 (TMDB Collection 404609)
     tagline: 'Si vis pacem, para bellum.',
     description: 'The mythic global underworld of blood oaths, gold markers, sovereign sanctuary hotels, and hyper-stylized kinetic violence.',
-    genres: ['Action', 'Thriller', 'Neo-Noir'],
-    imageUrl: 'https://image.tmdb.org/t/p/w780/7I6VUdPj6tQECNHdviJkUHD2389.jpg'
+    genres: ['Action', 'Thriller', 'Neo-Noir']
   },
   {
     id: 'cyber-dystopia',
     name: 'Cybernetic Futures',
+    categoryLabel: 'Cyberpunk',
     tmdbId: 335984, // Blade Runner 2049 (TMDB Collection 424075)
     tagline: 'More human than human in a neon-drenched oblivion.',
     description: 'Dystopian cyberpunk sagas examining artificial consciousness, airborne spinners, and corporate monoliths.',
-    genres: ['Cyberpunk', 'Sci-Fi', 'Neo-Noir'],
-    imageUrl: 'https://image.tmdb.org/t/p/w780/ilRyAZwG5S9v9b2Y7w8FjK9kE1j.jpg'
+    genres: ['Cyberpunk', 'Sci-Fi', 'Neo-Noir']
   },
   {
     id: 'avatar-saga',
-    name: 'Pandora & The Na\'vi Chronicles',
+    name: 'Pandora & The Na’vi Chronicles',
+    categoryLabel: 'Alien Odyssey',
     tmdbId: 76600, // Avatar: The Way of Water (TMDB Collection 87096)
     tagline: 'The way of water connects all things, before your birth and after your death.',
     description: 'James Cameron’s monumental sci-fi saga charting Pandora, RDA corporate colonization, and the interconnected ocean and forest clans.',
-    genres: ['Sci-Fi', 'Adventure', 'Action'],
-    imageUrl: 'https://image.tmdb.org/t/p/w780/kyeqWdyUXW608qlYkRqosgbbJyK.jpg'
+    genres: ['Sci-Fi', 'Adventure', 'Action']
   }
 ];
 
@@ -102,14 +102,16 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
   onSelectMovie,
   selectedUniverseId: initialUniverseId
 }) => {
-  const [selectedUniverseId, setSelectedUniverseId] = useState<string>(
-    initialUniverseId || 'dune-universe'
+  // Initial state: nothing selected by default on initial entry unless explicitly requested from parent
+  const [selectedUniverseId, setSelectedUniverseId] = useState<string | null>(
+    initialUniverseId || null
   );
   const [filterType, setFilterType] = useState<RelationshipType | 'all'>('all');
 
   const [anchorMovie, setAnchorMovie] = useState<Movie | null>(null);
+  const [collectionMovies, setCollectionMovies] = useState<Movie[]>([]);
   const [connections, setConnections] = useState<LiveMovieConnection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
   // Quick franchise search state
@@ -118,23 +120,35 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Synchronize when initialUniverseId changes from outside
+  // Synchronize when initialUniverseId changes from outside navigation
   useEffect(() => {
     if (initialUniverseId && initialUniverseId !== selectedUniverseId) {
       setSelectedUniverseId(initialUniverseId);
     }
   }, [initialUniverseId]);
 
-  // Main data-fetch effect: Pull genuine TMDB collections, recommendations, and credits
+  // Main data-fetch effect: pull genuine TMDB collections, recommendations, and credits
   useEffect(() => {
     let isCancelled = false;
+
+    // Strict requirement: when page first opens and no universe is selected, do not automatically fetch
+    if (!selectedUniverseId) {
+      setIsLoading(false);
+      setAnchorMovie(null);
+      setCollectionMovies([]);
+      setConnections([]);
+      setApiError(null);
+      return;
+    }
+
     const fetchGenuineConnections = async () => {
       setIsLoading(true);
       setApiError(null);
+      setCollectionMovies([]);
 
       try {
         let targetTmdbId: number | null = null;
-        let activePreset = FRANCHISE_PRESETS.find(p => p.id === selectedUniverseId);
+        const activePreset = FRANCHISE_PRESETS.find(p => p.id === selectedUniverseId);
 
         if (activePreset) {
           targetTmdbId = activePreset.tmdbId;
@@ -144,13 +158,12 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
           if (!isNaN(numeric) && numeric > 0) {
             targetTmdbId = numeric;
           } else {
-            // Default to Dune if unknown
             targetTmdbId = FRANCHISE_PRESETS[0].tmdbId;
           }
         }
 
         if (!targetTmdbId) {
-          throw new Error('Valid numeric TMDB movie ID could not be resolved for this franchise.');
+          throw new Error('Valid numeric TMDB movie ID could not be resolved.');
         }
 
         // 1. Fetch genuine anchor movie details with credits & collection info
@@ -166,11 +179,12 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
         if (anchor.collection?.id) {
           try {
             const collectionParts = await tmdbService.getCollection(anchor.collection.id);
-            if (!isCancelled) {
+            if (!isCancelled && collectionParts.length > 0) {
               storageService.saveMultipleCachedMovies(collectionParts);
 
               // Sort collection parts chronologically
               const sortedParts = [...collectionParts].sort((a, b) => a.year - b.year);
+              setCollectionMovies(sortedParts);
 
               for (const part of sortedParts) {
                 const partId = String(part.tmdbId || part.id);
@@ -193,9 +207,9 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                   : 'Franchise Companion';
 
                 const description = isSequel
-                  ? `Official canonical continuation in the ${anchor.collection.name} (${part.year}), building upon the overarching storyline.`
+                  ? `Official canonical continuation in the ${anchor.collection.name} (${part.year}), building upon overarching franchise continuity.`
                   : isPrequel
-                  ? `Official canonical predecessor in the ${anchor.collection.name} (${part.year}), establishing narrative foundations and genesis.`
+                  ? `Official canonical predecessor in the ${anchor.collection.name} (${part.year}), establishing narrative foundations and universe genesis.`
                   : `Official companion release in the ${anchor.collection.name}.`;
 
                 discoveredConnections.push({
@@ -240,7 +254,6 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
           }
         }
 
-        // Save candidate movies in cache for seamless modal navigation
         storageService.saveMultipleCachedMovies(uniqueCandidates);
 
         // Analyze authentic metadata relationships for top candidates
@@ -280,7 +293,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
               targetMovie: anchor.year <= candidate.year ? candidate : anchor,
               relationshipType: 'shared-characters',
               relationshipLabel: `Shared Cast: ${sharedActors.slice(0, 2).join(' & ')}`,
-              description: `Features overlapping lead performances by ${sharedActors.slice(0, 2).join(' and ')}, bridging performance talent across separate cinematic works.`,
+              description: `Features overlapping lead performances by ${sharedActors.slice(0, 2).join(' and ')}, bridging talent across separate cinematic works.`,
               isCanonical: false,
               connectionScore: 82
             });
@@ -292,7 +305,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
               targetMovie: candidate,
               relationshipType: 'optional-companion',
               relationshipLabel: 'Thematic Sister Film',
-              description: `Verified thematic correlation sharing ${sharedGenres.slice(0, 2).join(' & ')} genre architecture, discovered via verified cinematic recommendation algorithms.`,
+              description: `Verified thematic correlation sharing ${sharedGenres.slice(0, 2).join(' & ')} genre architecture, discovered via verified algorithmic similarity.`,
               isCanonical: false,
               connectionScore: 74
             });
@@ -361,19 +374,19 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
 
   const activePreset = FRANCHISE_PRESETS.find(p => p.id === selectedUniverseId);
 
-  const relationshipBadges: { type: RelationshipType; label: string; color: string }[] = [
-    { type: 'direct-sequel', label: 'Direct Sequel', color: 'border-emerald-500/30 text-emerald-300 bg-emerald-950/40' },
-    { type: 'prequel', label: 'Prequel', color: 'border-blue-500/30 text-blue-300 bg-blue-950/40' },
-    { type: 'spin-off', label: 'Spin-Off', color: 'border-amber-500/30 text-amber-300 bg-amber-950/40' },
-    { type: 'story-related', label: 'Director / Story Lineage', color: 'border-[#F88F22]/40 text-[#FFE3B3] bg-[#2A1308]' },
-    { type: 'shared-characters', label: 'Shared Cast', color: 'border-cyan-500/30 text-cyan-300 bg-cyan-950/40' },
-    { type: 'optional-companion', label: 'Thematic Companion', color: 'border-[#EA6113]/30 text-[#FBB931] bg-[#1E0B05]' },
+  const relationshipBadges: { type: RelationshipType; label: string }[] = [
+    { type: 'direct-sequel', label: 'Direct Sequel' },
+    { type: 'prequel', label: 'Prequel' },
+    { type: 'spin-off', label: 'Spin-Off' },
+    { type: 'story-related', label: 'Director / Story Lineage' },
+    { type: 'shared-characters', label: 'Shared Cast' },
+    { type: 'optional-companion', label: 'Thematic Companion' },
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in w-full max-w-full overflow-x-hidden">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in w-full max-w-full overflow-x-hidden">
       
-      {/* Header section matching reference sunset palette */}
+      {/* Header section */}
       <div className="max-w-3xl">
         <div className="flex items-center gap-2 mb-2">
           <Network className="w-5 h-5 text-[#EA6113]" />
@@ -381,68 +394,70 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
             Movie Connection Engine
           </span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
           Connected Movies & Storyline Genealogy
         </h1>
         <p className="text-xs sm:text-sm text-neutral-300 mt-2 leading-relaxed">
-          Untangle how films correlate: canonical franchise sequels, ancestral prequels, director vision companions, and verified cast overlap. Driven exclusively by verified franchise registries and official cast credits.
+          Untangle how films correlate: canonical franchise sequels, ancestral prequels, director vision companions, and verified cast overlap. Powered by genuine TMDB collection registries.
         </p>
       </div>
 
-      {/* 1. Six Compact Cinematic Universe Cards Directly ABOVE Search Bar */}
-      <div className="space-y-3">
+      {/* 1. Six Compact Elegant Glowing Filter Cards (2-column on mobile) */}
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold uppercase tracking-wider text-neutral-300">
             Cinematic Universes
           </label>
           <span className="text-[11px] text-[#FBB931] font-semibold">
-            6 Official Franchises
+            6 Filter Cards
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+        {/* Responsive 2-column mobile grid, 3-column tablet, 6-column desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
           {FRANCHISE_PRESETS.map((universe) => {
             const isSelected = selectedUniverseId === universe.id;
             return (
               <button
                 key={universe.id}
+                type="button"
                 onClick={() => {
                   setSelectedUniverseId(universe.id);
+                  setSearchQuery('');
+                  setSearchResults([]);
                   setFilterType('all');
                 }}
-                className={`group relative overflow-hidden rounded-2xl text-left transition-all aspect-[16/10] sm:aspect-[4/3] flex flex-col justify-end p-2.5 sm:p-3 border cursor-pointer active:scale-98 ${
+                className={`group relative rounded-xl text-left transition-all px-2.5 py-2 sm:px-3 sm:py-2.5 border cursor-pointer active:scale-95 flex flex-col justify-between min-h-[60px] sm:min-h-[66px] ${
                   isSelected
-                    ? 'border-[#F88F22] ring-2 ring-[#F88F22]/70 shadow-[0_0_18px_rgba(234,97,19,0.45)] bg-[#2A1308]'
-                    : 'border-white/10 hover:border-[#F88F22]/40 bg-[#140804] hover:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
+                    ? 'border-[#EA6113] bg-gradient-to-br from-[#2D1208] to-[#190904] ring-1 ring-[#F88F22]/60 shadow-[0_0_16px_rgba(234,97,19,0.4)]'
+                    : 'border-white/10 hover:border-[#F88F22]/40 bg-[#120508]/80 hover:bg-[#1C090E]/90'
                 }`}
               >
-                <img
-                  src={universe.imageUrl}
-                  alt={universe.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0402] via-[#0A0402]/65 to-transparent" />
-                
-                <div className="relative z-10 space-y-0.5">
-                  <span className="text-[10px] font-bold text-[#FBB931] uppercase tracking-wider block truncate">
-                    {universe.genres[0]}
+                <div className="flex items-center justify-between gap-1 w-full">
+                  <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${
+                    isSelected ? 'text-[#FBB931]' : 'text-neutral-400 group-hover:text-neutral-300'
+                  }`}>
+                    {universe.categoryLabel}
                   </span>
-                  <div className="text-xs sm:text-sm font-bold text-white line-clamp-1 group-hover:text-[#FFE3B3] transition-colors leading-tight">
-                    {universe.name}
-                  </div>
+                  {isSelected ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#EA6113] ring-2 ring-[#F88F22]/60 shadow-[0_0_8px_#EA6113] shrink-0" />
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-[#F88F22]/30 shrink-0" />
+                  )}
                 </div>
-
-                {isSelected && (
-                  <div className="absolute top-2 right-2 z-10 w-2 h-2 rounded-full bg-[#EA6113] ring-2 ring-white/60" />
-                )}
+                
+                <div className={`text-xs font-bold leading-tight line-clamp-2 transition-colors mt-1 ${
+                  isSelected ? 'text-white font-extrabold' : 'text-neutral-200 group-hover:text-white'
+                }`}>
+                  {universe.name}
+                </div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* 2. Premium Search Bar Directly Below Universe Cards */}
+      {/* 2. Search Bar Directly Below Universe Cards */}
       <div className="space-y-2">
         <div className="relative w-full">
           <div className="relative flex items-center rounded-2xl liquid-glass border border-[#F88F22]/30 focus-within:border-[#F88F22] focus-within:shadow-[0_0_20px_rgba(234,97,19,0.35)] transition-all overflow-hidden">
@@ -464,7 +479,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                   setSearchQuery('');
                   setSearchResults([]);
                 }}
-                className="p-1 mr-3 text-neutral-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                className="p-1 mr-3 text-neutral-400 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
                 title="Clear search"
               >
                 <X className="w-4 h-4" />
@@ -511,12 +526,36 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
         </div>
       </div>
 
+      {/* Initial Empty State when no universe or movie is selected */}
+      {!selectedUniverseId && !anchorMovie && !isLoading && (
+        <div className="py-14 sm:py-20 px-4 rounded-3xl liquid-glass border border-white/5 text-center max-w-md mx-auto space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-[#EA6113]/10 border border-[#F88F22]/30 flex items-center justify-center mx-auto text-[#EA6113] shadow-[0_0_16px_rgba(234,97,19,0.2)]">
+            <Network className="w-6 h-6 text-[#EA6113]" />
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            Choose a universe to explore
+          </h3>
+          <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">
+            Select one of the six cinematic options above or search any movie to uncover verified connections, sequels, prequels, and creative lineage.
+          </p>
+        </div>
+      )}
+
       {/* Universe Lore Spotlight Banner */}
       {anchorMovie && (
         <div className="p-6 rounded-3xl liquid-glass border border-[#F88F22]/25 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5 max-w-2xl">
-            <div className="text-xs font-bold text-[#FBB931] uppercase tracking-wider">
-              {anchorMovie.collection?.name || activePreset?.name || 'Verified Movie Connection Anchor'}
+            <div className="text-xs font-bold text-[#FBB931] uppercase tracking-wider flex items-center gap-1.5">
+              <span>{anchorMovie.collection?.name || activePreset?.name || 'Verified Movie Connection Anchor'}</span>
+              {anchorMovie.collection ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 font-semibold">
+                  Official TMDB Collection
+                </span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] font-semibold">
+                  Thematic & Auteur Lineage
+                </span>
+              )}
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white truncate">
               {anchorMovie.title} ({anchorMovie.year})
@@ -525,7 +564,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
               {activePreset ? activePreset.description : anchorMovie.overview}
             </p>
             <div className="text-[11px] text-neutral-400 pt-1">
-              Directed by <strong className="text-white">{anchorMovie.director}</strong> · {anchorMovie.genres.join(', ')} · ★ {anchorMovie.rating ? anchorMovie.rating.toFixed(1) : '7.5'} Rating
+              Directed by <strong className="text-white">{anchorMovie.director || 'Visionary Filmmakers'}</strong> · {anchorMovie.genres.join(', ')} · ★ {anchorMovie.rating ? anchorMovie.rating.toFixed(1) : '7.5'} Rating
             </div>
           </div>
 
@@ -546,6 +585,46 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
         </div>
       )}
 
+      {/* Official TMDB Franchise Collection Section (if genuine collection exists) */}
+      {collectionMovies.length > 0 && (
+        <section className="space-y-3 p-5 rounded-3xl liquid-glass border border-emerald-500/20 bg-gradient-to-br from-[#0c1a11]/40 to-[#070104]/80">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Official Franchise Canon: {anchorMovie?.collection?.name}
+              </h3>
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-400">
+              {collectionMovies.length} Official Films
+            </span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+            {collectionMovies.map((part) => (
+              <div
+                key={part.id}
+                onClick={() => onSelectMovie(part)}
+                className="w-[110px] sm:w-[130px] shrink-0 cursor-pointer group"
+              >
+                <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-emerald-500/30 group-hover:border-emerald-400 shadow-md">
+                  <img
+                    src={part.posterUrl}
+                    alt={part.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-bold text-emerald-300 border border-emerald-500/30">
+                    {part.year}
+                  </div>
+                </div>
+                <div className="mt-1.5 text-xs font-semibold text-white group-hover:text-emerald-300 truncate">
+                  {part.title}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Catalog Notice State Banner */}
       {apiError && !isLoading && (
         <div className="p-6 rounded-3xl bg-[#1E0B05] border border-red-500/30 text-neutral-200 space-y-3">
@@ -557,7 +636,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
             {apiError}
           </p>
           <div className="text-[11px] text-neutral-400 bg-black/40 p-3 rounded-xl border border-white/5">
-            <strong>Data Integrity Discipline:</strong> Movie Verse does not invent fake sequels, prequels, or fabricated connections. Please ensure movie catalog service is connected to query live franchise collections.
+            <strong>Data Integrity Discipline:</strong> Movie Verse does not invent fake sequels, prequels, or fabricated connections. Please ensure TMDB catalog service is reachable to query live franchise collections.
           </div>
         </div>
       )}
@@ -568,7 +647,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
           <span className="text-xs text-neutral-400 mr-2">Filter Connection Type:</span>
           <button
             onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
               filterType === 'all'
                 ? 'bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white border-[#F88F22] shadow-md'
                 : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
@@ -583,7 +662,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
               <button
                 key={badge.type}
                 onClick={() => setFilterType(badge.type)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer ${
                   filterType === badge.type
                     ? 'bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white border-[#F88F22]'
                     : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
@@ -606,13 +685,15 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
             ))}
           </div>
         ) : filteredConnections.length === 0 ? (
-          <div className="p-12 rounded-3xl liquid-glass text-center text-neutral-300 text-sm border border-white/5 space-y-2">
-            <GitFork className="w-8 h-8 text-[#FBB931]/60 mx-auto" />
-            <div className="font-semibold text-white">No Connected Movies Found</div>
-            <p className="text-xs text-neutral-400 max-w-md mx-auto">
-              No verified franchise sequels, prequels, or director companions matched the selected filter for this title. Try selecting "All Relationships" or choose another franchise preset.
-            </p>
-          </div>
+          anchorMovie ? (
+            <div className="p-12 rounded-3xl liquid-glass text-center text-neutral-300 text-sm border border-white/5 space-y-2">
+              <GitFork className="w-8 h-8 text-[#FBB931]/60 mx-auto" />
+              <div className="font-semibold text-white">No Connected Movies Found</div>
+              <p className="text-xs text-neutral-400 max-w-md mx-auto">
+                No verified franchise sequels, prequels, or director companions matched the selected filter for this title. Try selecting "All Relationships" or choose another franchise option.
+              </p>
+            </div>
+          ) : null
         ) : (
           filteredConnections.map((conn) => {
             const { sourceMovie: source, targetMovie: target } = conn;
@@ -638,6 +719,9 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                     <div className="min-w-0">
                       <div className="text-[11px] text-neutral-400 truncate">
                         {source.year} · {source.genres?.[0] || 'Cinema'} · ★ {source.rating ? source.rating.toFixed(1) : '7.5'}
+                      </div>
+                      <div className="text-sm font-bold text-white group-hover/card:text-[#FFE3B3] transition-colors truncate">
+                        {source.title}
                       </div>
                       {source.director ? (
                         <div className="text-[10px] text-neutral-400 truncate">
@@ -667,7 +751,7 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({
                         {conn.isCanonical ? 'Canonical Continuity' : 'Auteur / Thematic Lineage'}
                       </span>
 
-                      {/* Connection Score Badge (Clearly distinguished from official rating) */}
+                      {/* Connection Score Badge */}
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#140A05] border border-[#F88F22]/20 text-[#FBB931] font-semibold tabular-nums">
                         {conn.connectionScore}% Match
                       </span>

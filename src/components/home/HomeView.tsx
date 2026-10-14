@@ -7,17 +7,19 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Movie, MoodCategory } from '../../types/movie';
-import { UNIVERSES, WHERE_TO_WATCH_DIRECTORY, MOODS } from '../../data/moviesData';
+import { Movie } from '../../types/movie';
+import { UNIVERSES, MOODS } from '../../data/moviesData';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { HeroBanner } from './HeroBanner';
 import { MovieCard } from '../discover/MovieCard';
 import { DeveloperCard } from '../common/DeveloperCard';
+import { HorizontalMovieRow } from '../common/HorizontalMovieRow';
 import { 
-  ChevronRight, Network, ListOrdered, Sparkles, Tv, 
-  ExternalLink, ArrowRight, History, Flame, Film, 
-  RefreshCw, AlertCircle, TrendingUp, Clock, Award, Bookmark, Play, Search, Loader2, Pause
+  Network, Sparkles, Tv, 
+  ArrowRight, History, Flame, Film, 
+  RefreshCw, AlertCircle, Clock, Award, Bookmark, 
+  Play, Search, Loader2, Globe2 
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -34,9 +36,10 @@ interface HomeViewProps {
   onSelectMood: (moodId: string | null) => void;
   onOpenTrailer: (movie: Movie) => void;
   onOpenSearch: () => void;
+  onViewAll: (categoryKey: string) => void;
 }
 
-type CategoryTab = 'all' | 'movies' | 'trending' | 'popular' | 'top_rated' | 'upcoming';
+type CategoryTab = 'all' | 'movies' | 'trending' | 'popular' | 'now_playing' | 'upcoming' | 'top_rated' | 'tamil' | 'bangladeshi';
 
 export const HomeView: React.FC<HomeViewProps> = ({
   onSelectMovie,
@@ -51,22 +54,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
   selectedMoodId,
   onSelectMood,
   onOpenTrailer,
-  onOpenSearch
+  onOpenSearch,
+  onViewAll
 }) => {
   const [activeTab, setActiveTab] = useState<CategoryTab>('all');
+  
+  // Real TMDB Movie Feeds
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
-  const [topRatedMovies, setTopRatedMovies] = useState<Movie[]>([]);
+  const [nowPlayingMovies, setNowPlayingMovies] = useState<Movie[]>([]);
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]);
+  const [topRatedMovies, setTopRatedMovies] = useState<Movie[]>([]);
+  const [tamilMovies, setTamilMovies] = useState<Movie[]>([]);
+  const [bangladeshiMovies, setBangladeshiMovies] = useState<Movie[]>([]);
   const [moodMovies, setMoodMovies] = useState<Movie[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMood, setIsLoadingMood] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Session-stable dynamic hero candidates
+  // Dynamic hero candidates
   const [heroMovies, setHeroMovies] = useState<Movie[]>(() => {
     try {
-      const stored = sessionStorage.getItem('movieverse_session_hero_v2');
+      const stored = sessionStorage.getItem('movieverse_session_hero_v3');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -77,33 +87,46 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return [];
   });
 
-  // Smooth horizontal marquee animation controls
-  const [isGlidePaused, setIsGlidePaused] = useState(false);
-  const [isGlideHovered, setIsGlideHovered] = useState(false);
-
   const fetchFeeds = async () => {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [trendRes, popRes, topRes, upRes] = await Promise.all([
+      const [
+        trendRes, 
+        popRes, 
+        nowRes, 
+        upRes, 
+        topRes,
+        tamilRes,
+        bdRes
+      ] = await Promise.all([
         tmdbService.getTrending('week', 1),
         tmdbService.getPopular(1),
-        tmdbService.getTopRated(1),
-        tmdbService.getUpcoming(1)
+        tmdbService.getNowPlaying(1).catch(() => ({ movies: [], totalPages: 0 })),
+        tmdbService.getUpcoming(1).catch(() => ({ movies: [], totalPages: 0 })),
+        tmdbService.getTopRated(1).catch(() => ({ movies: [], totalPages: 0 })),
+        tmdbService.getTamilCinema(1).catch(() => ({ movies: [], totalPages: 0 })),
+        tmdbService.getBangladeshiCinema(1).catch(() => ({ movies: [], totalPages: 0 }))
       ]);
 
       const allFetched = [
         ...trendRes.movies,
         ...popRes.movies,
+        ...nowRes.movies,
+        ...upRes.movies,
         ...topRes.movies,
-        ...upRes.movies
+        ...tamilRes.movies,
+        ...bdRes.movies
       ];
       storageService.saveMultipleCachedMovies(allFetched);
 
       setTrendingMovies(trendRes.movies);
       setPopularMovies(popRes.movies);
-      setTopRatedMovies(topRes.movies);
+      setNowPlayingMovies(nowRes.movies);
       setUpcomingMovies(upRes.movies);
+      setTopRatedMovies(topRes.movies);
+      setTamilMovies(tamilRes.movies);
+      setBangladeshiMovies(bdRes.movies);
 
       // Select high-quality candidates with backdrops for dynamic hero carousel
       const heroPool = [...trendRes.movies, ...popRes.movies].filter(m => m.backdropUrl && m.overview);
@@ -111,7 +134,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         const selectedHeroes = heroPool.slice(0, 6);
         setHeroMovies(selectedHeroes);
         try {
-          sessionStorage.setItem('movieverse_session_hero_v2', JSON.stringify(selectedHeroes));
+          sessionStorage.setItem('movieverse_session_hero_v3', JSON.stringify(selectedHeroes));
         } catch {
           // ignore
         }
@@ -121,8 +144,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
       setApiError(err.message || 'Unable to connect to live movie catalog. Please verify connection.');
       setTrendingMovies([]);
       setPopularMovies([]);
-      setTopRatedMovies([]);
-      setUpcomingMovies([]);
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +187,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     };
   }, [selectedMoodId]);
 
-  // Continue watching / recently viewed movies (strictly mapped from genuine cache, zero fake defaults)
+  // Continue watching / recently viewed movies (strictly mapped from genuine cache)
   const continueWatchingMovies = recentMovieIds
     .map(id => storageService.getCachedMovie(id))
     .filter((m): m is Movie => Boolean(m));
@@ -179,7 +200,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in w-full max-w-full overflow-x-hidden">
       
-      {/* 1. Featured Movie Carousel (Dynamic selection from genuine TMDB trending/popular candidates) */}
+      {/* 1. Featured Movie Carousel */}
       {(heroMovies.length > 0 || trendingMovies.length > 0) ? (
         <HeroBanner
           movies={heroMovies.length > 0 ? heroMovies : trendingMovies}
@@ -193,7 +214,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <Loader2 className="w-8 h-8 text-[#FBB931] animate-spin" />
         </div>
       ) : (
-        /* Cinematic Welcome Hub if API is not yet configured or returned an error */
+        /* Cinematic Welcome Hub */
         <div className="relative rounded-3xl p-6 sm:p-10 border border-[#F88F22]/30 bg-gradient-to-br from-[#241108]/90 via-[#160B05]/95 to-[#0D0704] shadow-2xl overflow-hidden">
           <div className="max-w-2xl space-y-3 relative z-10">
             <span className="text-[11px] font-bold text-[#FBB931] uppercase tracking-widest flex items-center gap-1.5">
@@ -216,7 +237,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </button>
               <button
                 onClick={fetchFeeds}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-xs"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-xs cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-[#FBB931]" />
                 <span>Retry Connection</span>
@@ -240,20 +261,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       )}
 
-      {/* 2. Category Navigation Tabs matching Reference 1 */}
+      {/* 2. Category Navigation Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-touch py-1 px-1 -mx-1">
         {[
           { id: 'all', label: 'All' },
-          { id: 'movies', label: 'Movies' },
           { id: 'trending', label: 'Trending' },
           { id: 'popular', label: 'Popular' },
-          { id: 'top_rated', label: 'Top Rated' },
+          { id: 'now_playing', label: 'Now Playing' },
           { id: 'upcoming', label: 'Upcoming' },
+          { id: 'top_rated', label: 'Top Rated' },
+          { id: 'tamil', label: 'Tamil Cinema' },
+          { id: 'bangladeshi', label: 'Bangladeshi' },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as CategoryTab)}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeTab === tab.id
                 ? 'sunset-gradient-btn text-white shadow-lg'
                 : 'bg-white/[0.05] hover:bg-white/10 text-neutral-400 hover:text-white border border-white/5'
@@ -267,7 +290,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={() => onExploreVibeMatch()}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0 cursor-pointer"
         >
           <Sparkles className="w-3 h-3 text-[#EA6113]" />
           <span>Vibe Match</span>
@@ -275,7 +298,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={() => onExploreConnections()}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0 cursor-pointer"
         >
           <Network className="w-3 h-3 text-[#EA6113]" />
           <span>Connected</span>
@@ -283,14 +306,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={onExploreWhereToWatch}
-          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[#2A1308] border border-[#F88F22]/30 text-[#FFE3B3] hover:border-[#FBB931] flex items-center gap-1.5 shrink-0 cursor-pointer"
         >
           <Tv className="w-3.5 h-3.5 text-[#EA6113]" />
           <span>Where to Watch</span>
         </button>
       </div>
 
-      {/* 3. Continue Watching / History Section (Only if genuine user history exists) */}
+      {/* 3. Continue Watching / History Section */}
       {continueWatchingMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -355,98 +378,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 4. Top Trending Section with Smooth Gliding Animation */}
-      {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && trendingMovies.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Flame className="w-4 h-4 text-[#EA6113]" />
-              <span>Top Trending Movies</span>
-            </h2>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsGlidePaused(prev => !prev)}
-                className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-medium text-neutral-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-                title={isGlidePaused ? 'Resume auto-glide' : 'Pause auto-glide'}
-                aria-label={isGlidePaused ? 'Resume auto-glide' : 'Pause auto-glide'}
-              >
-                {isGlidePaused ? (
-                  <>
-                    <Play className="w-3 h-3 text-[#FBB931]" />
-                    <span className="hidden sm:inline">Glide: Paused</span>
-                  </>
-                ) : (
-                  <>
-                    <Pause className="w-3 h-3 text-[#EA6113]" />
-                    <span className="hidden sm:inline">Auto-Glide</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => setActiveTab('trending')}
-                className="text-xs font-semibold text-neutral-400 hover:text-white"
-              >
-                View All ({trendingMovies.length})
-              </button>
-            </div>
-          </div>
-
-          {/* Gliding Row Container with Edge Fades & Touch Hover Handling */}
-          <div 
-            className="relative w-full overflow-hidden rounded-2xl py-1 group/glider"
-            onMouseEnter={() => setIsGlideHovered(true)}
-            onMouseLeave={() => setIsGlideHovered(false)}
-            onTouchStart={() => setIsGlideHovered(true)}
-            onTouchEnd={() => setTimeout(() => setIsGlideHovered(false), 2000)}
-          >
-            {/* Subtle Gradient Masks on Edges for Cinematic Platform Depth */}
-            <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 sm:w-12 bg-gradient-to-r from-[#070104] to-transparent z-10" />
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 sm:w-12 bg-gradient-to-l from-[#070104] to-transparent z-10" />
-
-            {/* Seamless Double-Buffered Marquee Track */}
-            <div 
-              className={`animate-glide-row flex gap-3 ${
-                isGlidePaused || isGlideHovered ? 'is-paused' : ''
-              }`}
-            >
-              {/* Primary Movie Cards */}
-              {trendingMovies.map((movie) => (
-                <div 
-                  key={movie.id} 
-                  className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
-                >
-                  <MovieCard
-                    movie={movie}
-                    onSelectMovie={onSelectMovie}
-                    isWatchlisted={watchlist.includes(movie.id)}
-                    onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-                    onOpenTrailer={onOpenTrailer}
-                  />
-                </div>
-              ))}
-
-              {/* Duplicate Movie Cards for Infinite Gliding Loop with Unique Keys */}
-              {trendingMovies.map((movie) => (
-                <div 
-                  key={`${movie.id}-glide-clone`} 
-                  className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
-                  aria-hidden="true"
-                >
-                  <MovieCard
-                    movie={movie}
-                    onSelectMovie={onSelectMovie}
-                    isWatchlisted={watchlist.includes(movie.id)}
-                    onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-                    onOpenTrailer={onOpenTrailer}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+      {/* 4. Top Trending Section — Fluid Auto-Glide with Native Touch Scrolling */}
+      {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && (
+        <HorizontalMovieRow
+          title="Top Trending Movies"
+          icon={<Flame className="w-4 h-4 text-[#EA6113]" />}
+          movies={trendingMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('trending')}
+          totalCount={trendingMovies.length}
+          isLoading={isLoading}
+          speed={24}
+        />
       )}
 
       {/* 5. Vibe Match Mood Pills */}
@@ -458,7 +404,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </h2>
           <button
             onClick={() => onExploreVibeMatch()}
-            className="text-xs font-semibold text-neutral-400 hover:text-white"
+            className="text-xs font-semibold text-neutral-400 hover:text-white cursor-pointer"
           >
             Open Vibe Match
           </button>
@@ -471,7 +417,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <button
                 key={mood.id}
                 onClick={() => onSelectMood(isSelected ? null : mood.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs font-semibold shrink-0 transition-all ${
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs font-semibold shrink-0 transition-all cursor-pointer ${
                   isSelected
                     ? 'sunset-gradient-btn text-white border-[#F88F22] shadow-md'
                     : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/5 text-neutral-300 hover:text-white'
@@ -499,7 +445,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             ) : moodMovies.length > 0 ? (
               <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
                 {moodMovies.map(movie => (
-                  <div key={movie.id} className="w-[110px] sm:w-[135px] shrink-0">
+                  <div key={movie.id} className="w-[115px] sm:w-[138px] shrink-0">
                     <MovieCard
                       movie={movie}
                       onSelectMovie={onSelectMovie}
@@ -519,42 +465,111 @@ export const HomeView: React.FC<HomeViewProps> = ({
         )}
       </section>
 
-      {/* 6. Popular on Movie Verse */}
-      {(activeTab === 'all' || activeTab === 'popular' || activeTab === 'movies') && popularMovies.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Film className="w-4 h-4 text-[#EA6113]" />
-              <span>Popular Movies</span>
-            </h2>
-            <button
-              onClick={() => setActiveTab('popular')}
-              className="text-xs font-semibold text-neutral-400 hover:text-white"
-            >
-              View All ({popularMovies.length})
-            </button>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
-            {popularMovies.map((movie) => (
-              <div 
-                key={movie.id} 
-                className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
-              >
-                <MovieCard
-                  movie={movie}
-                  onSelectMovie={onSelectMovie}
-                  isWatchlisted={watchlist.includes(movie.id)}
-                  onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-                  onOpenTrailer={onOpenTrailer}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
+      {/* 6. Popular Movies — Reusable Touch Glider */}
+      {(activeTab === 'all' || activeTab === 'popular' || activeTab === 'movies') && (
+        <HorizontalMovieRow
+          title="Popular Movies"
+          icon={<Film className="w-4 h-4 text-[#EA6113]" />}
+          movies={popularMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('popular')}
+          totalCount={popularMovies.length}
+          isLoading={isLoading}
+          speed={22}
+        />
       )}
 
-      {/* 7. My List / Saved Strip (Only if genuine watchlisted items exist) */}
+      {/* 7. Tamil Cinema (Language: ta) */}
+      {(activeTab === 'all' || activeTab === 'tamil') && (tamilMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Tamil Cinema (Kollywood)"
+          icon={<Globe2 className="w-4 h-4 text-[#EA6113]" />}
+          movies={tamilMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('tamil')}
+          totalCount={tamilMovies.length}
+          isLoading={isLoading}
+          speed={20}
+          emptyMessage="No current Tamil cinema titles found."
+        />
+      )}
+
+      {/* 8. Bangladeshi Cinema (Origin Country: BD) */}
+      {(activeTab === 'all' || activeTab === 'bangladeshi') && (bangladeshiMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Bangladeshi Cinema (Dhallywood)"
+          icon={<Globe2 className="w-4 h-4 text-[#EA6113]" />}
+          movies={bangladeshiMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('bangladeshi')}
+          totalCount={bangladeshiMovies.length}
+          isLoading={isLoading}
+          speed={18}
+          emptyMessage="No genuine Bangladeshi titles currently returned by TMDB."
+        />
+      )}
+
+      {/* 9. Now Playing in Theaters */}
+      {(activeTab === 'all' || activeTab === 'now_playing' || activeTab === 'movies') && (nowPlayingMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Now Playing in Theaters"
+          icon={<Film className="w-4 h-4 text-[#EA6113]" />}
+          movies={nowPlayingMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('now_playing')}
+          totalCount={nowPlayingMovies.length}
+          isLoading={isLoading}
+          speed={22}
+        />
+      )}
+
+      {/* 10. Upcoming Releases */}
+      {(activeTab === 'all' || activeTab === 'upcoming' || activeTab === 'movies') && (upcomingMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Upcoming Releases"
+          icon={<Clock className="w-4 h-4 text-[#FBB931]" />}
+          movies={upcomingMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('upcoming')}
+          totalCount={upcomingMovies.length}
+          isLoading={isLoading}
+          speed={20}
+        />
+      )}
+
+      {/* 11. Top Rated Masterpieces */}
+      {(activeTab === 'all' || activeTab === 'top_rated') && (topRatedMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Top Rated Masterpieces"
+          icon={<Award className="w-4 h-4 text-amber-400" />}
+          movies={topRatedMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onViewAll={() => onViewAll('top_rated')}
+          totalCount={topRatedMovies.length}
+          isLoading={isLoading}
+          speed={20}
+        />
+      )}
+
+      {/* 12. My List / Saved Strip */}
       {watchlistMovies.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -571,7 +586,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             {watchlistMovies.map((movie) => (
               <div 
                 key={movie.id} 
-                className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
+                className="w-[115px] sm:w-[138px] md:w-[158px] shrink-0"
               >
                 <MovieCard
                   movie={movie}
@@ -586,7 +601,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 8. Connected Universes Showcase */}
+      {/* 13. Connected Universes Showcase */}
       <section className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div>
@@ -600,7 +615,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
           <button
             onClick={() => onExploreConnections()}
-            className="text-xs font-semibold text-[#FBB931] hover:text-[#FFE3B3] shrink-0"
+            className="text-xs font-semibold text-[#FBB931] hover:text-[#FFE3B3] shrink-0 cursor-pointer"
           >
             All Lore
           </button>
@@ -632,42 +647,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </section>
 
-      {/* 9. Top Rated Epics */}
-      {(activeTab === 'all' || activeTab === 'top_rated') && topRatedMovies.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-400" />
-              <span>Top Rated Masterpieces</span>
-            </h2>
-            <button
-              onClick={() => setActiveTab('top_rated')}
-              className="text-xs font-semibold text-neutral-400 hover:text-white"
-            >
-              View All ({topRatedMovies.length})
-            </button>
-          </div>
-
-          <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
-            {topRatedMovies.map((movie) => (
-              <div 
-                key={movie.id} 
-                className="w-[110px] sm:w-[135px] md:w-[155px] shrink-0"
-              >
-                <MovieCard
-                  movie={movie}
-                  onSelectMovie={onSelectMovie}
-                  isWatchlisted={watchlist.includes(movie.id)}
-                  onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
-                  onOpenTrailer={onOpenTrailer}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 10. Where to Watch Streaming Directory Banner */}
+      {/* 14. Where to Watch Streaming Directory Banner */}
       <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#241108]/90 via-[#180C06] to-[#0A0402] border border-[#F88F22]/25 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#FBB931] uppercase tracking-wider">
@@ -684,14 +664,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         <button
           onClick={onExploreWhereToWatch}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl sunset-gradient-btn text-white font-bold text-xs shrink-0 shadow-lg transition-all self-start sm:self-center active:scale-95"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl sunset-gradient-btn text-white font-bold text-xs shrink-0 shadow-lg transition-all self-start sm:self-center active:scale-95 cursor-pointer"
         >
           <span>Open Directory</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </section>
 
-      {/* 11. Lead Developer Signature Identity */}
+      {/* 15. Lead Developer Signature Identity */}
       <section className="pt-2">
         <DeveloperCard variant="full" />
       </section>

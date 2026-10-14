@@ -614,5 +614,80 @@ export const tmdbService = {
     }
     const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+  },
+
+  /**
+   * Fetch Tamil Cinema (language ta) sorted by popularity with genuine TMDB metadata.
+   */
+  async getTamilCinema(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const cacheKey = `tamil_cinema_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/discover?with_original_language=ta&sort_by=popularity.desc&page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch Tamil cinema (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 15 * 60 * 1000);
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
+    }
+  },
+
+  /**
+   * Fetch Bangladeshi Cinema using genuine origin country code BD.
+   * Strictly distinguishes Bangladeshi cinema from Indian Bengali cinema.
+   */
+  async getBangladeshiCinema(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const cacheKey = `bangladeshi_cinema_p${page}`;
+    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/discover?with_origin_country=BD&sort_by=popularity.desc&page=${page}`);
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch Bangladeshi cinema (${res.status})`);
+      }
+      const data: any = await res.json();
+      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      const result = { movies, totalPages: data.total_pages || 1 };
+      setClientCache(cacheKey, result, 15 * 60 * 1000);
+      return result;
+    } catch (err) {
+      if (cached) return cached;
+      throw err;
+    }
+  },
+
+  /**
+   * Universal category dispatcher for dedicated View All listings.
+   */
+  async getCategoryMovies(category: string, page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    switch (category) {
+      case 'trending':
+        return this.getTrending('week', page);
+      case 'popular':
+        return this.getPopular(page);
+      case 'now_playing':
+        return this.getNowPlaying(page);
+      case 'upcoming':
+        return this.getUpcoming(page);
+      case 'top_rated':
+        return this.getTopRated(page);
+      case 'tamil':
+        return this.getTamilCinema(page);
+      case 'bangladeshi':
+        return this.getBangladeshiCinema(page);
+      default:
+        return this.getPopular(page);
+    }
   }
 };
