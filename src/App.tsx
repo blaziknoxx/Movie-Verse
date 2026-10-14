@@ -35,6 +35,7 @@ export default function App() {
   // Cross-view state parameters
   const [targetUniverseId, setTargetUniverseId] = useState<string | undefined>(undefined);
   const [targetSeedMovieId, setTargetSeedMovieId] = useState<string | undefined>(undefined);
+  const [targetWatchMovieId, setTargetWatchMovieId] = useState<string | undefined>(undefined);
   const [selectedMoodId, setSelectedMoodId] = useState<string | null>(null);
 
   // Local storage state
@@ -120,7 +121,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleExploreWhereToWatch = () => {
+  const handleExploreWhereToWatch = (movieId?: string) => {
+    if (movieId) {
+      setTargetWatchMovieId(movieId);
+    }
     setActiveTab('where-to-watch');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -202,7 +206,10 @@ export default function App() {
           )}
 
           {activeTab === 'where-to-watch' && (
-            <WhereToWatchView />
+            <WhereToWatchView
+              initialMovieId={targetWatchMovieId}
+              onSelectMovie={handleSelectMovie}
+            />
           )}
 
           {activeTab === 'library' && (

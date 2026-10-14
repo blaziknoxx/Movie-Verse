@@ -14,7 +14,7 @@ import { buildHDHub4uSearchUrl, getMovieLinkBDUrl, getMovieStreamingPlatforms } 
 import { 
   ArrowLeft, Star, Bookmark, CheckCircle2, Network, ListOrdered, 
   Tv, ExternalLink, Sparkles, User, Calendar, Clock, Film,
-  Loader2, ThumbsUp, Play, Share2, Eye, ChevronRight, Shield, Info
+  Loader2, ThumbsUp, Play, Share2, Eye, ChevronRight, Shield, Info, Flame
 } from 'lucide-react';
 
 interface MovieDetailModalProps {
@@ -28,7 +28,7 @@ interface MovieDetailModalProps {
   onNavigateToWatchOrder: (universeId?: string) => void;
   onNavigateToSameVibe: (movieId: string) => void;
   onNavigateToVibeMatch: (movieId: string) => void;
-  onNavigateToWhereToWatch: () => void;
+  onNavigateToWhereToWatch: (movieId?: string) => void;
   onSelectMovie: (movie: Movie) => void;
   onOpenTrailer: (movie: Movie) => void;
 }
@@ -119,19 +119,23 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   if (!movie) return null;
   const current = detailedMovie || movie;
 
-  // External streaming platforms dynamically generated using movie title
+  // External streaming platforms dynamically generated using movie title with recommendation indicators
   const externalStreamingPlatforms = [
     {
       name: 'HDHub4u',
       type: 'External Portal' as const,
       url: buildHDHub4uSearchUrl(current.title),
-      description: 'Search dynamic catalog on HDHub4u'
+      badge: 'Movie Verse Pick',
+      isPick: true,
+      description: `Direct title query matching "${current.title}"`
     },
     {
       name: 'MovieLinkBD',
       type: 'External Portal' as const,
       url: getMovieLinkBDUrl(),
-      description: 'External directory index (homepage fallback)'
+      badge: 'Directory Index',
+      isPick: false,
+      description: 'Homepage directory index (opaque ID fallback)'
     }
   ];
 
@@ -342,7 +346,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               <button
                 onClick={() => {
                   onClose();
-                  onNavigateToWhereToWatch();
+                  onNavigateToWhereToWatch(String(current.tmdbId || current.id));
                 }}
                 className="text-[11px] text-[#F88F22] hover:text-[#FBB931] font-semibold"
               >
@@ -350,22 +354,38 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {externalStreamingPlatforms.map((platform, idx) => (
                 <a
                   key={idx}
                   href={platform.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-xl bg-[#140A05] hover:bg-[#1E0E07] border border-[#F88F22]/20 flex items-center justify-between transition-all group"
+                  className={`p-3 rounded-2xl flex items-center justify-between transition-all group relative overflow-hidden ${
+                    platform.isPick 
+                      ? 'bg-gradient-to-br from-[#241108] to-[#120703] border border-[#FBB931]/50 shadow-[0_0_16px_rgba(251,185,49,0.2)] hover:border-[#FBB931]/80' 
+                      : 'bg-[#140A05] hover:bg-[#1E0E07] border border-[#F88F22]/20 hover:border-[#FBB931]/40'
+                  }`}
                 >
-                  <div className="truncate">
-                    <div className="text-xs font-bold text-white group-hover:text-[#FFE3B3] truncate">
-                      {platform.name}
+                  <div className="truncate space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white group-hover:text-[#FFE3B3] truncate">
+                        {platform.name}
+                      </span>
+                      {platform.isPick ? (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FBB931]/20 border border-[#FBB931]/40 text-[#FFE3B3] text-[9px] font-bold">
+                          <Flame className="w-2.5 h-2.5 text-[#FBB931]" />
+                          Pick
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-neutral-400 text-[9px]">
+                          Directory
+                        </span>
+                      )}
                     </div>
-                    <div className="text-[10px] text-neutral-400">{platform.type}</div>
+                    <div className="text-[10px] text-neutral-400 truncate">{platform.description}</div>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-neutral-500 group-hover:text-white shrink-0 ml-1" />
+                  <ExternalLink className={`w-3.5 h-3.5 shrink-0 ml-1.5 ${platform.isPick ? 'text-[#FBB931]' : 'text-neutral-500 group-hover:text-white'}`} />
                 </a>
               ))}
             </div>
