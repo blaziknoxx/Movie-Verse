@@ -394,6 +394,10 @@ export default function App() {
   };
 
   const handleOpenSearch = (initialQ?: string) => {
+    // Save current scroll position before entering search
+    const currentKey = activeTab === 'listing' ? `listing_${listingCategory}` : activeTab;
+    scrollPositionsRef.current[currentKey] = window.scrollY || document.documentElement.scrollTop || 0;
+
     setIsSearchOpen(true);
     const queryToUse = initialQ !== undefined ? initialQ : activeSearchQuery;
     if (initialQ !== undefined) {
@@ -416,15 +420,16 @@ export default function App() {
   };
 
   const handleCloseSearch = () => {
-    if (inAppHistoryDepthRef.current > 0 && window.history.state?.searchOpen) {
+    if (inAppHistoryDepthRef.current > 0) {
       window.history.back();
     } else {
+      // Direct visit to Search without previous in-app history entry: safely return to home
       setIsSearchOpen(false);
       setActiveSearchQuery('');
+      setSelectedMovie(null);
+      setActiveTab('home');
       const nextState: NavState = {
-        tab: activeTab,
-        category: activeTab === 'listing' ? listingCategory : undefined,
-        movieId: selectedMovie?.id,
+        tab: 'home',
         inApp: false,
       };
       try {
@@ -432,6 +437,7 @@ export default function App() {
       } catch {
         // ignore
       }
+      resetScrollPosition('instant');
     }
   };
 
@@ -795,6 +801,7 @@ export default function App() {
       <SearchModal
         isOpen={isSearchOpen}
         onClose={handleCloseSearch}
+        onBack={handleCloseSearch}
         onSelectMovie={handleSelectMovie}
         initialQuery={activeSearchQuery}
         onQueryChange={handleSearchQueryChange}

@@ -148,7 +148,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   };
 
   return (
-    <div ref={modalScrollRef} className="fixed inset-0 z-50 overflow-y-auto bg-black/95 backdrop-blur-md animate-fade-in text-neutral-200">
+    <div ref={modalScrollRef} className="fixed inset-0 z-[70] overflow-y-auto bg-black/95 backdrop-blur-md animate-fade-in text-neutral-200">
       
       {/* Phone-Framed Screen Container */}
       <div className="relative w-full max-w-2xl mx-auto min-h-screen bg-[#0A0402] pb-24 border-x border-[#F88F22]/15 shadow-2xl">

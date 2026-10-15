@@ -144,7 +144,7 @@ export const TrailerModal: React.FC<TrailerModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/90 backdrop-blur-2xl animate-fade-in overflow-y-auto"
+      className="fixed inset-0 z-[80] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/90 backdrop-blur-2xl animate-fade-in overflow-y-auto"
       onClick={onClose}
     >
       {/* Modal Dialog Card */}

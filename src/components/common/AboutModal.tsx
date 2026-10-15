@@ -11,7 +11,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto liquid-glass-panel rounded-3xl p-6 sm:p-8 text-neutral-200 border border-[#F88F22]/20 shadow-2xl">
         
         {/* Close Button */}
