@@ -8,6 +8,7 @@
 
 import { PlaybackSource, PlaybackType, Movie } from '../types/movie';
 import { nexstreamService } from './nexstreamService';
+import { storageService } from './storageService';
 
 // Strict allowlist for approved in-app iframe embed providers
 const ALLOWED_EMBED_DOMAINS = [
@@ -235,7 +236,10 @@ export function resolveMoviePlaybackSources(
   const sources: PlaybackSource[] = [];
 
   // Determine actual numeric TMDB ID
-  const rawTmdb = movie.tmdbId ?? (Number(movie.id) ? Number(movie.id) : null);
+  const cachedMovie = movie.id ? storageService.getCachedMovie(movie.id) : undefined;
+  const rawTmdb = movie.tmdbId ?? 
+    (Number(movie.id) ? Number(movie.id) : null) ?? 
+    (cachedMovie?.tmdbId ? cachedMovie.tmdbId : null);
   const cleanTmdbId = nexstreamService.parseTmdbId(rawTmdb);
 
   const isTv = options.isTv ?? (

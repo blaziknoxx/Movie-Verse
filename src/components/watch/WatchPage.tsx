@@ -12,7 +12,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, PlaybackSource } from '../../types/movie';
-import { tmdbService } from '../../services/tmdbService';
+import { tmdbService, getPosterUrl, getBackdropUrl } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { nexstreamService } from '../../services/nexstreamService';
 import { resolveMoviePlaybackSources } from '../../services/videoSecurityService';
@@ -22,7 +22,7 @@ import { MovieCard } from '../discover/MovieCard';
 import { 
   ArrowLeft, Star, Clock, Calendar, Bookmark, Share2, 
   Film, Sparkles, Tv, Clapperboard, CheckCircle2, Shield,
-  Key, Check, ChevronRight, ChevronLeft, Play, AlertCircle, Layers
+  ChevronRight, ChevronLeft, Play, AlertCircle, Layers
 } from 'lucide-react';
 
 interface WatchPageProps {
@@ -86,11 +86,21 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   // Playback Active State (starts on user action)
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
 
-  // NexStream API Key Configuration State
-  const [apiKeyInput, setApiKeyInput] = useState<string>(() => nexstreamService.getApiKey());
-  const [isEditingKey, setIsEditingKey] = useState<boolean>(false);
-  const [keySavedFeedback, setKeySavedFeedback] = useState<boolean>(false);
-  const hasKey = Boolean(apiKeyInput.trim() || nexstreamService.hasApiKey());
+  // NexStream API Key Reactive State (synced from nexstreamService and Profile Settings)
+  const [apiKey, setApiKey] = useState<string>(() => nexstreamService.getApiKey());
+
+  useEffect(() => {
+    const unsubscribe = nexstreamService.subscribe((newKey) => {
+      setApiKey(newKey);
+    });
+    // Ensure key is fetched if not yet in memory
+    if (!nexstreamService.hasApiKey()) {
+      nexstreamService.fetchServerKey().then((fetched) => {
+        if (fetched) setApiKey(fetched);
+      });
+    }
+    return unsubscribe;
+  }, []);
 
   // Synchronize movie state from props or from URL movieId
   useEffect(() => {
@@ -101,6 +111,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         (Boolean(movie.duration) && (movie.duration.toLowerCase().includes('series') || movie.duration.toLowerCase().includes('ep')))
       );
       setIsTvShow(isTv);
+      setIsLoading(false);
       return;
     }
 
@@ -113,19 +124,60 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           (Boolean(cached.duration) && (cached.duration.toLowerCase().includes('series') || cached.duration.toLowerCase().includes('ep')))
         );
         setIsTvShow(isTv);
+        setIsLoading(false);
         return;
       }
 
       const cleanId = String(movieId).replace(/\D/g, '');
       if (cleanId) {
         setIsLoading(true);
+        // 1. Attempt to fetch details from TMDB proxy
         tmdbService.getMovieDetails(cleanId)
           .then((loaded) => {
             setCurrentMovie(loaded);
             storageService.saveCachedMovie(loaded);
           })
-          .catch((err) => {
-            console.warn('[WatchPage] Error resolving movie from TMDB:', err);
+          .catch(async () => {
+            // 2. Fallback to NexStream metadata API if TMDB token is not configured or blocked
+            try {
+              const meta = await nexstreamService.fetchMetadata(cleanId, isTvShow);
+              if (meta) {
+                const titleStr = meta.title || `TMDB Title ${cleanId}`;
+                const synthesized: Movie = {
+                  id: String(cleanId),
+                  tmdbId: Number(cleanId),
+                  title: titleStr,
+                  slug: titleStr.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                  year: meta.year || 2024,
+                  duration: '2h 00m',
+                  tagline: '',
+                  rating: 7.5,
+                  genres: ['Cinema'],
+                  director: 'Cinema Production',
+                  cast: [],
+                  overview: meta.overview || `Streaming cinematic presentation (TMDB ID: ${cleanId}).`,
+                  posterUrl: meta.poster || getPosterUrl(null, titleStr),
+                  backdropUrl: meta.backdrop || meta.poster || getBackdropUrl(null, titleStr),
+                  streamingPlatforms: [],
+                  vibeTags: ['Cinematic Experience'],
+                  vibeProfile: {
+                    darkAtmosphere: 6,
+                    actionIntensity: 6,
+                    psychologicalComplexity: 6,
+                    mysterySuspense: 6,
+                    emotionalWeight: 6,
+                    pacing: 'Balanced',
+                    visualStyle: 'Cinematic'
+                  },
+                  mediaType: isTvShow ? 'tv' : 'movie',
+                  moodIds: ['sci-fi-epic'],
+                };
+                setCurrentMovie(synthesized);
+                storageService.saveCachedMovie(synthesized);
+              }
+            } catch {
+              // ignore
+            }
           })
           .finally(() => {
             setIsLoading(false);
@@ -180,7 +232,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       isTv: isTvShow,
       season: selectedSeason,
       episode: selectedEpisode,
-      apiKey: apiKeyInput.trim() || undefined,
+      apiKey: apiKey.trim() || undefined,
     });
 
     setSources(resolvedSources);
@@ -209,16 +261,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           }).catch(() => {});
         });
     }
-  }, [currentMovie, isTvShow, selectedSeason, selectedEpisode, apiKeyInput]);
-
-  const handleSaveApiKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanKey = apiKeyInput.trim();
-    nexstreamService.setApiKey(cleanKey);
-    setIsEditingKey(false);
-    setKeySavedFeedback(true);
-    setTimeout(() => setKeySavedFeedback(false), 3000);
-  };
+  }, [currentMovie, isTvShow, selectedSeason, selectedEpisode, apiKey]);
 
   const handleShare = () => {
     if (navigator.share && currentMovie) {
@@ -283,9 +326,10 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-extrabold uppercase tracking-widest text-[#FFE3B3]">
-            NexStream Theater
+          <span className="w-2 h-2 rounded-full bg-[#EA6113] animate-pulse" />
+          <span className="text-xs font-bold uppercase tracking-wider text-[#FFE3B3] flex items-center gap-1.5">
+            <Film className="w-3.5 h-3.5 text-[#F88F22]" />
+            <span>Theater Screen</span>
           </span>
         </div>
 
@@ -334,9 +378,9 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       </div>
 
       {/* 2. Format Switcher (Movie vs TV Series) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-[#140804] border border-[#F88F22]/20">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold text-neutral-300 pl-1">Playback Format:</span>
+      <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-[#140804] border border-[#F88F22]/20">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-neutral-400 pl-0.5">Format:</span>
           <div className="inline-flex rounded-xl bg-black/60 p-1 border border-white/10">
             <button
               type="button"
@@ -347,7 +391,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Feature Movie
+              Movie
             </button>
             <button
               type="button"
@@ -363,66 +407,11 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           </div>
         </div>
 
-        {/* TMDB ID Verification Badge */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-black/60 border border-[#F88F22]/20 text-[#FFE3B3]">
-            TMDB ID: <strong className="text-white">{cleanTmdbId || 'N/A'}</strong>
-          </span>
-          <button
-            type="button"
-            onClick={() => setIsEditingKey(!isEditingKey)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#241107] hover:bg-[#34180A] border border-[#F88F22]/30 text-xs font-semibold text-[#FBB931] transition-all"
-            title="Configure NexStream API Key"
-          >
-            <Key className="w-3 h-3" />
-            <span>{hasKey ? 'Key Configured' : 'Configure Key'}</span>
-          </button>
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="text-[11px] font-semibold text-[#FFE3B3]">NexStream HD</span>
         </div>
       </div>
-
-      {/* 3. NexStream API Key Configuration Drawer (if toggled or if missing) */}
-      {(isEditingKey || !hasKey) && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#200D06] via-[#160803] to-[#0A0402] border border-[#F88F22]/35 space-y-3 shadow-2xl">
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1">
-              <h4 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-1.5">
-                <Key className="w-4 h-4 text-[#F88F22]" />
-                <span>NexStream API Key Configuration</span>
-              </h4>
-              <p className="text-[11px] sm:text-xs text-neutral-300 leading-relaxed max-w-2xl">
-                NexStream embeds require a valid API key issued from <a href="https://api.codespecters.com/" target="_blank" rel="noopener noreferrer" className="text-[#FBB931] hover:underline font-bold">api.codespecters.com</a>. If your key has domain locks, ensure this applet origin is allowlisted in your Codespecters dashboard.
-              </p>
-            </div>
-            {hasKey && (
-              <button
-                type="button"
-                onClick={() => setIsEditingKey(false)}
-                className="text-xs text-neutral-400 hover:text-white"
-              >
-                Close
-              </button>
-            )}
-          </div>
-
-          <form onSubmit={handleSaveApiKey} className="flex flex-col sm:flex-row gap-2 pt-1">
-            <input
-              type="password"
-              placeholder="Enter your NexStream API Key (apikey=...)"
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              className="flex-grow px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-[#F88F22]"
-              autoComplete="off"
-            />
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl sunset-gradient-btn text-white text-xs font-bold shrink-0 transition-all active:scale-95 shadow-md flex items-center justify-center gap-1.5"
-            >
-              {keySavedFeedback ? <Check className="w-3.5 h-3.5" /> : null}
-              <span>{keySavedFeedback ? 'Saved!' : 'Save Key'}</span>
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* 4. TV Series Season & Episode Controls (Strictly for TV Shows) */}
       {isTvShow && (

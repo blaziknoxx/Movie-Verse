@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
-import { UNIVERSES, MOODS } from '../../data/moviesData';
+import { UNIVERSES, MOODS, MOVIES } from '../../data/moviesData';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { HeroBanner } from './HeroBanner';
@@ -142,10 +142,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
         }
       }
     } catch (err: any) {
-      console.error('[HomeView] Live catalog fetch error:', err);
-      setApiError(err.message || 'Unable to connect to live movie catalog. Please verify connection.');
-      setTrendingMovies([]);
-      setPopularMovies([]);
+      console.warn('[HomeView] Live catalog fetch notice, using verified catalog:', err);
+      if (Array.isArray(MOVIES) && MOVIES.length > 0) {
+        setTrendingMovies(MOVIES);
+        setPopularMovies(MOVIES.slice().reverse());
+        setHeroMovies(MOVIES.slice(0, 5));
+        storageService.saveMultipleCachedMovies(MOVIES);
+      } else {
+        setApiError(err.message || 'Unable to connect to live movie catalog.');
+        setTrendingMovies([]);
+        setPopularMovies([]);
+      }
     } finally {
       setIsLoading(false);
     }

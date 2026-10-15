@@ -6,6 +6,11 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    define: {
+      'import.meta.env.VITE_NEXSTREAM_API_KEY': JSON.stringify(
+        process.env.VITE_NEXSTREAM_API_KEY || process.env.NEXSTREAM_API_KEY || ''
+      ),
+    },
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, '.'),

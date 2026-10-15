@@ -17,6 +17,7 @@ export const NEXSTREAM_PROVIDER_BASE = 'https://api.codespecters.com';
 class NexStreamService {
   private inMemoryKey: string | null = null;
   private serverFetched = false;
+  private listeners: Set<(key: string) => void> = new Set();
 
   constructor() {
     // 1. Initial attempt from Vite client environment variable
@@ -41,14 +42,37 @@ class NexStreamService {
       // ignore
     }
 
-    // 3. Asynchronously attempt to fetch from server config endpoint if available
-    if (typeof window !== 'undefined' && !this.inMemoryKey) {
+    // 3. Asynchronously fetch from server config endpoint if available
+    if (typeof window !== 'undefined') {
       this.fetchServerKey().catch(() => {});
     }
   }
 
   /**
-   * Fetches server-configured NexStream API key without exposing secret logs.
+   * Subscribe to API key updates
+   */
+  subscribe(listener: (key: string) => void): () => void {
+    this.listeners.add(listener);
+    // Fire immediately with current key
+    const current = this.getApiKey();
+    if (current) listener(current);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(key: string): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(key);
+      } catch (e) {
+        console.warn('[NexStream] Listener notification error:', e);
+      }
+    }
+  }
+
+  /**
+   * Fetches server-configured NexStream API key.
    */
   async fetchServerKey(): Promise<string | null> {
     if (this.serverFetched && this.inMemoryKey) {
@@ -60,8 +84,18 @@ class NexStreamService {
       if (res.ok) {
         const data: any = await res.json();
         if (data && typeof data.apiKey === 'string' && data.apiKey.trim()) {
-          this.inMemoryKey = data.apiKey.trim();
-          return this.inMemoryKey;
+          const key = data.apiKey.trim();
+          this.inMemoryKey = key;
+          // Store in localStorage if none currently saved
+          try {
+            if (typeof window !== 'undefined' && window.localStorage && !window.localStorage.getItem(STORAGE_KEY)) {
+              window.localStorage.setItem(STORAGE_KEY, key);
+            }
+          } catch {
+            // ignore
+          }
+          this.notify(key);
+          return key;
         }
       }
     } catch {
@@ -88,6 +122,15 @@ class NexStreamService {
     } catch {
       // ignore
     }
+    try {
+      const envKey = (import.meta as any).env?.VITE_NEXSTREAM_API_KEY || (import.meta as any).env?.NEXSTREAM_API_KEY;
+      if (typeof envKey === 'string' && envKey.trim()) {
+        this.inMemoryKey = envKey.trim();
+        return this.inMemoryKey;
+      }
+    } catch {
+      // ignore
+    }
     return '';
   }
 
@@ -108,6 +151,7 @@ class NexStreamService {
     } catch {
       // ignore
     }
+    this.notify(cleaned);
   }
 
   /**
@@ -168,6 +212,42 @@ class NexStreamService {
     const key = (customKey || this.getApiKey()).trim();
     const keyParam = key ? `?apikey=${encodeURIComponent(key)}` : '';
     return `${NEXSTREAM_PROVIDER_BASE}/embed/tv/${cleanId}/${s}/${ep}${keyParam}`;
+  }
+
+  /**
+   * Fetches metadata directly from NexStream API for a given TMDB ID.
+   * Useful when TMDB proxy is not configured or fails.
+   */
+  async fetchMetadata(
+    tmdbId: number | string,
+    isTv = false,
+    season = 1,
+    episode = 1
+  ): Promise<{ title?: string; poster?: string; backdrop?: string; year?: number; overview?: string } | null> {
+    const cleanId = this.parseTmdbId(tmdbId);
+    if (!cleanId) return null;
+    const key = this.getApiKey();
+    const endpoint = isTv
+      ? `${NEXSTREAM_PROVIDER_BASE}/api/tv/${cleanId}/${season}/${episode}${key ? `?apikey=${encodeURIComponent(key)}` : ''}`
+      : `${NEXSTREAM_PROVIDER_BASE}/api/movie/${cleanId}${key ? `?apikey=${encodeURIComponent(key)}` : ''}`;
+
+    try {
+      const res = await fetch(endpoint);
+      if (res.ok) {
+        const data: any = await res.json();
+        if (data && data.meta) {
+          return {
+            title: data.meta.title,
+            poster: data.meta.poster,
+            backdrop: data.meta.backdrop || data.meta.poster,
+            overview: data.meta.overview,
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return null;
   }
 }
 

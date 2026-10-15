@@ -218,15 +218,24 @@ export default function App() {
   };
 
   const handleOpenWatch = (movie: Movie) => {
-    setWatchMovie(movie);
-    setWatchMovieId(movie.id);
+    const cached = storageService.getCachedMovie(movie.id);
+    const numericTmdbId = movie.tmdbId || (Number(movie.id) ? Number(movie.id) : undefined) || cached?.tmdbId;
+    const resolvedMovie: Movie = {
+      ...movie,
+      ...(numericTmdbId ? { tmdbId: numericTmdbId } : {})
+    };
+    const targetId = numericTmdbId ? String(numericTmdbId) : movie.id;
+
+    setWatchMovie(resolvedMovie);
+    setWatchMovieId(targetId);
+    storageService.saveCachedMovie(resolvedMovie);
     setSelectedMovie(null);
     setActiveTab('watch');
     try {
       window.history.pushState(
-        { tab: 'watch', movieId: movie.id },
+        { tab: 'watch', movieId: targetId },
         '',
-        `?view=watch&movieId=${movie.id}`
+        `?view=watch&movieId=${targetId}`
       );
     } catch {
       // ignore
