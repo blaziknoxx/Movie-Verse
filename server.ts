@@ -136,16 +136,6 @@ app.get('/api/tmdb/status', (req: Request, res: Response) => {
   });
 });
 
-// NexStream configuration endpoint
-app.get('/api/config/nexstream', (req: Request, res: Response) => {
-  const apiKey = (process.env.NEXSTREAM_API_KEY || process.env.VITE_NEXSTREAM_API_KEY || '').trim();
-  res.json({
-    status: 'ok',
-    configured: Boolean(apiKey),
-    apiKey: apiKey || '',
-  });
-});
-
 // Trending movies (week or day)
 app.get('/api/tmdb/trending', async (req: Request, res: Response) => {
   try {
@@ -172,8 +162,7 @@ app.get('/api/tmdb/popular', async (req: Request, res: Response) => {
 // Now Playing movies
 app.get('/api/tmdb/now_playing', async (req: Request, res: Response) => {
   try {
-    const page = req.query.page || '1';
-    const result = await fetchFromTMDB('/movie/now_playing', { page });
+    const result = await fetchFromTMDB('/movie/now_playing', req.query as Record<string, any>);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);
@@ -183,8 +172,7 @@ app.get('/api/tmdb/now_playing', async (req: Request, res: Response) => {
 // Upcoming movies
 app.get('/api/tmdb/upcoming', async (req: Request, res: Response) => {
   try {
-    const page = req.query.page || '1';
-    const result = await fetchFromTMDB('/movie/upcoming', { page });
+    const result = await fetchFromTMDB('/movie/upcoming', req.query as Record<string, any>);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);
@@ -194,8 +182,7 @@ app.get('/api/tmdb/upcoming', async (req: Request, res: Response) => {
 // Top Rated movies
 app.get('/api/tmdb/top_rated', async (req: Request, res: Response) => {
   try {
-    const page = req.query.page || '1';
-    const result = await fetchFromTMDB('/movie/top_rated', { page });
+    const result = await fetchFromTMDB('/movie/top_rated', req.query as Record<string, any>);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);
@@ -289,20 +276,6 @@ app.get('/api/tmdb/movie/:id/videos', async (req: Request, res: Response) => {
   }
 });
 
-// Movie Watch Providers (Where to Watch official JustWatch data from TMDB)
-app.get('/api/tmdb/movie/:id/watch/providers', async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id;
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ error: 'Valid numeric movie ID required' });
-    }
-    const result = await fetchFromTMDB(`/movie/${id}/watch/providers`);
-    res.json(result.data);
-  } catch (err: any) {
-    handleProxyError(res, err);
-  }
-});
-
 // Franchise Collection (Sequels, Prequels & Connected franchise entries)
 app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
   try {
@@ -311,63 +284,6 @@ app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Valid numeric collection ID required' });
     }
     const result = await fetchFromTMDB(`/collection/${id}`);
-    res.json(result.data);
-  } catch (err: any) {
-    handleProxyError(res, err);
-  }
-});
-
-// TV Series Details
-app.get('/api/tmdb/tv/:id', async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id;
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
-    }
-    const result = await fetchFromTMDB(`/tv/${id}`);
-    res.json(result.data);
-  } catch (err: any) {
-    handleProxyError(res, err);
-  }
-});
-
-// TV Series Season details with episodes
-app.get('/api/tmdb/tv/:id/season/:season_number', async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id;
-    const seasonNumber = req.params.season_number;
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
-    }
-    const result = await fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`);
-    res.json(result.data);
-  } catch (err: any) {
-    handleProxyError(res, err);
-  }
-});
-
-// TV Series Credits
-app.get('/api/tmdb/tv/:id/credits', async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id;
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
-    }
-    const result = await fetchFromTMDB(`/tv/${id}/credits`);
-    res.json(result.data);
-  } catch (err: any) {
-    handleProxyError(res, err);
-  }
-});
-
-// TV Series Videos (Trailers)
-app.get('/api/tmdb/tv/:id/videos', async (req: Request, res: Response) => {
-  try {
-    const id = req.params.id;
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
-    }
-    const result = await fetchFromTMDB(`/tv/${id}/videos`);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);
@@ -384,10 +300,10 @@ app.get('/api/tmdb/genres', async (req: Request, res: Response) => {
   }
 });
 
-// Discover movies by genre, sort, language, country, etc.
+// Discover movies by genre, sort, language, origin country, release dates, etc.
 app.get('/api/tmdb/discover', async (req: Request, res: Response) => {
   try {
-    const result = await fetchFromTMDB('/discover/movie', req.query);
+    const result = await fetchFromTMDB('/discover/movie', req.query as Record<string, any>);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);

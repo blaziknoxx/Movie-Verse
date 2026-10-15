@@ -50,24 +50,24 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             <button
               key={item.id}
               onClick={handleClick}
-              className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-all select-none ${
-                isActive ? 'text-red-500 font-bold' : 'text-neutral-400 hover:text-white'
+              className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-all select-none cursor-pointer ${
+                isActive ? 'text-[#FBB931] font-bold' : 'text-neutral-400 hover:text-white'
               }`}
             >
               <div className="relative">
                 <Icon 
                   className={`w-5 h-5 transition-transform ${
-                    isActive ? 'scale-110 stroke-[2.2] fill-red-500/20' : 'stroke-[1.8]'
+                    isActive ? 'scale-110 stroke-[2.2] text-[#F88F22] header-icon-glow fill-[#EA6113]/25' : 'stroke-[1.8]'
                   }`} 
                 />
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1 -right-2 px-1 text-[9px] font-bold bg-red-600 text-white rounded-full leading-tight border border-black">
+                  <span className="absolute -top-1 -right-2 px-1 text-[9px] font-bold bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white rounded-full leading-tight border border-black shadow-[0_0_8px_rgba(234,97,19,0.8)]">
                     {item.badge}
                   </span>
                 )}
               </div>
               <span className={`text-[10px] tracking-tight mt-1 whitespace-nowrap ${
-                isActive ? 'text-white font-bold' : 'font-medium'
+                isActive ? 'text-[#FFE3B3] font-bold header-subtext-glow' : 'font-medium'
               }`}>
                 {item.label}
               </span>

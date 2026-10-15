@@ -17,27 +17,33 @@ export const Header: React.FC<HeaderProps> = ({
   watchlistCount
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#070104]/90 backdrop-blur-xl border-b border-white/[0.06] transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full bg-[#0A0402]/95 backdrop-blur-xl border-b border-[#F88F22]/15 transition-all">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
         
-        {/* Left: Greeting + Wordmark matching Reference 1 ("Hello / Venkatesh M") */}
+        {/* Left: Coordinated Glowing Brand Identity (Logo + "Hello Cinephile" + "Movie Verse") */}
         <div 
           onClick={() => setActiveTab('home')}
-          className="flex items-center gap-3 cursor-pointer group select-none"
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none min-w-0"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-rose-950 flex items-center justify-center border border-red-500/30 shadow-[0_0_15px_rgba(229,9,20,0.4)] shrink-0">
-            <Film className="w-4 h-4 text-white" />
+          {/* Movie Verse Logo Box with Coordinated Glow */}
+          <div 
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl header-logo-glow flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 active:scale-95"
+            title="Movie Verse Home"
+          >
+            <Film className="w-4 h-4 sm:w-5 sm:h-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] header-icon-glow" />
           </div>
 
-          <div className="flex flex-col">
-            <span className="text-[10px] text-neutral-400 font-medium leading-tight">
-              Hello, Cinephile
+          <div className="flex flex-col min-w-0">
+            {/* "Hello Cinephile" with subtle warm gold glow */}
+            <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase header-subtext-glow truncate leading-tight">
+              Hello Cinephile
             </span>
+            {/* "Movie Verse" Wordmark with Distinctive Brand Glow */}
             <div className="flex items-center gap-1.5">
-              <span className="text-sm sm:text-base font-extrabold text-white tracking-tight group-hover:text-red-200 transition-colors">
+              <span className="text-sm sm:text-base md:text-lg font-black text-white header-brand-glow tracking-tight group-hover:text-[#FFE3B3] transition-colors truncate">
                 Movie Verse
               </span>
-              <span className="w-1.5 h-1.5 rounded-full bg-red-600 hidden sm:inline-block" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FBB931] shadow-[0_0_8px_#FBB931] hidden sm:inline-block" />
             </div>
           </div>
         </div>
@@ -57,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab(item.id)}
               className={`py-1 transition-colors whitespace-nowrap ${
                 activeTab === item.id
-                  ? 'text-white border-b-2 border-red-600 font-bold'
+                  ? 'text-[#FFE3B3] border-b-2 border-[#EA6113] font-bold header-subtext-glow'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -66,51 +72,51 @@ export const Header: React.FC<HeaderProps> = ({
           ))}
         </nav>
 
-        {/* Right Header Actions matching Reference 1: Bell, Search, Watchlist, Profile */}
-        <div className="flex items-center gap-2">
-          {/* Quick Search Button */}
+        {/* Right Header Actions: Coordinated Glowing Search, Saved, Account/Profile */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Search Button with Glowing Search Icon */}
           <button
             onClick={onOpenSearch}
-            className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-neutral-300 hover:text-white border border-white/10 transition-all text-xs font-medium focus:outline-none"
+            className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl header-btn-glow text-neutral-200 hover:text-white transition-all text-xs font-semibold focus:outline-none cursor-pointer"
             title="Search movies (⌘K or /)"
             aria-label="Search movies"
           >
-            <Search className="w-4 h-4 text-red-500" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden sm:inline px-1 py-0.5 text-[9px] bg-black/50 rounded border border-white/10 text-neutral-400">⌘K</kbd>
+            <Search className="w-4 h-4 text-[#F88F22] header-icon-glow shrink-0" />
+            <span className="hidden sm:inline text-xs">Search</span>
+            <kbd className="hidden sm:inline px-1 py-0.5 text-[9px] bg-black/50 rounded border border-[#F88F22]/20 text-[#FFE3B3]/80">⌘K</kbd>
           </button>
 
-          {/* Watchlist / Saved Icon Button */}
+          {/* Saved / Watchlist Button with Glowing Saved Icon */}
           <button
             onClick={() => setActiveTab('library')}
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all border relative ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all relative cursor-pointer ${
               activeTab === 'library'
-                ? 'bg-red-600 text-white border-red-500 shadow-[0_0_12px_rgba(229,9,20,0.5)]'
-                : 'bg-white/[0.05] hover:bg-white/10 text-neutral-300 hover:text-white border-white/10'
+                ? 'header-btn-active text-white'
+                : 'header-btn-glow text-neutral-300 hover:text-white'
             }`}
-            title="My Library & Watchlist"
-            aria-label="Library and Watchlist"
+            title="My Library & Saved Movies"
+            aria-label="Saved Movies"
           >
-            <Bookmark className="w-4 h-4" />
+            <Bookmark className={`w-4 h-4 header-icon-glow ${activeTab === 'library' ? 'text-white fill-white' : 'text-[#F88F22]'}`} />
             {watchlistCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-black">
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border border-black shadow-[0_0_8px_rgba(234,97,19,0.8)]">
                 {watchlistCount}
               </span>
             )}
           </button>
 
-          {/* My CineProfile Button */}
+          {/* Account / Profile Button with Glowing Profile Icon */}
           <button
             onClick={() => setActiveTab('profile')}
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all border ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
               activeTab === 'profile'
-                ? 'sunset-gradient-btn text-white border-[#F88F22] shadow-[0_0_12px_rgba(234,97,19,0.5)]'
-                : 'bg-white/[0.05] hover:bg-white/10 text-neutral-300 hover:text-white border-white/10'
+                ? 'header-btn-active text-white'
+                : 'header-btn-glow text-neutral-300 hover:text-white'
             }`}
-            title="My CineProfile"
-            aria-label="My CineProfile"
+            title="Account & CineProfile"
+            aria-label="Account Profile"
           >
-            <User className="w-4 h-4" />
+            <User className={`w-4 h-4 header-icon-glow ${activeTab === 'profile' ? 'text-white' : 'text-[#FBB931]'}`} />
           </button>
         </div>
 

@@ -75,7 +75,6 @@ export const MOOD_TO_GENRE_IDS: Record<string, string> = {
 };
 
 export const TMDB_IMAGE_BASE = {
-  posterW185: 'https://image.tmdb.org/t/p/w185',
   posterW342: 'https://image.tmdb.org/t/p/w342',
   posterW500: 'https://image.tmdb.org/t/p/w500',
   backdropW780: 'https://image.tmdb.org/t/p/w780',
@@ -110,38 +109,16 @@ export function getPlaceholderImage(title: string, width = 500, height = 750): s
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-export function getPosterUrl(posterPath?: string | null, title = '', size: 'w342' | 'w500' = 'w500'): string {
+export function getPosterUrl(posterPath?: string | null, title = ''): string {
   if (posterPath) {
-    const baseUrl = size === 'w342' ? TMDB_IMAGE_BASE.posterW342 : TMDB_IMAGE_BASE.posterW500;
-    if (posterPath.startsWith('http')) {
-      if (size === 'w342' && posterPath.includes('/w500/')) {
-        return posterPath.replace('/w500/', '/w342/');
-      }
-      return posterPath;
-    }
-    return `${baseUrl}${posterPath.startsWith('/') ? posterPath : `/${posterPath}`}`;
+    return `${TMDB_IMAGE_BASE.posterW500}${posterPath}`;
   }
   return getPlaceholderImage(title, 500, 750);
 }
 
-/**
- * Optimized responsive poster URL: returns lighter w342 for mobile & desktop movie cards
- * to cut bandwidth usage by ~60% and prevent Android rasterizer memory pressure.
- */
-export function getOptimizedPosterUrl(posterUrlOrPath?: string | null, size: 'w342' | 'w500' = 'w342', title = ''): string {
-  return getPosterUrl(posterUrlOrPath, title, size);
-}
-
-export function getBackdropUrl(backdropPath?: string | null, title = '', size: 'w780' | 'w1280' = 'w1280'): string {
+export function getBackdropUrl(backdropPath?: string | null, title = ''): string {
   if (backdropPath) {
-    const baseUrl = size === 'w780' ? TMDB_IMAGE_BASE.backdropW780 : TMDB_IMAGE_BASE.backdropW1280;
-    if (backdropPath.startsWith('http')) {
-      if (size === 'w780' && backdropPath.includes('/w1280/')) {
-        return backdropPath.replace('/w1280/', '/w780/');
-      }
-      return backdropPath;
-    }
-    return `${baseUrl}${backdropPath.startsWith('/') ? backdropPath : `/${backdropPath}`}`;
+    return `${TMDB_IMAGE_BASE.backdropW1280}${backdropPath}`;
   }
   return getPlaceholderImage(title, 1280, 720);
 }
@@ -294,53 +271,72 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   };
 }
 
-// Client-side cache with TTL to prevent redundant network bursts and enable offline graceful fallback
-const clientMemoryCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+// -------------------------------------------------------------
+// In-Memory Client Cache & In-Flight Request Deduplication
+// -------------------------------------------------------------
+interface ClientCacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+const clientCache = new Map<string, ClientCacheEntry<any>>();
 const inFlightRequests = new Map<string, Promise<any>>();
 
-function getClientCache<T>(key: string): T | null {
-  const inMem = clientMemoryCache.get(key);
-  if (inMem && Date.now() - inMem.timestamp < inMem.ttl) {
-    return inMem.data as T;
+async function cachedFetchJson<T>(url: string, ttlMs: number = 5 * 60 * 1000, signal?: AbortSignal): Promise<T> {
+  const now = Date.now();
+  const cached = clientCache.get(url);
+  if (cached && (now - cached.timestamp < cached.ttl)) {
+    return cached.data;
   }
-  try {
-    const raw = sessionStorage.getItem(`tmdb_cache_${key}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Date.now() - parsed.timestamp < parsed.ttl) {
-        clientMemoryCache.set(key, parsed);
-        return parsed.data as T;
+
+  // Deduplicate in-flight requests for the exact same URL
+  if (inFlightRequests.has(url)) {
+    return inFlightRequests.get(url)! as Promise<T>;
+  }
+
+  const promise = (async (): Promise<T> => {
+    try {
+      const res = await fetch(url, { signal });
+      if (!res.ok) {
+        const errorJson: any = await res.json().catch(() => ({}));
+        throw new Error(errorJson.error || `Failed to fetch data (${res.status})`);
       }
+      const data: T = await res.json();
+      clientCache.set(url, { data, timestamp: Date.now(), ttl: ttlMs });
+      return data;
+    } finally {
+      inFlightRequests.delete(url);
     }
-  } catch {
-    // Ignore storage quota or parsing errors
-  }
-  return null;
-}
+  })();
 
-function setClientCache<T>(key: string, data: T, ttlMs: number = 10 * 60 * 1000) {
-  const entry = { data, timestamp: Date.now(), ttl: ttlMs };
-  clientMemoryCache.set(key, entry);
-  try {
-    sessionStorage.setItem(`tmdb_cache_${key}`, JSON.stringify(entry));
-  } catch {
-    // Ignore storage quota
-  }
-}
-
-/**
- * Deduplicates in-flight promises across components to avoid redundant network bursts
- */
-function dedupeRequest<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
-  const existing = inFlightRequests.get(key);
-  if (existing) {
-    return existing as Promise<T>;
-  }
-  const promise = fetcher().finally(() => {
-    inFlightRequests.delete(key);
-  });
-  inFlightRequests.set(key, promise);
+  inFlightRequests.set(url, promise);
   return promise;
+}
+
+// Dynamic date helpers for accurate release-date filtering
+function getTodayIso(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getPastDateIso(years = 2): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - years);
+  return d.toISOString().split('T')[0];
+}
+
+function filterAndSortRecent(movies: Movie[], today: string): Movie[] {
+  return movies
+    .filter(m => {
+      // Must not be in the future for released movie sections
+      if (m.releaseDate && m.releaseDate > today) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort strictly by descending release date
+      const dateA = a.releaseDate || `${a.year}-01-01`;
+      const dateB = b.releaseDate || `${b.year}-01-01`;
+      return dateB.localeCompare(dateA);
+    });
 }
 
 export const tmdbService = {
@@ -348,166 +344,189 @@ export const tmdbService = {
    * Check proxy status and token configuration.
    */
   async getStatus(): Promise<{ configured: boolean; error?: string }> {
-    return dedupeRequest('tmdb_status', async () => {
-      try {
-        const res = await fetch('/api/tmdb/status');
-        if (!res.ok) return { configured: false, error: `HTTP ${res.status}` };
-        const data: any = await res.json();
-        return { configured: Boolean(data.configured) };
-      } catch (err: any) {
-        return { configured: false, error: err.message };
-      }
-    });
+    try {
+      const res = await fetch('/api/tmdb/status');
+      if (!res.ok) return { configured: false, error: `HTTP ${res.status}` };
+      const data: any = await res.json();
+      return { configured: Boolean(data.configured) };
+    } catch (err: any) {
+      return { configured: false, error: err.message };
+    }
   },
 
   /**
-   * Fetch weekly or daily trending movies with TTL caching.
-   * Strictly preserves TMDB's authentic trending velocity ranking.
+   * Fetch weekly or daily trending movies.
+   * STRICT: Preserves TMDB's actual trending ranking! Does NOT re-sort by release date.
    */
   async getTrending(timeWindow: 'day' | 'week' = 'week', page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `trending_${timeWindow}_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
-
-    return dedupeRequest(cacheKey, async () => {
-      try {
-        const res = await fetch(`/api/tmdb/trending?time_window=${timeWindow}&page=${page}`);
-        if (!res.ok) {
-          const errorJson: any = await res.json().catch(() => ({}));
-          throw new Error(errorJson.error || `Failed to fetch trending movies (${res.status})`);
-        }
-        const data: any = await res.json();
-        const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-        const result = { movies, totalPages: data.total_pages || 1 };
-        setClientCache(cacheKey, result, 10 * 60 * 1000); // 10 mins TTL
-        return result;
-      } catch (err) {
-        if (cached) return cached;
-        throw err;
-      }
-    });
+    const url = `/api/tmdb/trending?time_window=${timeWindow}&page=${page}`;
+    // 5-minute cache TTL for live trending
+    const data = await cachedFetchJson<any>(url, 5 * 60 * 1000);
+    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch popular movies with TTL caching.
-   * Strictly preserves TMDB popularity ranking.
+   * Fetch popular movies.
    */
   async getPopular(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `popular_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
-
-    return dedupeRequest(cacheKey, async () => {
-      try {
-        const res = await fetch(`/api/tmdb/popular?page=${page}`);
-        if (!res.ok) {
-          const errorJson: any = await res.json().catch(() => ({}));
-          throw new Error(errorJson.error || `Failed to fetch popular movies (${res.status})`);
-        }
-        const data: any = await res.json();
-        const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-        const result = { movies, totalPages: data.total_pages || 1 };
-        setClientCache(cacheKey, result, 10 * 60 * 1000);
-        return result;
-      } catch (err) {
-        if (cached) return cached;
-        throw err;
-      }
-    });
+    const url = `/api/tmdb/popular?page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch now playing movies with TTL caching.
-   * Explicitly sorts in descending release-date order (latest release first)
-   * as required for new release sections.
+   * Fetch now playing movies in theaters.
+   * Ensures future releases are filtered out from now-playing list.
    */
   async getNowPlaying(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `now_playing_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
-
-    return dedupeRequest(cacheKey, async () => {
-      try {
-        const res = await fetch(`/api/tmdb/now_playing?page=${page}`);
-        if (!res.ok) {
-          const errorJson: any = await res.json().catch(() => ({}));
-          throw new Error(errorJson.error || `Failed to fetch now playing movies (${res.status})`);
-        }
-        const data: any = await res.json();
-        const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-        // Sort in descending release date order so freshest releases lead the section
-        const sortedMovies = [...rawMovies].sort((a, b) => {
-          const timeA = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
-          const timeB = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
-          return timeB - timeA;
-        });
-        const result = { movies: sortedMovies, totalPages: data.total_pages || 1 };
-        setClientCache(cacheKey, result, 10 * 60 * 1000);
-        return result;
-      } catch (err) {
-        if (cached) return cached;
-        throw err;
-      }
-    });
+    const today = getTodayIso();
+    const url = `/api/tmdb/now_playing?page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    // Filter out unreleased titles
+    const movies = rawMovies.filter((m: Movie) => !m.releaseDate || m.releaseDate <= today);
+    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch upcoming movies with TTL caching.
-   * Explicitly sorts chronologically by upcoming release date.
+   * Fetch upcoming movies.
+   * STRICT: Only future releases (release date >= today).
+   * Sorted in ascending order by release date (soonest upcoming first).
    */
   async getUpcoming(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `upcoming_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
-
-    return dedupeRequest(cacheKey, async () => {
-      try {
-        const res = await fetch(`/api/tmdb/upcoming?page=${page}`);
-        if (!res.ok) {
-          const errorJson: any = await res.json().catch(() => ({}));
-          throw new Error(errorJson.error || `Failed to fetch upcoming movies (${res.status})`);
-        }
-        const data: any = await res.json();
-        const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-        // Chronological order: arriving soonest first
-        const sortedMovies = [...rawMovies].sort((a, b) => {
-          const timeA = a.releaseDate ? new Date(a.releaseDate).getTime() : Infinity;
-          const timeB = b.releaseDate ? new Date(b.releaseDate).getTime() : Infinity;
-          return timeA - timeB;
-        });
-        const result = { movies: sortedMovies, totalPages: data.total_pages || 1 };
-        setClientCache(cacheKey, result, 10 * 60 * 1000);
-        return result;
-      } catch (err) {
-        if (cached) return cached;
-        throw err;
-      }
-    });
+    const today = getTodayIso();
+    const url = `/api/tmdb/upcoming?page=${page}`;
+    const data = await cachedFetchJson<any>(url, 15 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    // Strictly future releases
+    const movies = rawMovies
+      .filter((m: Movie) => m.releaseDate && m.releaseDate >= today)
+      .sort((a: Movie, b: Movie) => (a.releaseDate || '').localeCompare(b.releaseDate || ''));
+    return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch top rated movies with TTL caching.
+   * Fetch top rated movies with sensible vote count.
    */
   async getTopRated(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `top_rated_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
+    const url = `/api/tmdb/top_rated?page=${page}`;
+    const data = await cachedFetchJson<any>(url, 30 * 60 * 1000);
+    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    return { movies, totalPages: data.total_pages || 1 };
+  },
 
-    try {
-      const res = await fetch(`/api/tmdb/top_rated?page=${page}`);
-      if (!res.ok) {
-        const errorJson: any = await res.json().catch(() => ({}));
-        throw new Error(errorJson.error || `Failed to fetch top rated movies (${res.status})`);
-      }
-      const data: any = await res.json();
-      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-      const result = { movies, totalPages: data.total_pages || 1 };
-      setClientCache(cacheKey, result, 30 * 60 * 1000);
-      return result;
-    } catch (err) {
-      if (cached) return cached;
-      throw err;
+  /**
+   * Fetch recent Hollywood (US productions in English).
+   * Filters: with_original_language=en, with_origin_country=US, primary_release_date.lte=today,
+   * primary_release_date.gte=2 years back, sorted by primary_release_date.desc.
+   */
+  async getHollywood(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const today = getTodayIso();
+    const pastDate = getPastDateIso(2);
+    const url = `/api/tmdb/discover?with_original_language=en&with_origin_country=US&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=10&page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = filterAndSortRecent(rawMovies, today);
+    return { movies, totalPages: data.total_pages || 1 };
+  },
+
+  /**
+   * Fetch recent Hindi movies.
+   * Filters: with_original_language=hi, primary_release_date.lte=today,
+   * sorted by primary_release_date.desc.
+   */
+  async getHindi(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const today = getTodayIso();
+    const pastDate = getPastDateIso(2);
+    const url = `/api/tmdb/discover?with_original_language=hi&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=5&page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = filterAndSortRecent(rawMovies, today);
+    return { movies, totalPages: data.total_pages || 1 };
+  },
+
+  /**
+   * Fetch recent Animation movies.
+   * Filters: with_genres=16, primary_release_date.lte=today,
+   * sorted by primary_release_date.desc.
+   */
+  async getAnimation(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const today = getTodayIso();
+    const pastDate = getPastDateIso(2);
+    const url = `/api/tmdb/discover?with_genres=16&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=10&page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = filterAndSortRecent(rawMovies, today);
+    return { movies, totalPages: data.total_pages || 1 };
+  },
+
+  /**
+   * Fetch recent Tamil movies.
+   * Filters: with_original_language=ta, primary_release_date.lte=today,
+   * sorted by primary_release_date.desc.
+   */
+  async getTamil(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const today = getTodayIso();
+    const pastDate = getPastDateIso(2);
+    const url = `/api/tmdb/discover?with_original_language=ta&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=3&page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = filterAndSortRecent(rawMovies, today);
+    return { movies, totalPages: data.total_pages || 1 };
+  },
+
+  /**
+   * Fetch recent Bangladeshi movies.
+   * Filters: with_origin_country=BD, primary_release_date.lte=today,
+   * sorted by primary_release_date.desc.
+   * Note: No artificial vote count threshold to ensure all legitimate releases are preserved.
+   */
+  async getBangladeshi(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    const today = getTodayIso();
+    const url = `/api/tmdb/discover?with_origin_country=BD&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&page=${page}`;
+    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = filterAndSortRecent(rawMovies, today);
+    return { movies, totalPages: data.total_pages || 1 };
+  },
+
+  /**
+   * Dispatch to the correct TMDB endpoint based on category ID.
+   */
+  async getCategoryMovies(category: string, page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    switch (category) {
+      case 'trending':
+        return this.getTrending('week', page);
+      case 'popular':
+        return this.getPopular(page);
+      case 'now_playing':
+        return this.getNowPlaying(page);
+      case 'upcoming':
+        return this.getUpcoming(page);
+      case 'top_rated':
+        return this.getTopRated(page);
+      case 'hollywood':
+        return this.getHollywood(page);
+      case 'hindi':
+        return this.getHindi(page);
+      case 'animation':
+        return this.getAnimation(page);
+      case 'tamil':
+        return this.getTamil(page);
+      case 'bangladeshi':
+        return this.getBangladeshi(page);
+      default:
+        return this.getTrending('week', page);
     }
+  },
+
+  /**
+   * Invalidate cached client results.
+   */
+  clearCache(): void {
+    clientCache.clear();
   },
 
   /**
@@ -543,45 +562,38 @@ export const tmdbService = {
    */
   async getMovieDetails(id: string | number): Promise<Movie> {
     const numericId = String(id).replace(/\D/g, '');
-    const cacheKey = `movie_details_${numericId}`;
-    const cached = getClientCache<Movie>(cacheKey);
-    if (cached) return cached;
+    const [detailsRes, creditsRes, videosRes] = await Promise.all([
+      fetch(`/api/tmdb/movie/${numericId}`),
+      fetch(`/api/tmdb/movie/${numericId}/credits`).catch(() => null),
+      fetch(`/api/tmdb/movie/${numericId}/videos`).catch(() => null)
+    ]);
 
-    return dedupeRequest(cacheKey, async () => {
-      const [detailsRes, creditsRes, videosRes] = await Promise.all([
-        fetch(`/api/tmdb/movie/${numericId}`),
-        fetch(`/api/tmdb/movie/${numericId}/credits`).catch(() => null),
-        fetch(`/api/tmdb/movie/${numericId}/videos`).catch(() => null)
-      ]);
+    if (!detailsRes.ok) {
+      const errorJson: any = await detailsRes.json().catch(() => ({}));
+      throw new Error(errorJson.error || `Failed to fetch movie details for ID ${id}`);
+    }
 
-      if (!detailsRes.ok) {
-        const errorJson: any = await detailsRes.json().catch(() => ({}));
-        throw new Error(errorJson.error || `Failed to fetch movie details for ID ${id}`);
+    const detailsData: any = await detailsRes.json();
+    let creditsData: any = null;
+    if (creditsRes && creditsRes.ok) {
+      creditsData = await creditsRes.json().catch(() => null);
+    }
+
+    let trailerKey: string | undefined = undefined;
+    if (videosRes && videosRes.ok) {
+      const vids: any = await videosRes.json().catch(() => null);
+      if (vids && Array.isArray(vids.results)) {
+        const officialTrailer = vids.results.find((v: any) => v.site === 'YouTube' && v.type === 'Trailer') ||
+                                vids.results.find((v: any) => v.site === 'YouTube' && (v.type === 'Teaser' || v.type === 'Clip'));
+        if (officialTrailer) trailerKey = officialTrailer.key;
       }
+    }
 
-      const detailsData: any = await detailsRes.json();
-      let creditsData: any = null;
-      if (creditsRes && creditsRes.ok) {
-        creditsData = await creditsRes.json().catch(() => null);
-      }
-
-      let trailerKey: string | undefined = undefined;
-      if (videosRes && videosRes.ok) {
-        const vids: any = await videosRes.json().catch(() => null);
-        if (vids && Array.isArray(vids.results)) {
-          const officialTrailer = vids.results.find((v: any) => v.site === 'YouTube' && v.type === 'Trailer') ||
-                                  vids.results.find((v: any) => v.site === 'YouTube' && (v.type === 'Teaser' || v.type === 'Clip'));
-          if (officialTrailer) trailerKey = officialTrailer.key;
-        }
-      }
-
-      const movie = normalizeTMDBMovie(detailsData, creditsData);
-      if (trailerKey) {
-        movie.trailerKey = trailerKey;
-      }
-      setClientCache(cacheKey, movie, 60 * 60 * 1000); // 1 hour TTL
-      return movie;
-    });
+    const movie = normalizeTMDBMovie(detailsData, creditsData);
+    if (trailerKey) {
+      movie.trailerKey = trailerKey;
+    }
+    return movie;
   },
 
   /**
@@ -596,52 +608,12 @@ export const tmdbService = {
   },
 
   /**
-   * Fetch official watch providers (Where to Watch / JustWatch data) by TMDB movie ID.
-   */
-  async getMovieWatchProviders(id: string | number): Promise<{
-    link?: string;
-    flatrate?: { provider_id: number; provider_name: string; logo_path?: string }[];
-    rent?: { provider_id: number; provider_name: string; logo_path?: string }[];
-    buy?: { provider_id: number; provider_name: string; logo_path?: string }[];
-  } | null> {
-    const numericId = String(id).replace(/\D/g, '');
-    if (!numericId) return null;
-    const cacheKey = `watch_providers_${numericId}`;
-    const cached = getClientCache<any>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const res = await fetch(`/api/tmdb/movie/${numericId}/watch/providers`);
-      if (!res.ok) return null;
-      const data: any = await res.json();
-      const results = data.results || {};
-      const regionData = results.US || results.GB || results.CA || Object.values(results)[0] as any;
-      if (!regionData) return null;
-
-      const parsed = {
-        link: regionData.link || `https://www.themoviedb.org/movie/${numericId}/watch`,
-        flatrate: regionData.flatrate || [],
-        rent: regionData.rent || [],
-        buy: regionData.buy || [],
-      };
-      setClientCache(cacheKey, parsed, 60 * 60 * 1000);
-      return parsed;
-    } catch {
-      return null;
-    }
-  },
-
-  /**
    * Fetch connected franchise films from TMDB collection.
    * Dynamically loads real credits for each part to ensure genuine director and cast names.
    */
   async getCollection(collectionId: number | string): Promise<Movie[]> {
     const numericId = String(collectionId).replace(/\D/g, '');
     if (!numericId) return [];
-    const cacheKey = `collection_${numericId}`;
-    const cached = getClientCache<Movie[]>(cacheKey);
-    if (cached) return cached;
-
     const res = await fetch(`/api/tmdb/collection/${numericId}`);
     if (!res.ok) return [];
     const data: any = await res.json();
@@ -663,7 +635,6 @@ export const tmdbService = {
       })
     );
 
-    setClientCache(cacheKey, partsWithCredits, 60 * 60 * 1000);
     return partsWithCredits;
   },
 
@@ -718,167 +689,5 @@ export const tmdbService = {
     }
     const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-  },
-
-  /**
-   * Fetch Tamil Cinema (language ta) sorted by popularity with genuine TMDB metadata.
-   */
-  async getTamilCinema(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `tamil_cinema_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const res = await fetch(`/api/tmdb/discover?with_original_language=ta&sort_by=popularity.desc&page=${page}`);
-      if (!res.ok) {
-        const errorJson: any = await res.json().catch(() => ({}));
-        throw new Error(errorJson.error || `Failed to fetch Tamil cinema (${res.status})`);
-      }
-      const data: any = await res.json();
-      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-      const result = { movies, totalPages: data.total_pages || 1 };
-      setClientCache(cacheKey, result, 15 * 60 * 1000);
-      return result;
-    } catch (err) {
-      if (cached) return cached;
-      throw err;
-    }
-  },
-
-  /**
-   * Fetch Bangladeshi Cinema using genuine origin country code BD.
-   * Strictly distinguishes Bangladeshi cinema from Indian Bengali cinema.
-   */
-  async getBangladeshiCinema(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    const cacheKey = `bangladeshi_cinema_p${page}`;
-    const cached = getClientCache<{ movies: Movie[]; totalPages: number }>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const res = await fetch(`/api/tmdb/discover?with_origin_country=BD&sort_by=popularity.desc&page=${page}`);
-      if (!res.ok) {
-        const errorJson: any = await res.json().catch(() => ({}));
-        throw new Error(errorJson.error || `Failed to fetch Bangladeshi cinema (${res.status})`);
-      }
-      const data: any = await res.json();
-      const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-      const result = { movies, totalPages: data.total_pages || 1 };
-      setClientCache(cacheKey, result, 15 * 60 * 1000);
-      return result;
-    } catch (err) {
-      if (cached) return cached;
-      throw err;
-    }
-  },
-
-  /**
-   * Universal category dispatcher for dedicated View All listings.
-   */
-  async getCategoryMovies(category: string, page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
-    switch (category) {
-      case 'trending':
-        return this.getTrending('week', page);
-      case 'popular':
-        return this.getPopular(page);
-      case 'now_playing':
-        return this.getNowPlaying(page);
-      case 'upcoming':
-        return this.getUpcoming(page);
-      case 'top_rated':
-        return this.getTopRated(page);
-      case 'tamil':
-        return this.getTamilCinema(page);
-      case 'bangladeshi':
-        return this.getBangladeshiCinema(page);
-      default:
-        return this.getPopular(page);
-    }
-  },
-
-  /**
-   * Fetch TV series details by TMDB ID.
-   */
-  async getTvDetails(id: string | number): Promise<{
-    id: number;
-    name: string;
-    numberOfSeasons: number;
-    numberOfEpisodes: number;
-    seasons: { seasonNumber: number; name: string; episodeCount: number }[];
-    overview: string;
-    backdropUrl?: string;
-    posterUrl?: string;
-  } | null> {
-    const numericId = String(id).replace(/\D/g, '');
-    if (!numericId) return null;
-    const cacheKey = `tv_details_${numericId}`;
-    const cached = getClientCache<any>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const res = await fetch(`/api/tmdb/tv/${numericId}`);
-      if (!res.ok) return null;
-      const data: any = await res.json();
-      const seasons = (data.seasons || [])
-        .filter((s: any) => s.season_number > 0)
-        .map((s: any) => ({
-          seasonNumber: s.season_number,
-          name: s.name || `Season ${s.season_number}`,
-          episodeCount: s.episode_count || 1,
-        }));
-
-      const result = {
-        id: Number(numericId),
-        name: data.name || data.original_name || 'TV Series',
-        numberOfSeasons: data.number_of_seasons || seasons.length || 1,
-        numberOfEpisodes: data.number_of_episodes || 0,
-        seasons: seasons.length > 0 ? seasons : [{ seasonNumber: 1, name: 'Season 1', episodeCount: 10 }],
-        overview: data.overview || '',
-        backdropUrl: getBackdropUrl(data.backdrop_path, data.name),
-        posterUrl: getPosterUrl(data.poster_path, data.name),
-      };
-      setClientCache(cacheKey, result, 60 * 60 * 1000);
-      return result;
-    } catch {
-      return null;
-    }
-  },
-
-  /**
-   * Fetch TV episodes for a specific season.
-   */
-  async getTvSeasonEpisodes(
-    id: string | number,
-    seasonNumber: number
-  ): Promise<{
-    episodeNumber: number;
-    seasonNumber: number;
-    name: string;
-    overview?: string;
-    stillUrl?: string;
-    runtime?: number;
-  }[]> {
-    const numericId = String(id).replace(/\D/g, '');
-    if (!numericId) return [];
-    const cacheKey = `tv_episodes_${numericId}_s${seasonNumber}`;
-    const cached = getClientCache<any[]>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const res = await fetch(`/api/tmdb/tv/${numericId}/season/${seasonNumber}`);
-      if (!res.ok) return [];
-      const data: any = await res.json();
-      const episodes = (data.episodes || []).map((ep: any) => ({
-        episodeNumber: ep.episode_number,
-        seasonNumber: ep.season_number ?? seasonNumber,
-        name: ep.name || `Episode ${ep.episode_number}`,
-        overview: ep.overview || '',
-        stillUrl: ep.still_path ? `${TMDB_IMAGE_BASE.backdropW780}${ep.still_path}` : undefined,
-        runtime: ep.runtime,
-      }));
-      setClientCache(cacheKey, episodes, 60 * 60 * 1000);
-      return episodes;
-    } catch {
-      return [];
-    }
   }
 };

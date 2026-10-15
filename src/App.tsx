@@ -592,13 +592,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070104] text-[#f4eff1] relative selection:bg-red-900/60 selection:text-white flex flex-col justify-between w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#0A0402] text-[#FFE3B3] relative selection:bg-[#EA6113]/50 selection:text-white flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       
       {/* Contained Ambient Background Glows — Overflow strictly isolated to prevent mobile drift */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="ambient-glow-crimson top-0 left-1/4 w-[380px] h-[380px] -translate-x-1/2 opacity-25" />
-        <div className="ambient-glow-wine top-[35%] right-0 w-[420px] h-[420px] opacity-20" />
-        <div className="ambient-glow-crimson bottom-10 left-10 w-[350px] h-[350px] opacity-15" />
+        <div className="ambient-glow-sunset-flame top-0 left-1/4 w-[380px] h-[380px] -translate-x-1/2 opacity-25" />
+        <div className="ambient-glow-sunset-gold top-[35%] right-0 w-[420px] h-[420px] opacity-20" />
+        <div className="ambient-glow-sunset-flame bottom-10 left-10 w-[350px] h-[350px] opacity-15" />
       </div>
 
       {/* Main App Container */}

@@ -38,137 +38,6 @@
     margin: 0;
     padding: 0;
   }
-
-  /* Universal iOS Safari auto-zoom prevention: inputs must compute to at least 16px */
-  input,
-  textarea,
-  select {
-    font-size: 16px;
-  }
-}
-
-@media screen and (max-width: 768px) {
-  input,
-  textarea,
-  select,
-  input:focus,
-  textarea:focus,
-  select:focus {
-    font-size: 16px !important;
-  }
-}
-
-/* Cross-Browser Hardware-Accelerated Animations (iOS Safari, Chrome, Brave & Android) */
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@-webkit-keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@-webkit-keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    -webkit-transform: translate3d(0, 10px, 0);
-  }
-  100% {
-    opacity: 1;
-    -webkit-transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes scaleIn {
-  0% {
-    opacity: 0;
-    transform: scale3d(0.96, 0.96, 1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale3d(1, 1, 1);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  -webkit-animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: opacity;
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  -webkit-animation: fadeInUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: opacity, transform;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  -webkit-animation: scaleIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: opacity, transform;
-}
-
-/* Smooth horizontal marquee animation for home movie row (streaming carousel glide) */
-@keyframes glideLeft {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(calc(-50% - 0.375rem));
-  }
-}
-
-.animate-glide-row {
-  display: flex;
-  width: max-content;
-  animation: glideLeft 50s linear infinite;
-  will-change: transform;
-}
-
-.animate-glide-row:hover,
-.animate-glide-row:focus-within,
-.animate-glide-row.is-paused {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  .animate-glide-row {
-    animation: none !important;
-    transform: none !important;
-  }
-  .animate-fade-in,
-  .animate-fade-in-up,
-  .animate-scale-in {
-    animation: none !important;
-    -webkit-animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
 }
 
 .pb-safe {
@@ -181,78 +50,121 @@
 
 .scroll-touch {
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
-/* Custom cinematic Sunset liquid-glass utilities (optimized blur for 60fps mobile rendering) */
+/* Custom cinematic Sunset liquid-glass utilities */
 .liquid-glass {
-  background: rgba(18, 8, 4, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(248, 143, 34, 0.18);
-  box-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 227, 179, 0.08);
+  background: rgba(20, 9, 4, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(248, 143, 34, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 227, 179, 0.08);
 }
 
 .liquid-glass-card {
-  background: linear-gradient(145deg, rgba(24, 10, 5, 0.88) 0%, rgba(14, 6, 3, 0.94) 100%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(145deg, rgba(26, 12, 6, 0.85) 0%, rgba(14, 6, 3, 0.92) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(248, 143, 34, 0.18);
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 227, 179, 0.06);
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 227, 179, 0.06);
 }
 
 .liquid-glass-card:hover {
   border-color: rgba(251, 185, 49, 0.45);
-  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.8), 0 0 20px -2px rgba(248, 143, 34, 0.3);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.85), 0 0 25px -4px rgba(248, 143, 34, 0.35);
 }
 
 .liquid-glass-nav {
-  background: rgba(12, 5, 2, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(12, 5, 2, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(248, 143, 34, 0.15);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
 
 .liquid-glass-panel {
-  background: rgba(16, 7, 3, 0.9);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(18, 8, 4, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(248, 143, 34, 0.2);
 }
 
-/* 
- * 6. PERFORMANCE-OPTIMIZED SUNSET NEON GLOW FOR MOVIE CARDS
- * Replaces heavy 100+ DOM blur filters with GPU-accelerated box-shadow & translateZ
- * Eliminates Android raster thread choke while maintaining the signature Sunset neon halo.
- */
+/* ============================================================
+   COORDINATED PREMIUM HEADER GLOW SYSTEM
+   Brand Palette:
+   #EA6113 (Sunset Flame), #F88F22 (Warm Orange),
+   #FBB931 (Sunset Gold), #FFE3B3 (Soft Warm Highlight)
+   ============================================================ */
+
+/* Logo Box Glow */
+.header-logo-glow {
+  background: linear-gradient(135deg, #EA6113 0%, #F88F22 55%, #FBB931 100%);
+  box-shadow: 
+    0 0 16px -2px rgba(234, 97, 19, 0.45),
+    0 0 28px -4px rgba(248, 143, 34, 0.25),
+    inset 0 1px 1px rgba(255, 227, 179, 0.35);
+  border: 1px solid rgba(251, 185, 49, 0.4);
+}
+
+/* Movie Verse Wordmark Glow */
+.header-brand-glow {
+  text-shadow: 
+    0 0 12px rgba(248, 143, 34, 0.45),
+    0 0 24px rgba(234, 97, 19, 0.25);
+  letter-spacing: -0.02em;
+}
+
+/* "Hello Cinephile" Text Glow */
+.header-subtext-glow {
+  text-shadow: 0 0 8px rgba(251, 185, 49, 0.35);
+}
+
+/* Icon Glows (Search, Saved, Profile) */
+.header-icon-glow {
+  filter: drop-shadow(0 0 6px rgba(248, 143, 34, 0.5));
+  transition: filter 0.25s ease, transform 0.25s ease;
+}
+
+.header-icon-glow:hover {
+  filter: drop-shadow(0 0 10px rgba(251, 185, 49, 0.75));
+}
+
+/* Action button container glow */
+.header-btn-glow {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(248, 143, 34, 0.22);
+  transition: all 0.25s ease;
+}
+
+.header-btn-glow:hover {
+  background: rgba(248, 143, 34, 0.1);
+  border-color: rgba(251, 185, 49, 0.5);
+  box-shadow: 0 0 14px rgba(234, 97, 19, 0.35);
+}
+
+.header-btn-active {
+  background: linear-gradient(135deg, #EA6113 0%, #F88F22 100%);
+  border-color: #FBB931;
+  box-shadow: 0 0 16px rgba(234, 97, 19, 0.55);
+}
+
+/* HIGH-PERFORMANCE SUNSET CARD GLOW (GPU Accelerated, No Heavy Blur Passes) */
 .sunset-card-glow {
   position: relative;
   border-radius: 1rem;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 0 4px 14px -3px rgba(234, 97, 19, 0.18);
+  box-shadow: 0 4px 14px -3px rgba(0, 0, 0, 0.65), 0 0 14px -2px rgba(234, 97, 19, 0.16);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .sunset-card-glow:hover {
-    transform: translate3d(0, -3px, 0);
-    -webkit-transform: translate3d(0, -3px, 0);
-    box-shadow: 0 8px 24px -2px rgba(234, 97, 19, 0.4), 0 0 18px 2px rgba(248, 143, 34, 0.25);
-  }
-}
-
-.sunset-card-glow:active {
-  transform: scale3d(0.98, 0.98, 1);
-  -webkit-transform: scale3d(0.98, 0.98, 1);
+.sunset-card-glow:hover {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.8), 0 0 22px rgba(248, 143, 34, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sunset-card-glow {
+  .sunset-card-glow, .header-icon-glow, .header-btn-glow {
     transition: none !important;
-    transform: none !important;
   }
 }
 

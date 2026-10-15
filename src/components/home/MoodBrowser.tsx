@@ -36,9 +36,9 @@ export const MoodBrowser: React.FC<MoodBrowserProps> = ({
             <button
               key={mood.id}
               onClick={() => onSelectMood(isSelected ? null : mood.id)}
-              className={`text-left p-3 rounded-2xl transition-all duration-200 border ${
+              className={`text-left p-3 rounded-2xl transition-all duration-200 border cursor-pointer ${
                 isSelected
-                  ? 'bg-rose-950/80 border-rose-500 text-white shadow-[0_0_18px_rgba(225,29,72,0.3)] scale-[1.02]'
+                  ? 'bg-[#241108] border-[#F88F22] text-white shadow-[0_0_18px_rgba(248,143,34,0.35)] scale-[1.02]'
                   : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/5 text-neutral-300 hover:text-white'
               }`}
             >
