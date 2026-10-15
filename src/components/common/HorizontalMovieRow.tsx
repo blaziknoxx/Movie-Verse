@@ -13,7 +13,7 @@
  * - Per-row pause/play control & functional View All button
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { Movie } from '../../types/movie';
 import { MovieCard } from '../discover/MovieCard';
 import { Play, Pause, ChevronRight } from 'lucide-react';
@@ -35,7 +35,7 @@ interface HorizontalMovieRowProps {
   speed?: number; // px per second, default 24
 }
 
-export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
+export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = memo(({
   title,
   icon,
   movies,
@@ -52,19 +52,48 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
   speed = 24
 }) => {
   const [isPaused, setIsPaused] = useState(false);
+  const rowContainerRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const isInteractingRef = useRef(false);
   const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animFrameIdRef = useRef<number | null>(null);
+  const [isInViewport, setIsInViewport] = useState(true);
 
-  // Check for reduced motion preference
-  const isReducedMotion = typeof window !== 'undefined' 
-    && window.matchMedia 
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Check and dynamically listen for reduced motion preference
+  const [isReducedMotion, setIsReducedMotion] = useState(() => {
+    return typeof window !== 'undefined' 
+      && window.matchMedia 
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
 
-  // Seamless auto-scroll step loop
   useEffect(() => {
-    if (isPaused || isReducedMotion || movies.length < 3) return;
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = (e: MediaQueryListEvent) => setIsReducedMotion(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  // Performance Optimization: IntersectionObserver pauses the 60fps loop when offscreen
+  useEffect(() => {
+    const el = rowContainerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setIsInViewport(entry.isIntersecting);
+      },
+      { rootMargin: '120px 0px' }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Seamless auto-scroll step loop (only runs when visible and not paused)
+  useEffect(() => {
+    if (isPaused || isReducedMotion || !isInViewport || movies.length < 3) return;
 
     let lastTime = performance.now();
 
@@ -72,7 +101,7 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
       const delta = now - lastTime;
       lastTime = now;
 
-      // Only move if not interacting and not paused
+      // Only move if not interacting and not paused and element exists
       if (!isInteractingRef.current && !isPaused && trackRef.current) {
         const el = trackRef.current;
         const move = (speed * delta) / 1000;
@@ -93,12 +122,14 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
     return () => {
       if (animFrameIdRef.current) {
         cancelAnimationFrame(animFrameIdRef.current);
+        animFrameIdRef.current = null;
       }
       if (resumeTimeoutRef.current) {
         clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
       }
     };
-  }, [isPaused, isReducedMotion, movies.length, speed]);
+  }, [isPaused, isReducedMotion, isInViewport, movies.length, speed]);
 
   // Touch and interaction handlers: completely yields control to user during manual gestures
   const handleInteractionStart = useCallback(() => {
@@ -145,7 +176,7 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
   // If loading, render elegant pulse cards
   if (isLoading) {
     return (
-      <section className="space-y-3">
+      <section ref={rowContainerRef} className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {icon}
@@ -293,8 +324,8 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
             </div>
           ))}
 
-          {/* Double-buffered Clone Cards for seamless loop if enough cards */}
-          {canInfiniteGlide && movies.map((movie, idx) => (
+          {/* Double-buffered Clone Cards for seamless loop if enough cards (capped at 10 for performance) */}
+          {canInfiniteGlide && movies.slice(0, 10).map((movie, idx) => (
             <div
               key={`${movie.id}-glide-clone-${idx}`}
               className="w-[115px] sm:w-[138px] md:w-[158px] shrink-0"
@@ -314,4 +345,6 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
       </div>
     </section>
   );
-};
+});
+
+HorizontalMovieRow.displayName = 'HorizontalMovieRow';

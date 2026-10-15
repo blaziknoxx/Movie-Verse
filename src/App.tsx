@@ -3,9 +3,10 @@
  * Developer — Estiaq Mehedi
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Movie } from './types/movie';
 import { storageService } from './services/storageService';
+import { tmdbService } from './services/tmdbService';
 
 import { Header } from './components/common/Header';
 import { MobileNav } from './components/common/MobileNav';
@@ -28,18 +29,98 @@ import { WatchPage } from './components/watch/WatchPage';
 import { MovieDetailModal } from './components/detail/MovieDetailModal';
 import { SearchModal } from './components/search/SearchModal';
 
+interface NavState {
+  tab: string;
+  category?: string;
+  movieId?: string;
+  watchId?: string;
+  trailerId?: string;
+  searchOpen?: boolean;
+  searchQuery?: string;
+  inApp?: boolean;
+}
+
+function parseUrlToNavState(): NavState {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view') || params.get('tab') || 'home';
+    const cat = params.get('category') || undefined;
+    const mid = params.get('movieId') || params.get('id') || undefined;
+    const movieParam = params.get('movie') || undefined;
+    const searchParam = params.get('search') || params.get('q') || undefined;
+    const isSearch = params.has('search') || params.has('q');
+
+    if (view === 'trailer') {
+      return { tab: 'trailer', trailerId: mid || movieParam, inApp: false };
+    }
+    if (view === 'watch') {
+      return { tab: 'watch', watchId: mid || movieParam, inApp: false };
+    }
+    if (view === 'listing') {
+      return { tab: 'listing', category: cat || 'trending', movieId: movieParam, inApp: false };
+    }
+
+    const validTabs = ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile'];
+    const tab = validTabs.includes(view) ? view : 'home';
+
+    return {
+      tab,
+      movieId: movieParam || (view === 'home' && mid ? mid : undefined),
+      searchOpen: isSearch,
+      searchQuery: searchParam || '',
+      inApp: false,
+    };
+  } catch {
+    return { tab: 'home', inApp: false };
+  }
+}
+
+function buildUrlFromState(state: NavState): string {
+  const params = new URLSearchParams();
+  if (state.tab === 'trailer') {
+    params.set('view', 'trailer');
+    if (state.trailerId) params.set('movieId', state.trailerId);
+    return `?${params.toString()}`;
+  }
+  if (state.tab === 'watch') {
+    params.set('view', 'watch');
+    if (state.watchId) params.set('movieId', state.watchId);
+    return `?${params.toString()}`;
+  }
+  if (state.tab === 'listing') {
+    params.set('view', 'listing');
+    if (state.category) params.set('category', state.category);
+    if (state.movieId) params.set('movie', state.movieId);
+    return `?${params.toString()}`;
+  }
+  if (state.tab !== 'home') {
+    params.set('tab', state.tab);
+  }
+  if (state.movieId) {
+    params.set('movie', state.movieId);
+  }
+  if (state.searchOpen) {
+    params.set('search', state.searchQuery || '');
+  }
+  const str = params.toString();
+  return str ? `?${str}` : '/';
+}
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<string>('home');
-  const [listingCategory, setListingCategory] = useState<string>('trending');
+  const initialState = parseUrlToNavState();
+
+  const [activeTab, setActiveTab] = useState<string>(initialState.tab);
+  const [listingCategory, setListingCategory] = useState<string>(initialState.category || 'trending');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   
   // Dedicated Watch & Trailer states
   const [trailerMovie, setTrailerMovie] = useState<Movie | null>(null);
-  const [trailerMovieId, setTrailerMovieId] = useState<string | undefined>(undefined);
+  const [trailerMovieId, setTrailerMovieId] = useState<string | undefined>(initialState.trailerId);
   const [watchMovie, setWatchMovie] = useState<Movie | null>(null);
-  const [watchMovieId, setWatchMovieId] = useState<string | undefined>(undefined);
+  const [watchMovieId, setWatchMovieId] = useState<string | undefined>(initialState.watchId);
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(Boolean(initialState.searchOpen));
+  const [activeSearchQuery, setActiveSearchQuery] = useState(initialState.searchQuery || '');
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   
   // Cross-view state parameters
@@ -53,6 +134,10 @@ export default function App() {
   const [watched, setWatched] = useState<string[]>(() => storageService.getWatched());
   const [recentMovieIds, setRecentMovieIds] = useState<string[]>(() => storageService.getRecentMovies());
 
+  // History depth & scroll position tracker
+  const inAppHistoryDepthRef = useRef<number>(0);
+  const scrollPositionsRef = useRef<Record<string, number>>({});
+
   // Global keyboard shortcuts (⌘K or / for search, Esc for close)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,141 +148,308 @@ export default function App() {
         e.preventDefault();
         setIsSearchOpen(true);
       } else if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-        setIsAboutOpen(false);
-        setIsTrailerOpen(false);
-        setSelectedMovie(null);
+        if (selectedMovie) {
+          handleCloseMovieDetail();
+        } else if (isSearchOpen) {
+          setIsSearchOpen(false);
+        } else if (isAboutOpen) {
+          setIsAboutOpen(false);
+        } else if (isTrailerOpen) {
+          setIsTrailerOpen(false);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [selectedMovie, isSearchOpen, isAboutOpen, isTrailerOpen]);
 
-  // Bulletproof scroll position reset for seamless mobile and desktop navigation
+  // Bulletproof scroll position reset for new views
   const resetScrollPosition = (behavior: ScrollBehavior = 'instant') => {
-    // 1. Reset browser window scroll
     window.scrollTo({ top: 0, left: 0, behavior });
-    
-    // 2. Reset document root scrolling elements
-    if (document.scrollingElement) {
-      document.scrollingElement.scrollTop = 0;
-    }
-    if (document.documentElement) {
-      document.documentElement.scrollTop = 0;
-    }
-    if (document.body) {
-      document.body.scrollTop = 0;
-    }
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
 
-    // 3. Reset main element and any nested containers with overflow
     const mainEl = document.querySelector('main');
     if (mainEl) mainEl.scrollTop = 0;
 
-    const scrollContainers = document.querySelectorAll('[data-scroll-root]');
-    scrollContainers.forEach(el => { el.scrollTop = 0; });
-
-    // 4. Delayed check on next frame for asynchronously rendered or reflowed content
     requestAnimationFrame(() => {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
       if (mainEl) mainEl.scrollTop = 0;
     });
   };
 
-  // Synchronize browser history and refresh-safe URLs
+  // Synchronize browser history, back/forward navigation, and refresh-safe URLs
   useEffect(() => {
-    const handleUrlState = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const view = params.get('view') || params.get('tab');
-        const cat = params.get('category');
-        const mid = params.get('movieId') || params.get('id');
+    const handlePopState = (e: PopStateEvent) => {
+      const state: NavState = e.state || parseUrlToNavState();
+      if (inAppHistoryDepthRef.current > 0) {
+        inAppHistoryDepthRef.current -= 1;
+      }
 
-        if (view === 'listing' && cat) {
-          setListingCategory(cat);
-          setActiveTab('listing');
-        } else if (view === 'trailer') {
-          if (mid) {
-            setTrailerMovieId(mid);
-            const cached = storageService.getCachedMovie(mid);
-            if (cached) setTrailerMovie(cached);
+      const nextTab = state.tab || 'home';
+      setActiveTab(nextTab);
+
+      if (state.category) {
+        setListingCategory(state.category);
+      }
+
+      // Handle Watch View
+      if (nextTab === 'watch') {
+        const wid = state.watchId || state.movieId;
+        setWatchMovieId(wid);
+        setTrailerMovie(null);
+        setTrailerMovieId(undefined);
+        if (wid) {
+          const cached = storageService.getCachedMovie(wid);
+          if (cached) setWatchMovie(cached);
+          else {
+            tmdbService.getMovieDetails(wid).then(m => setWatchMovie(m)).catch(() => {});
           }
-          setActiveTab('trailer');
-        } else if (view === 'watch') {
-          if (mid) {
-            setWatchMovieId(mid);
-            const cached = storageService.getCachedMovie(mid);
-            if (cached) setWatchMovie(cached);
-          }
-          setActiveTab('watch');
-        } else if (view && ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile'].includes(view)) {
-          if (view === 'connections') {
-            setTargetUniverseId(undefined);
-          }
-          setActiveTab(view);
-        } else if (!view || view === 'home') {
-          setActiveTab('home');
         }
-      } catch {
-        // ignore
+        setSelectedMovie(null);
+      } 
+      // Handle Trailer View
+      else if (nextTab === 'trailer') {
+        const tid = state.trailerId || state.movieId;
+        setTrailerMovieId(tid);
+        setWatchMovie(null);
+        setWatchMovieId(undefined);
+        if (tid) {
+          const cached = storageService.getCachedMovie(tid);
+          if (cached) setTrailerMovie(cached);
+          else {
+            tmdbService.getMovieDetails(tid).then(m => setTrailerMovie(m)).catch(() => {});
+          }
+        }
+        setSelectedMovie(null);
+      } 
+      // Other Views: Restore Movie Details Modal or Close it
+      else {
+        setWatchMovie(null);
+        setWatchMovieId(undefined);
+        setTrailerMovie(null);
+        setTrailerMovieId(undefined);
+
+        if (state.movieId) {
+          const cached = storageService.getCachedMovie(state.movieId);
+          if (cached) {
+            setSelectedMovie(cached);
+          } else {
+            tmdbService.getMovieDetails(state.movieId).then(m => setSelectedMovie(m)).catch(() => {});
+          }
+        } else {
+          setSelectedMovie(null);
+        }
+
+        // Restore scroll position when returning from details or subpage
+        if (!state.movieId) {
+          const scrollKey = nextTab === 'listing' ? `listing_${state.category || 'trending'}` : nextTab;
+          const targetY = scrollPositionsRef.current[scrollKey] ?? 0;
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: targetY, left: 0, behavior: 'instant' });
+          });
+        }
+      }
+
+      // Restore Search modal state
+      if (state.searchOpen) {
+        setIsSearchOpen(true);
+        if (state.searchQuery !== undefined) {
+          setActiveSearchQuery(state.searchQuery);
+        }
+      } else {
+        setIsSearchOpen(false);
       }
     };
 
-    handleUrlState();
-    window.addEventListener('popstate', handleUrlState);
-    return () => window.removeEventListener('popstate', handleUrlState);
+    // On initial mount, if URL has movie ID or watch/trailer ID, resolve metadata
+    const init = parseUrlToNavState();
+    if (init.movieId) {
+      const cached = storageService.getCachedMovie(init.movieId);
+      if (cached) {
+        setSelectedMovie(cached);
+      } else {
+        tmdbService.getMovieDetails(init.movieId).then(m => setSelectedMovie(m)).catch(() => {});
+      }
+    }
+    if (init.watchId) {
+      const cached = storageService.getCachedMovie(init.watchId);
+      if (cached) setWatchMovie(cached);
+      else tmdbService.getMovieDetails(init.watchId).then(m => setWatchMovie(m)).catch(() => {});
+    }
+    if (init.trailerId) {
+      const cached = storageService.getCachedMovie(init.trailerId);
+      if (cached) setTrailerMovie(cached);
+      else tmdbService.getMovieDetails(init.trailerId).then(m => setTrailerMovie(m)).catch(() => {});
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Ensure scroll resets immediately whenever activeTab changes
-  useEffect(() => {
-    resetScrollPosition('instant');
-  }, [activeTab]);
-
   const handleNavSelect = (tab: string) => {
-    if (tab === activeTab) {
-      // Tapping already-selected tab returns smoothly to top
+    if (tab === activeTab && !selectedMovie) {
+      // Tapping already-selected tab smoothly returns to top
       resetScrollPosition('smooth');
     } else {
+      // Save current scroll position
+      const currentKey = activeTab === 'listing' ? `listing_${listingCategory}` : activeTab;
+      scrollPositionsRef.current[currentKey] = window.scrollY || document.documentElement.scrollTop || 0;
+
       if (tab === 'connections') {
         setTargetUniverseId(undefined);
       }
       setActiveTab(tab);
+      setSelectedMovie(null);
+
+      const nextState: NavState = { tab, inApp: true };
+      inAppHistoryDepthRef.current += 1;
       try {
-        window.history.pushState(
-          { tab },
-          '',
-          tab === 'home' ? '/' : `?tab=${tab}`
-        );
+        window.history.pushState(nextState, '', buildUrlFromState(nextState));
       } catch {
         // ignore
       }
-      resetScrollPosition('instant');
+
+      // If we previously visited this tab, restore its scroll, otherwise scroll to top
+      const prevScroll = scrollPositionsRef.current[tab] ?? 0;
+      if (prevScroll > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: prevScroll, left: 0, behavior: 'instant' });
+        });
+      } else {
+        resetScrollPosition('instant');
+      }
     }
   };
 
   const handleOpenCategoryListing = (categoryKey: string) => {
+    // Save current scroll position before entering listing
+    const currentKey = activeTab === 'listing' ? `listing_${listingCategory}` : activeTab;
+    scrollPositionsRef.current[currentKey] = window.scrollY || document.documentElement.scrollTop || 0;
+
     setListingCategory(categoryKey);
     setActiveTab('listing');
+    setSelectedMovie(null);
+
+    const nextState: NavState = {
+      tab: 'listing',
+      category: categoryKey,
+      inApp: true,
+    };
+    inAppHistoryDepthRef.current += 1;
     try {
-      window.history.pushState(
-        { tab: 'listing', category: categoryKey },
-        '',
-        `?view=listing&category=${categoryKey}`
-      );
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
     } catch {
       // ignore
     }
     resetScrollPosition('instant');
   };
 
-  // Handlers
+  // Handlers for movie selection and modals
   const handleSelectMovie = (movie: Movie) => {
+    // Save current scroll position
+    const currentKey = activeTab === 'listing' ? `listing_${listingCategory}` : activeTab;
+    scrollPositionsRef.current[currentKey] = window.scrollY || document.documentElement.scrollTop || 0;
+
     setSelectedMovie(movie);
+    storageService.saveCachedMovie(movie);
     const updatedRecents = storageService.addRecentMovie(movie.id);
     setRecentMovieIds(updatedRecents);
+
+    const nextState: NavState = {
+      tab: activeTab,
+      category: activeTab === 'listing' ? listingCategory : undefined,
+      movieId: movie.id,
+      searchOpen: isSearchOpen,
+      searchQuery: activeSearchQuery,
+      inApp: true,
+    };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCloseMovieDetail = () => {
+    if (inAppHistoryDepthRef.current > 0) {
+      window.history.back();
+    } else {
+      setSelectedMovie(null);
+      const nextState: NavState = {
+        tab: activeTab === 'watch' || activeTab === 'trailer' ? 'home' : activeTab,
+        category: activeTab === 'listing' ? listingCategory : undefined,
+        inApp: false,
+      };
+      try {
+        window.history.replaceState(nextState, '', buildUrlFromState(nextState));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleOpenSearch = (initialQ?: string) => {
+    setIsSearchOpen(true);
+    const queryToUse = initialQ !== undefined ? initialQ : activeSearchQuery;
+    if (initialQ !== undefined) {
+      setActiveSearchQuery(initialQ);
+    }
+    const nextState: NavState = {
+      tab: activeTab,
+      category: activeTab === 'listing' ? listingCategory : undefined,
+      movieId: selectedMovie?.id,
+      searchOpen: true,
+      searchQuery: queryToUse,
+      inApp: true,
+    };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleCloseSearch = () => {
+    if (inAppHistoryDepthRef.current > 0 && window.history.state?.searchOpen) {
+      window.history.back();
+    } else {
+      setIsSearchOpen(false);
+      setActiveSearchQuery('');
+      const nextState: NavState = {
+        tab: activeTab,
+        category: activeTab === 'listing' ? listingCategory : undefined,
+        movieId: selectedMovie?.id,
+        inApp: false,
+      };
+      try {
+        window.history.replaceState(nextState, '', buildUrlFromState(nextState));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleSearchQueryChange = (q: string) => {
+    setActiveSearchQuery(q);
+    const nextState: NavState = {
+      tab: activeTab,
+      category: activeTab === 'listing' ? listingCategory : undefined,
+      movieId: selectedMovie?.id,
+      searchOpen: true,
+      searchQuery: q,
+      inApp: true,
+    };
+    try {
+      window.history.replaceState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
   };
 
   const handleOpenTrailer = (movie: Movie) => {
@@ -214,12 +466,16 @@ export default function App() {
     storageService.saveCachedMovie(resolvedMovie);
     setSelectedMovie(null);
     setActiveTab('trailer');
+
+    const nextState: NavState = {
+      tab: 'trailer',
+      trailerId: targetId,
+      movieId: targetId,
+      inApp: true,
+    };
+    inAppHistoryDepthRef.current += 1;
     try {
-      window.history.pushState(
-        { tab: 'trailer', movieId: targetId },
-        '',
-        `?view=trailer&movieId=${targetId}`
-      );
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
     } catch {
       // ignore
     }
@@ -240,12 +496,16 @@ export default function App() {
     storageService.saveCachedMovie(resolvedMovie);
     setSelectedMovie(null);
     setActiveTab('watch');
+
+    const nextState: NavState = {
+      tab: 'watch',
+      watchId: targetId,
+      movieId: targetId,
+      inApp: true,
+    };
+    inAppHistoryDepthRef.current += 1;
     try {
-      window.history.pushState(
-        { tab: 'watch', movieId: targetId },
-        '',
-        `?view=watch&movieId=${targetId}`
-      );
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
     } catch {
       // ignore
     }
@@ -253,10 +513,28 @@ export default function App() {
   };
 
   const handleBackFromWatchOrTrailer = () => {
-    if (window.history.length > 1) {
+    if (inAppHistoryDepthRef.current > 0) {
       window.history.back();
     } else {
-      handleNavSelect('home');
+      // Fallback: Return to Movie Details for this title on Home
+      const mid = watchMovieId || trailerMovieId;
+      if (mid) {
+        const cached = storageService.getCachedMovie(mid);
+        if (cached) {
+          setSelectedMovie(cached);
+        } else {
+          tmdbService.getMovieDetails(mid).then(m => setSelectedMovie(m)).catch(() => {});
+        }
+        setActiveTab('home');
+        const nextState: NavState = { tab: 'home', movieId: mid, inApp: false };
+        try {
+          window.history.replaceState(nextState, '', buildUrlFromState(nextState));
+        } catch {
+          // ignore
+        }
+      } else {
+        handleNavSelect('home');
+      }
     }
   };
 
@@ -330,7 +608,7 @@ export default function App() {
         <Header
           activeTab={activeTab}
           setActiveTab={handleNavSelect}
-          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenSearch={() => handleOpenSearch()}
           onOpenAbout={() => setIsAboutOpen(true)}
           watchlistCount={watchlist.length}
         />
@@ -352,7 +630,7 @@ export default function App() {
               onSelectMood={setSelectedMoodId}
               onOpenTrailer={handleOpenTrailer}
               onOpenWatch={handleOpenWatch}
-              onOpenSearch={() => setIsSearchOpen(true)}
+              onOpenSearch={() => handleOpenSearch()}
               onViewAll={handleOpenCategoryListing}
             />
           )}
@@ -361,7 +639,7 @@ export default function App() {
             <CategoryListingView
               categoryKey={listingCategory}
               onBack={() => {
-                if (window.history.length > 1 && window.history.state?.tab === 'listing') {
+                if (inAppHistoryDepthRef.current > 0) {
                   window.history.back();
                 } else {
                   handleNavSelect('home');
@@ -478,7 +756,7 @@ export default function App() {
           activeTab={activeTab}
           setActiveTab={handleNavSelect}
           onResetScroll={() => resetScrollPosition('smooth')}
-          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenSearch={() => handleOpenSearch()}
           watchlistCount={watchlist.length}
         />
 
@@ -487,7 +765,7 @@ export default function App() {
       {/* Global Movie Details Screen Modal matching Reference 2 */}
       <MovieDetailModal
         movie={selectedMovie}
-        onClose={() => setSelectedMovie(null)}
+        onClose={handleCloseMovieDetail}
         isWatchlisted={selectedMovie ? watchlist.includes(selectedMovie.id) : false}
         isWatched={selectedMovie ? watched.includes(selectedMovie.id) : false}
         onToggleWatchlist={handleToggleWatchlist}
@@ -516,8 +794,10 @@ export default function App() {
       {/* Instant Search Modal */}
       <SearchModal
         isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
+        onClose={handleCloseSearch}
         onSelectMovie={handleSelectMovie}
+        initialQuery={activeSearchQuery}
+        onQueryChange={handleSearchQueryChange}
       />
 
       {/* About Modal */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Movie } from '../../types/movie';
 import { Play, Info, Bookmark, Star, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -11,7 +11,7 @@ interface HeroBannerProps {
   onOpenWatch?: (movie: Movie) => void;
 }
 
-export const HeroBanner: React.FC<HeroBannerProps> = ({
+export const HeroBanner: React.FC<HeroBannerProps> = memo(({
   movies,
   onSelectMovie,
   isWatchlisted,
@@ -20,16 +20,18 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onOpenWatch
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const isInteractingRef = useRef(false);
 
-  // Take top 5 candidates for the featured carousel
+  // Take top 6 candidates for the featured carousel
   const carouselMovies = movies.slice(0, 6);
   const currentMovie = carouselMovies[currentIndex] || movies[0];
 
   useEffect(() => {
-    // Auto-advance carousel every 7 seconds if user isn't interacting
+    // Auto-advance carousel every 7 seconds when visible and not interacting
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % carouselMovies.length);
+      if (document.visibilityState === 'visible' && !isInteractingRef.current && carouselMovies.length > 1) {
+        setCurrentIndex((prev) => (prev + 1) % carouselMovies.length);
+      }
     }, 7000);
     return () => clearInterval(timer);
   }, [carouselMovies.length]);
@@ -47,7 +49,13 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   };
 
   return (
-    <section className="relative w-full max-w-full overflow-hidden mb-6 pt-1">
+    <section 
+      className="relative w-full max-w-full overflow-hidden mb-6 pt-1"
+      onMouseEnter={() => { isInteractingRef.current = true; }}
+      onMouseLeave={() => { isInteractingRef.current = false; }}
+      onTouchStart={() => { isInteractingRef.current = true; }}
+      onTouchEnd={() => { setTimeout(() => { isInteractingRef.current = false; }, 4000); }}
+    >
       {/* Featured Card Wrapper with Peek Preview on the Right */}
       <div className="relative w-full px-0 sm:px-2">
         
@@ -56,12 +64,15 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           onClick={() => onSelectMovie(currentMovie)}
           className="group relative w-full aspect-[16/10] sm:aspect-[21/9] rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer border border-white/[0.08] shadow-2xl bg-[#12040b]"
         >
-          {/* Backdrop Image */}
+          {/* Backdrop Image with High Loading Priority for LCP */}
           <img
             src={currentMovie.backdropUrl || currentMovie.posterUrl}
             alt={currentMovie.title}
             className="w-full h-full object-cover object-center transform transition-transform duration-700 ease-out group-hover:scale-105"
             loading="eager"
+            // @ts-ignore
+            fetchpriority="high"
+            decoding="async"
           />
 
           {/* Cinematic Scrims for Flawless Readability */}
@@ -212,4 +223,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       </div>
     </section>
   );
-};
+});
+
+HeroBanner.displayName = 'HeroBanner';

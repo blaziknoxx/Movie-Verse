@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Movie } from '../../types/movie';
 import { Bookmark, Star, Film, Play } from 'lucide-react';
+import { getOptimizedPosterUrl, getBackdropUrl } from '../../services/tmdbService';
 
 interface MovieCardProps {
   movie: Movie;
@@ -13,7 +14,7 @@ interface MovieCardProps {
   onOpenWatch?: (movie: Movie) => void;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({
+export const MovieCard: React.FC<MovieCardProps> = memo(({
   movie,
   onSelectMovie,
   isWatchlisted,
@@ -27,10 +28,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 
   const isLandscape = aspectRatio === 'landscape';
 
+  // Efficient image resolution: w342 for posters, w780 for landscape thumbnails on mobile
+  const resolvedImgUrl = isLandscape
+    ? (movie.backdropUrl ? getBackdropUrl(movie.backdropUrl, movie.title, 'w780') : getOptimizedPosterUrl(movie.posterUrl, 'w342', movie.title))
+    : getOptimizedPosterUrl(movie.posterUrl, 'w342', movie.title);
+
   return (
     <div
       onClick={() => onSelectMovie(movie)}
-      className="group sunset-card-glow relative flex flex-col cursor-pointer transition-transform duration-300 active:scale-[0.98] hover:scale-[1.02] min-w-0 w-full select-none"
+      className="group sunset-card-glow relative flex flex-col cursor-pointer transition-transform duration-300 active:scale-[0.98] min-w-0 w-full select-none"
     >
       {/* Poster Media Box with Sunset Ambient Neon Lighting */}
       <div 
@@ -40,12 +46,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       >
         {!imgError ? (
           <img
-            src={isLandscape && movie.backdropUrl ? movie.backdropUrl : movie.posterUrl}
+            src={resolvedImgUrl}
             alt={movie.title}
             referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center p-3 bg-gradient-to-b from-[#2A1207] to-[#0A0402] text-center">
@@ -72,7 +79,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
               e.stopPropagation();
               onToggleWatchlist(movie.id, e);
             }}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all pointer-events-auto ${
+            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all pointer-events-auto cursor-pointer ${
               isWatchlisted
                 ? 'bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white shadow-[0_0_14px_rgba(234,97,19,0.7)]'
                 : 'bg-black/65 backdrop-blur-md text-neutral-300 hover:text-white hover:bg-black/85 border border-[#F88F22]/20'
@@ -124,4 +131,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+MovieCard.displayName = 'MovieCard';

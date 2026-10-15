@@ -19,14 +19,18 @@ interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectMovie: (movie: Movie) => void;
+  initialQuery?: string;
+  onQueryChange?: (query: string) => void;
 }
 
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,
   onClose,
-  onSelectMovie
+  onSelectMovie,
+  initialQuery,
+  onQueryChange
 }) => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery || '');
   const [results, setResults] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -42,6 +46,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const preserveQueryOnSelectRef = useRef(false);
+
+  // Sync initialQuery prop
+  useEffect(() => {
+    if (initialQuery !== undefined && initialQuery !== query) {
+      setQuery(initialQuery);
+    }
+  }, [initialQuery]);
 
   // Load recent searches and trending suggestions on open
   useEffect(() => {
@@ -49,25 +61,30 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       setRecentSearches(storageService.getRecentSearches());
       setTimeout(() => inputRef.current?.focus(), 60);
 
-      // Fetch genuine trending movies for initial state suggestions
-      setIsLoadingSuggestions(true);
-      tmdbService.getTrending('day', 1)
-        .then(data => {
-          setTrendingSuggestions(data.movies.slice(0, 6));
-          storageService.saveMultipleCachedMovies(data.movies);
-        })
-        .catch(err => {
-          console.warn('[SearchModal] Failed to load suggestions:', err);
-        })
-        .finally(() => {
-          setIsLoadingSuggestions(false);
-        });
+      // If query is already populated from preserved state, let debounced effect run
+      if (!query.trim()) {
+        setIsLoadingSuggestions(true);
+        tmdbService.getTrending('day', 1)
+          .then(data => {
+            setTrendingSuggestions(data.movies.slice(0, 6));
+            storageService.saveMultipleCachedMovies(data.movies);
+          })
+          .catch(err => {
+            console.warn('[SearchModal] Failed to load suggestions:', err);
+          })
+          .finally(() => {
+            setIsLoadingSuggestions(false);
+          });
+      }
     } else {
-      setQuery('');
-      setResults([]);
-      setCurrentPage(1);
-      setTotalPages(0);
-      setTotalResults(0);
+      if (!preserveQueryOnSelectRef.current) {
+        setQuery('');
+        setResults([]);
+        setCurrentPage(1);
+        setTotalPages(0);
+        setTotalResults(0);
+      }
+      preserveQueryOnSelectRef.current = false;
       setIsLoading(false);
       setErrorMsg(null);
       if (abortControllerRef.current) {
@@ -170,9 +187,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     });
     setRecentSearches(updated);
 
+    preserveQueryOnSelectRef.current = true;
     storageService.saveCachedMovie(movie);
     onSelectMovie(movie);
-    onClose();
   };
 
   const handleSelectRecentSearch = (item: RecentSearchItem) => {
@@ -185,6 +202,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     }
     // Repeat search query
     setQuery(item.query);
+    onQueryChange?.(item.query);
   };
 
   const handleRemoveRecentSearch = (e: React.MouseEvent, idOrQuery: string) => {
@@ -202,8 +220,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 pt-12 sm:pt-20 bg-black/85 backdrop-blur-xl animate-fade-in">
-      <div className="relative w-full max-w-2xl liquid-glass-panel rounded-3xl border border-[#F88F22]/30 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div 
+      className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 pt-12 sm:pt-20 bg-black/85 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-2xl liquid-glass-panel rounded-3xl border border-[#F88F22]/30 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Premium Search Header Bar */}
         <div className="p-4 sm:p-5 border-b border-white/10 bg-[#140804]/90 backdrop-blur-md">
@@ -213,7 +237,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                onQueryChange?.(e.target.value);
+              }}
               placeholder="Search movies by title, franchise, or keywords..."
               className="w-full bg-transparent text-white placeholder-neutral-400 text-base sm:text-base focus:outline-none"
             />
