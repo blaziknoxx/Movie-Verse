@@ -397,7 +397,7 @@ export const storageService = {
     displayName: string;
     avatarId: string;
     bio?: string;
-    preferredStreamingProvider: 'all' | 'hdhub4u' | 'movielinkbd';
+    preferredStreamingProvider: 'all' | 'nexstream';
     showTransparencyNotice: boolean;
     joinedTimestamp: number;
   } {

@@ -670,7 +670,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             Where to Watch Official Directory
           </h3>
           <p className="text-xs text-neutral-300 max-w-lg leading-relaxed">
-            Curated movie discovery portals, regional guides, and streaming destinations including HDHub4u and MovieLinkBD.
+            Curated movie discovery portals, regional guides, and global streaming platforms.
           </p>
         </div>
 

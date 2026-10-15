@@ -377,30 +377,76 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // Case 3: Official Allowlisted Embed (YouTube / Vimeo / Archive.org)
+  // Case 3: Official Allowlisted Embed (NexStream / YouTube / Vimeo / Archive.org)
   if (source.type === 'embed') {
     return (
       <div 
         ref={containerRef}
         className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/30 shadow-[0_16px_50px_rgba(0,0,0,0.95)] sunset-card-glow group"
       >
-        {isLoading && (
-          <PlayerLoadingState title={title} sourceName={source.name} />
-        )}
+        {/* If playback not yet started (e.g. user hasn't clicked Play), show poster preview with Play trigger */}
+        {!isPlaying && !autoPlay ? (
+          <div 
+            onClick={() => setIsPlaying(true)}
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center cursor-pointer bg-black/50 hover:bg-black/40 transition-all group/poster"
+          >
+            {posterUrl && (
+              <img
+                src={posterUrl}
+                alt={title}
+                className="absolute inset-0 w-full h-full object-cover opacity-60 filter blur-[1px] group-hover/poster:scale-105 transition-transform duration-700"
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30" />
+            <div className="relative z-10 flex flex-col items-center gap-3 text-center px-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-[0_0_35px_rgba(234,97,19,0.7)] transform group-hover/poster:scale-110 active:scale-95 transition-all">
+                <Play className="w-8 h-8 sm:w-9 sm:h-9 fill-white translate-x-0.5" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                  Start Playback
+                </div>
+                <div className="text-xs text-[#FFE3B3]/80">
+                  {source.name}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {isLoading && (
+              <PlayerLoadingState title={title} sourceName={source.name} />
+            )}
 
-        <iframe
-          src={validation.sanitizedUrl || source.url}
-          title={`${title} — ${source.name}`}
-          onLoad={() => setIsLoading(false)}
-          onError={() => {
-            setIsLoading(false);
-            setHasError(true);
-            setErrorMessage('Embed player failed to initialize.');
-          }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-          className="w-full h-full border-0 relative z-10"
-        />
+            <iframe
+              src={validation.sanitizedUrl || source.url}
+              title={`${title} — ${source.name}`}
+              onLoad={() => setIsLoading(false)}
+              onError={() => {
+                setIsLoading(false);
+                setHasError(true);
+                setErrorMessage('NexStream player failed to initialize or connection was interrupted.');
+              }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+              allowFullScreen
+              referrerPolicy="origin"
+              className="w-full h-full border-0 relative z-10"
+            />
+
+            {/* Quick Fullscreen Overlay Button for Iframe */}
+            <div className="absolute top-3 right-3 z-20 pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="p-2 rounded-xl bg-black/70 hover:bg-black/90 text-white flex items-center justify-center border border-white/20 active:scale-95 shadow-md transition-all"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+              >
+                {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }

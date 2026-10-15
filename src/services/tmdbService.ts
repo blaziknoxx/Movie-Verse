@@ -689,5 +689,92 @@ export const tmdbService = {
       default:
         return this.getPopular(page);
     }
+  },
+
+  /**
+   * Fetch TV series details by TMDB ID.
+   */
+  async getTvDetails(id: string | number): Promise<{
+    id: number;
+    name: string;
+    numberOfSeasons: number;
+    numberOfEpisodes: number;
+    seasons: { seasonNumber: number; name: string; episodeCount: number }[];
+    overview: string;
+    backdropUrl?: string;
+    posterUrl?: string;
+  } | null> {
+    const numericId = String(id).replace(/\D/g, '');
+    if (!numericId) return null;
+    const cacheKey = `tv_details_${numericId}`;
+    const cached = getClientCache<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/tv/${numericId}`);
+      if (!res.ok) return null;
+      const data: any = await res.json();
+      const seasons = (data.seasons || [])
+        .filter((s: any) => s.season_number > 0)
+        .map((s: any) => ({
+          seasonNumber: s.season_number,
+          name: s.name || `Season ${s.season_number}`,
+          episodeCount: s.episode_count || 1,
+        }));
+
+      const result = {
+        id: Number(numericId),
+        name: data.name || data.original_name || 'TV Series',
+        numberOfSeasons: data.number_of_seasons || seasons.length || 1,
+        numberOfEpisodes: data.number_of_episodes || 0,
+        seasons: seasons.length > 0 ? seasons : [{ seasonNumber: 1, name: 'Season 1', episodeCount: 10 }],
+        overview: data.overview || '',
+        backdropUrl: getBackdropUrl(data.backdrop_path, data.name),
+        posterUrl: getPosterUrl(data.poster_path, data.name),
+      };
+      setClientCache(cacheKey, result, 60 * 60 * 1000);
+      return result;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Fetch TV episodes for a specific season.
+   */
+  async getTvSeasonEpisodes(
+    id: string | number,
+    seasonNumber: number
+  ): Promise<{
+    episodeNumber: number;
+    seasonNumber: number;
+    name: string;
+    overview?: string;
+    stillUrl?: string;
+    runtime?: number;
+  }[]> {
+    const numericId = String(id).replace(/\D/g, '');
+    if (!numericId) return [];
+    const cacheKey = `tv_episodes_${numericId}_s${seasonNumber}`;
+    const cached = getClientCache<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/tv/${numericId}/season/${seasonNumber}`);
+      if (!res.ok) return [];
+      const data: any = await res.json();
+      const episodes = (data.episodes || []).map((ep: any) => ({
+        episodeNumber: ep.episode_number,
+        seasonNumber: ep.season_number ?? seasonNumber,
+        name: ep.name || `Episode ${ep.episode_number}`,
+        overview: ep.overview || '',
+        stillUrl: ep.still_path ? `${TMDB_IMAGE_BASE.backdropW780}${ep.still_path}` : undefined,
+        runtime: ep.runtime,
+      }));
+      setClientCache(cacheKey, episodes, 60 * 60 * 1000);
+      return episodes;
+    } catch {
+      return [];
+    }
   }
 };

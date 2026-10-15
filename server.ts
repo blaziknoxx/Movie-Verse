@@ -136,6 +136,16 @@ app.get('/api/tmdb/status', (req: Request, res: Response) => {
   });
 });
 
+// NexStream configuration endpoint
+app.get('/api/config/nexstream', (req: Request, res: Response) => {
+  const apiKey = (process.env.NEXSTREAM_API_KEY || process.env.VITE_NEXSTREAM_API_KEY || '').trim();
+  res.json({
+    status: 'ok',
+    configured: Boolean(apiKey),
+    apiKey: apiKey || '',
+  });
+});
+
 // Trending movies (week or day)
 app.get('/api/tmdb/trending', async (req: Request, res: Response) => {
   try {
@@ -287,6 +297,63 @@ app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Valid numeric collection ID required' });
     }
     const result = await fetchFromTMDB(`/collection/${id}`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Series Details
+app.get('/api/tmdb/tv/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Series Season details with episodes
+app.get('/api/tmdb/tv/:id/season/:season_number', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    const seasonNumber = req.params.season_number;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}/season/${seasonNumber}`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Series Credits
+app.get('/api/tmdb/tv/:id/credits', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}/credits`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Series Videos (Trailers)
+app.get('/api/tmdb/tv/:id/videos', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV series ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}/videos`);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);

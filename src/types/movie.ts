@@ -78,6 +78,8 @@ export interface Movie {
   writers?: string[];
   language?: string;
   sources?: PlaybackSource[];
+  mediaType?: 'movie' | 'tv';
+  seasonsCount?: number;
 }
 
 export type PlaybackType = 'embed' | 'mp4' | 'hls' | 'webpage';
@@ -167,7 +169,7 @@ export interface UserProfile {
   displayName: string;
   avatarId: string;
   bio?: string;
-  preferredStreamingProvider?: 'all' | 'hdhub4u' | 'movielinkbd';
+  preferredStreamingProvider?: 'all' | 'nexstream';
   showTransparencyNotice?: boolean;
   joinedTimestamp: number;
 }

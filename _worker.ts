@@ -199,6 +199,22 @@ export default {
       });
     }
 
+    // Handle NexStream configuration check
+    if (url.pathname === '/api/config/nexstream') {
+      const nexstreamKey = (env.NEXSTREAM_API_KEY || env.VITE_NEXSTREAM_API_KEY || '').trim();
+      return new Response(JSON.stringify({
+        status: 'ok',
+        configured: Boolean(nexstreamKey),
+        apiKey: nexstreamKey || '',
+      }), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
     // Handle /api/tmdb and /api/tmdb/* requests
     if (url.pathname === '/api/tmdb' || url.pathname.startsWith('/api/tmdb/')) {
       const pathUnderTmdb = url.pathname.replace(/^\/api\/tmdb\/?/, '/');

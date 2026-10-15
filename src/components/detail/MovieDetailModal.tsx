@@ -10,7 +10,6 @@ import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
-import { buildHDHub4uSearchUrl, getMovieLinkBDUrl, getMovieStreamingPlatforms } from '../../services/streamingProviders';
 import { 
   ArrowLeft, Star, Bookmark, CheckCircle2, Network, ListOrdered, 
   Tv, ExternalLink, Sparkles, User, Calendar, Clock, Film,
@@ -87,7 +86,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             universeId: movie.universeId || details.universeId,
             universeName: movie.universeName || details.universeName,
             vibeTags: movie.vibeTags?.length ? movie.vibeTags : details.vibeTags,
-            streamingPlatforms: getMovieStreamingPlatforms(details.title || movie.title)
+            streamingPlatforms: details.streamingPlatforms || []
           };
           setDetailedMovie(merged);
           storageService.saveCachedMovie(merged);
@@ -121,23 +120,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   if (!movie) return null;
   const current = detailedMovie || movie;
 
-  // External streaming platforms dynamically generated using movie title with recommendation indicators
-  const externalStreamingPlatforms = [
+  // NexStream official in-app stream destination
+  const streamingDestinations = [
     {
-      name: 'HDHub4u',
-      type: 'External Portal' as const,
-      url: buildHDHub4uSearchUrl(current.title),
-      badge: 'Movie Verse Pick',
+      name: 'NexStream Theater',
+      type: 'Integrated HD Stream',
+      badge: 'Integrated Player',
       isPick: true,
-      description: `Direct title query matching "${current.title}"`
-    },
-    {
-      name: 'MovieLinkBD',
-      type: 'External Portal' as const,
-      url: getMovieLinkBDUrl(),
-      badge: 'Directory Index',
-      isPick: false,
-      description: 'Homepage directory index (opaque ID fallback)'
+      description: 'Stream directly in the Movie Verse Watch Room with NexStream API'
     }
   ];
 
@@ -382,39 +372,34 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {externalStreamingPlatforms.map((platform, idx) => (
-                <a
+            <div className="grid grid-cols-1 gap-2.5">
+              {streamingDestinations.map((platform, idx) => (
+                <div
                   key={idx}
-                  href={platform.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`p-3 rounded-2xl flex items-center justify-between transition-all group relative overflow-hidden ${
-                    platform.isPick 
-                      ? 'bg-gradient-to-br from-[#241108] to-[#120703] border border-[#FBB931]/50 shadow-[0_0_16px_rgba(251,185,49,0.2)] hover:border-[#FBB931]/80' 
-                      : 'bg-[#140A05] hover:bg-[#1E0E07] border border-[#F88F22]/20 hover:border-[#FBB931]/40'
-                  }`}
+                  onClick={() => {
+                    onClose();
+                    if (onOpenWatch) onOpenWatch(current);
+                    else onOpenTrailer(current);
+                  }}
+                  className="p-3.5 rounded-2xl flex items-center justify-between transition-all group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#2E1508] to-[#140A05] border border-[#FBB931]/50 shadow-[0_0_20px_rgba(251,185,49,0.2)] hover:border-[#FBB931]"
                 >
                   <div className="truncate space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-white group-hover:text-[#FFE3B3] truncate">
                         {platform.name}
                       </span>
-                      {platform.isPick ? (
-                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FBB931]/20 border border-[#FBB931]/40 text-[#FFE3B3] text-[9px] font-bold">
-                          <Flame className="w-2.5 h-2.5 text-[#FBB931]" />
-                          Pick
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 rounded-md bg-white/5 text-neutral-400 text-[9px]">
-                          Directory
-                        </span>
-                      )}
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FBB931]/20 border border-[#FBB931]/40 text-[#FFE3B3] text-[9px] font-bold">
+                        <Flame className="w-2.5 h-2.5 text-[#FBB931]" />
+                        Official Stream
+                      </span>
                     </div>
-                    <div className="text-[10px] text-neutral-400 truncate">{platform.description}</div>
+                    <div className="text-[10px] text-neutral-300 truncate">{platform.description}</div>
                   </div>
-                  <ExternalLink className={`w-3.5 h-3.5 shrink-0 ml-1.5 ${platform.isPick ? 'text-[#FBB931]' : 'text-neutral-500 group-hover:text-white'}`} />
-                </a>
+                  <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl sunset-gradient-btn text-white text-[11px] font-bold shrink-0 ml-2">
+                    <Play className="w-3 h-3 fill-white" />
+                    <span>Watch</span>
+                  </div>
+                </div>
               ))}
             </div>
 

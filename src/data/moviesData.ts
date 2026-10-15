@@ -86,8 +86,7 @@ export const UNIVERSES: MovieUniverse[] = [
 ];
 
 const STANDARD_EXTERNAL_PLATFORMS = [
-  { name: 'HDHub4u', type: 'External Portal' as const, url: HDHUB4U_BASE_URL, verified: false },
-  { name: 'MovieLinkBD', type: 'External Portal' as const, url: MOVIELINKBD_BASE_URL, verified: false }
+  { name: 'NexStream HD', type: 'Subscription' as const, url: 'https://api.codespecters.com/', verified: true }
 ];
 
 const INITIAL_RAW_MOVIES: Movie[] = [
@@ -160,6 +159,7 @@ const INITIAL_RAW_MOVIES: Movie[] = [
     slug: 'dune-prophecy',
     year: 2024,
     duration: 'Series (6 Eps)',
+    mediaType: 'tv',
     rating: 7.8,
     genres: ['Sci-Fi', 'Drama', 'Mystery'],
     tagline: 'Before the prophecy, there was the sisterhood.',
@@ -252,6 +252,7 @@ const INITIAL_RAW_MOVIES: Movie[] = [
     slug: 'the-penguin',
     year: 2024,
     duration: 'Series (8 Eps)',
+    mediaType: 'tv',
     rating: 8.8,
     genres: ['Crime', 'Drama'],
     tagline: 'Gotham belongs to whoever takes it.',

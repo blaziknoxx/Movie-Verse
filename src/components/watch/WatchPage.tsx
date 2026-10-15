@@ -1,22 +1,28 @@
 /**
- * Movie Verse — Full Movie Watch Page Component
+ * Movie Verse — Full Movie & TV Series Watch Page Component
  * Developer — Estiaq Mehedi
  * 
- * Production-ready full movie playback experience with multi-source selector,
- * adaptive HLS, direct MP4 streaming, verified external portal links, and compact recommendations.
+ * Powered by NexStream API (https://api.codespecters.com/):
+ * - Movies: https://api.codespecters.com/embed/movie/{tmdbId}?apikey={NEXSTREAM_API_KEY}
+ * - TV:     https://api.codespecters.com/embed/tv/{tmdbId}/{season}/{episode}?apikey={NEXSTREAM_API_KEY}
+ * 
+ * Uses authentic TMDB IDs, responsive iframe embed player, interactive season/episode selection,
+ * API key configuration, and verified studio previews.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, PlaybackSource } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
+import { nexstreamService } from '../../services/nexstreamService';
 import { resolveMoviePlaybackSources } from '../../services/videoSecurityService';
 import { VideoPlayer } from '../player/VideoPlayer';
 import { PlaybackSourceSelector } from '../player/PlaybackSourceSelector';
 import { MovieCard } from '../discover/MovieCard';
 import { 
   ArrowLeft, Star, Clock, Calendar, Bookmark, Share2, 
-  Film, Sparkles, Tv, Clapperboard, CheckCircle2, Shield 
+  Film, Sparkles, Tv, Clapperboard, CheckCircle2, Shield,
+  Key, Check, ChevronRight, ChevronLeft, Play, AlertCircle, Layers
 } from 'lucide-react';
 
 interface WatchPageProps {
@@ -29,6 +35,15 @@ interface WatchPageProps {
   isWatched: boolean;
   onToggleWatchlist: (movieId: string, e?: React.MouseEvent) => void;
   onToggleWatched: (movieId: string, movieObj?: Movie) => void;
+}
+
+interface EpisodeItem {
+  episodeNumber: number;
+  seasonNumber: number;
+  name: string;
+  overview?: string;
+  stillUrl?: string;
+  runtime?: number;
 }
 
 export const WatchPage: React.FC<WatchPageProps> = ({
@@ -50,10 +65,42 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   const [copiedShare, setCopiedShare] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
+  // Media Type: 'movie' | 'tv'
+  const [isTvShow, setIsTvShow] = useState<boolean>(() => {
+    if (!movie) return false;
+    return (
+      movie.mediaType === 'tv' ||
+      (Boolean(movie.duration) && (movie.duration.toLowerCase().includes('series') || movie.duration.toLowerCase().includes('ep')))
+    );
+  });
+
+  // TV Seasons & Episodes state
+  const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [selectedEpisode, setSelectedEpisode] = useState<number>(1);
+  const [availableSeasons, setAvailableSeasons] = useState<{ seasonNumber: number; name: string; episodeCount: number }[]>([
+    { seasonNumber: 1, name: 'Season 1', episodeCount: 10 }
+  ]);
+  const [episodesList, setEpisodesList] = useState<EpisodeItem[]>([]);
+  const [isLoadingEpisodes, setIsLoadingEpisodes] = useState(false);
+
+  // Playback Active State (starts on user action)
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
+
+  // NexStream API Key Configuration State
+  const [apiKeyInput, setApiKeyInput] = useState<string>(() => nexstreamService.getApiKey());
+  const [isEditingKey, setIsEditingKey] = useState<boolean>(false);
+  const [keySavedFeedback, setKeySavedFeedback] = useState<boolean>(false);
+  const hasKey = Boolean(apiKeyInput.trim() || nexstreamService.hasApiKey());
+
   // Synchronize movie state from props or from URL movieId
   useEffect(() => {
     if (movie) {
       setCurrentMovie(movie);
+      const isTv = (
+        movie.mediaType === 'tv' ||
+        (Boolean(movie.duration) && (movie.duration.toLowerCase().includes('series') || movie.duration.toLowerCase().includes('ep')))
+      );
+      setIsTvShow(isTv);
       return;
     }
 
@@ -61,6 +108,11 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       const cached = storageService.getCachedMovie(movieId);
       if (cached) {
         setCurrentMovie(cached);
+        const isTv = (
+          cached.mediaType === 'tv' ||
+          (Boolean(cached.duration) && (cached.duration.toLowerCase().includes('series') || cached.duration.toLowerCase().includes('ep')))
+        );
+        setIsTvShow(isTv);
         return;
       }
 
@@ -82,17 +134,60 @@ export const WatchPage: React.FC<WatchPageProps> = ({
     }
   }, [movie, movieId]);
 
-  // Resolve sources and related movies once currentMovie is ready
+  // Load TV show details and episodes if TV series
+  useEffect(() => {
+    if (!currentMovie) return;
+    const cleanTmdbId = nexstreamService.parseTmdbId(currentMovie.tmdbId ?? currentMovie.id);
+    if (!cleanTmdbId) return;
+
+    if (isTvShow) {
+      tmdbService.getTvDetails(cleanTmdbId)
+        .then((tvData) => {
+          if (tvData && tvData.seasons && tvData.seasons.length > 0) {
+            setAvailableSeasons(tvData.seasons);
+          }
+        })
+        .catch(() => {});
+
+      setIsLoadingEpisodes(true);
+      tmdbService.getTvSeasonEpisodes(cleanTmdbId, selectedSeason)
+        .then((eps) => {
+          if (eps && eps.length > 0) {
+            setEpisodesList(eps);
+          } else {
+            // Fallback generated list of episodes for the season
+            const seasonObj = availableSeasons.find(s => s.seasonNumber === selectedSeason);
+            const count = seasonObj?.episodeCount || 10;
+            const fallback: EpisodeItem[] = Array.from({ length: count }, (_, i) => ({
+              episodeNumber: i + 1,
+              seasonNumber: selectedSeason,
+              name: `Episode ${i + 1}`,
+              overview: `Episode ${i + 1} of Season ${selectedSeason}.`,
+            }));
+            setEpisodesList(fallback);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsLoadingEpisodes(false));
+    }
+  }, [currentMovie, isTvShow, selectedSeason]);
+
+  // Resolve playback sources whenever movie, tv mode, season, episode, or key changes
   useEffect(() => {
     if (!currentMovie) return;
 
-    // Resolve playback sources
-    const resolvedSources = resolveMoviePlaybackSources(currentMovie);
+    const resolvedSources = resolveMoviePlaybackSources(currentMovie, {
+      isTv: isTvShow,
+      season: selectedSeason,
+      episode: selectedEpisode,
+      apiKey: apiKeyInput.trim() || undefined,
+    });
+
     setSources(resolvedSources);
     setSelectedSource(resolvedSources[0] || null);
     setIsLoading(false);
 
-    // Save as recently watched / viewed
+    // Save as recently viewed
     storageService.addRecentMovie(currentMovie.id);
 
     // Fetch related titles from TMDB
@@ -106,7 +201,6 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           setRelatedMovies(filtered.slice(0, 5));
         })
         .catch(() => {
-          // Fallback to similar
           tmdbService.getSimilarMovies(cleanId).then((sim) => {
             const filtered = (sim || []).filter(
               (m) => String(m.tmdbId || m.id) !== cleanId
@@ -115,19 +209,49 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           }).catch(() => {});
         });
     }
-  }, [currentMovie]);
+  }, [currentMovie, isTvShow, selectedSeason, selectedEpisode, apiKeyInput]);
+
+  const handleSaveApiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanKey = apiKeyInput.trim();
+    nexstreamService.setApiKey(cleanKey);
+    setIsEditingKey(false);
+    setKeySavedFeedback(true);
+    setTimeout(() => setKeySavedFeedback(false), 3000);
+  };
 
   const handleShare = () => {
     if (navigator.share && currentMovie) {
       navigator.share({
         title: `${currentMovie.title} — Watch on Movie Verse`,
-        text: `Stream ${currentMovie.title} in HD on Movie Verse.`,
+        text: `Stream ${currentMovie.title} in HD via NexStream on Movie Verse.`,
         url: window.location.href,
       }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(window.location.href);
       setCopiedShare(true);
       setTimeout(() => setCopiedShare(false), 2000);
+    }
+  };
+
+  // Episode navigation
+  const handlePrevEpisode = () => {
+    if (selectedEpisode > 1) {
+      setSelectedEpisode(selectedEpisode - 1);
+    } else if (selectedSeason > 1) {
+      setSelectedSeason(selectedSeason - 1);
+      setSelectedEpisode(1);
+    }
+  };
+
+  const handleNextEpisode = () => {
+    const currentSeasonObj = availableSeasons.find(s => s.seasonNumber === selectedSeason);
+    const maxEp = currentSeasonObj?.episodeCount || episodesList.length || 10;
+    if (selectedEpisode < maxEp) {
+      setSelectedEpisode(selectedEpisode + 1);
+    } else if (selectedSeason < availableSeasons.length) {
+      setSelectedSeason(selectedSeason + 1);
+      setSelectedEpisode(1);
     }
   };
 
@@ -141,6 +265,8 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       </div>
     );
   }
+
+  const cleanTmdbId = nexstreamService.parseTmdbId(currentMovie.tmdbId ?? currentMovie.id);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5 sm:space-y-7 animate-fade-in pb-16">
@@ -159,7 +285,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-xs font-extrabold uppercase tracking-widest text-[#FFE3B3]">
-            Cinematic Watch Room
+            NexStream Theater
           </span>
         </div>
 
@@ -207,18 +333,224 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         </div>
       </div>
 
-      {/* 2. Large 16:9 Video Player inside a Premium Glowing Card */}
+      {/* 2. Format Switcher (Movie vs TV Series) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-[#140804] border border-[#F88F22]/20">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-bold text-neutral-300 pl-1">Playback Format:</span>
+          <div className="inline-flex rounded-xl bg-black/60 p-1 border border-white/10">
+            <button
+              type="button"
+              onClick={() => setIsTvShow(false)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                !isTvShow
+                  ? 'sunset-gradient-btn text-white shadow-md'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              Feature Movie
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsTvShow(true)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                isTvShow
+                  ? 'sunset-gradient-btn text-white shadow-md'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              TV Series
+            </button>
+          </div>
+        </div>
+
+        {/* TMDB ID Verification Badge */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-black/60 border border-[#F88F22]/20 text-[#FFE3B3]">
+            TMDB ID: <strong className="text-white">{cleanTmdbId || 'N/A'}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsEditingKey(!isEditingKey)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#241107] hover:bg-[#34180A] border border-[#F88F22]/30 text-xs font-semibold text-[#FBB931] transition-all"
+            title="Configure NexStream API Key"
+          >
+            <Key className="w-3 h-3" />
+            <span>{hasKey ? 'Key Configured' : 'Configure Key'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. NexStream API Key Configuration Drawer (if toggled or if missing) */}
+      {(isEditingKey || !hasKey) && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#200D06] via-[#160803] to-[#0A0402] border border-[#F88F22]/35 space-y-3 shadow-2xl">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1">
+              <h4 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-1.5">
+                <Key className="w-4 h-4 text-[#F88F22]" />
+                <span>NexStream API Key Configuration</span>
+              </h4>
+              <p className="text-[11px] sm:text-xs text-neutral-300 leading-relaxed max-w-2xl">
+                NexStream embeds require a valid API key issued from <a href="https://api.codespecters.com/" target="_blank" rel="noopener noreferrer" className="text-[#FBB931] hover:underline font-bold">api.codespecters.com</a>. If your key has domain locks, ensure this applet origin is allowlisted in your Codespecters dashboard.
+              </p>
+            </div>
+            {hasKey && (
+              <button
+                type="button"
+                onClick={() => setIsEditingKey(false)}
+                className="text-xs text-neutral-400 hover:text-white"
+              >
+                Close
+              </button>
+            )}
+          </div>
+
+          <form onSubmit={handleSaveApiKey} className="flex flex-col sm:flex-row gap-2 pt-1">
+            <input
+              type="password"
+              placeholder="Enter your NexStream API Key (apikey=...)"
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              className="flex-grow px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-[#F88F22]"
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl sunset-gradient-btn text-white text-xs font-bold shrink-0 transition-all active:scale-95 shadow-md flex items-center justify-center gap-1.5"
+            >
+              {keySavedFeedback ? <Check className="w-3.5 h-3.5" /> : null}
+              <span>{keySavedFeedback ? 'Saved!' : 'Save Key'}</span>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* 4. TV Series Season & Episode Controls (Strictly for TV Shows) */}
+      {isTvShow && (
+        <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#140804] border border-[#F88F22]/25 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+            <div className="space-y-0.5">
+              <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#EA6113]" />
+                <span>Select Season & Episode</span>
+              </h3>
+              <p className="text-xs text-neutral-400">
+                Pick your episode to stream with NexStream embed
+              </p>
+            </div>
+
+            {/* Quick Prev / Next Episode Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePrevEpisode}
+                disabled={selectedSeason === 1 && selectedEpisode === 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#1F0E06] hover:bg-[#2A1409] disabled:opacity-40 text-neutral-300 hover:text-white text-xs font-semibold border border-white/10"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+              <span className="text-xs font-bold text-[#FBB931] px-2 font-mono tabular-nums">
+                S{selectedSeason}:E{selectedEpisode}
+              </span>
+              <button
+                type="button"
+                onClick={handleNextEpisode}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#1F0E06] hover:bg-[#2A1409] text-neutral-300 hover:text-white text-xs font-semibold border border-white/10"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Season Selector Tabs */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+              Seasons ({availableSeasons.length})
+            </span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar scroll-touch">
+              {availableSeasons.map((s) => {
+                const isCurrent = s.seasonNumber === selectedSeason;
+                return (
+                  <button
+                    key={s.seasonNumber}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSeason(s.seasonNumber);
+                      setSelectedEpisode(1);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0 ${
+                      isCurrent
+                        ? 'sunset-gradient-btn text-white border-[#F88F22] shadow-[0_0_12px_rgba(234,97,19,0.5)]'
+                        : 'bg-[#1C0D06] hover:bg-[#281308] text-neutral-300 hover:text-white border-white/10'
+                    }`}
+                  >
+                    {s.name} ({s.episodeCount} eps)
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Episode Grid Selector */}
+          <div className="space-y-2 pt-1">
+            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+              Episodes in Season {selectedSeason}
+            </span>
+            {isLoadingEpisodes ? (
+              <div className="py-6 text-center text-xs text-neutral-400 flex items-center justify-center gap-2">
+                <span className="w-4 h-4 rounded-full border-2 border-[#F88F22] border-t-transparent animate-spin" />
+                <span>Loading episode list...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-56 overflow-y-auto pr-1 no-scrollbar">
+                {episodesList.map((ep) => {
+                  const isCurEp = ep.episodeNumber === selectedEpisode;
+                  return (
+                    <button
+                      key={ep.episodeNumber}
+                      type="button"
+                      onClick={() => setSelectedEpisode(ep.episodeNumber)}
+                      className={`p-2.5 rounded-xl text-left transition-all border flex flex-col justify-between space-y-1 ${
+                        isCurEp
+                          ? 'bg-[#2E1508] border-[#FBB931] shadow-[0_0_14px_rgba(251,185,49,0.3)]'
+                          : 'bg-black/50 hover:bg-[#1E0D06] border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className={`text-[11px] font-mono font-bold ${isCurEp ? 'text-[#FBB931]' : 'text-neutral-400'}`}>
+                          Ep {ep.episodeNumber}
+                        </span>
+                        {isCurEp && <Play className="w-3 h-3 text-[#FBB931] fill-[#FBB931]" />}
+                      </div>
+                      <div className="text-xs font-semibold text-white truncate w-full">
+                        {ep.name || `Episode ${ep.episodeNumber}`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Large 16:9 Video Player inside a Premium Glowing Card */}
       <div className="relative w-full space-y-3">
         {selectedSource && (
           <VideoPlayer
             source={selectedSource}
-            title={currentMovie.title}
+            title={
+              isTvShow
+                ? `${currentMovie.title} — Season ${selectedSeason}, Episode ${selectedEpisode}`
+                : currentMovie.title
+            }
             posterUrl={currentMovie.backdropUrl || currentMovie.posterUrl}
-            autoPlay={true}
+            autoPlay={isPlaying}
           />
         )}
 
-        {/* 3. Compact Playback Source Selector */}
+        {/* 6. Compact Playback Source Selector */}
         {sources.length > 1 && (
           <div className="pt-1">
             <PlaybackSourceSelector
@@ -230,7 +562,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         )}
       </div>
 
-      {/* 4. Movie Details, Metadata, Trailer Shortcut, and Synopsis */}
+      {/* 7. Movie Details, Metadata, Trailer Shortcut, and Synopsis */}
       <div className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-[#140804]/90 border border-[#F88F22]/20 space-y-4 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
@@ -238,8 +570,8 @@ export const WatchPage: React.FC<WatchPageProps> = ({
               <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
                 {currentMovie.title}
               </h1>
-              <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                Full Movie
+              <span className="px-2 py-0.5 rounded bg-orange-500/15 border border-[#F88F22]/40 text-[10px] font-bold text-[#FBB931] uppercase tracking-wider">
+                {isTvShow ? `TV Series · S${selectedSeason}:E${selectedEpisode}` : 'Full Movie'}
               </span>
             </div>
 
@@ -310,16 +642,16 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         )}
       </div>
 
-      {/* 5. Compact Related Movies Section */}
+      {/* 8. Compact Related Movies Section */}
       {relatedMovies.length > 0 && (
         <div className="space-y-3.5 pt-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#EA6113]" />
-              <span>Related Movies</span>
+              <span>Related Titles</span>
             </h3>
             <span className="text-xs text-neutral-400">
-              More cinematic experiences
+              More cinematic universe entries
             </span>
           </div>
 
