@@ -83,44 +83,124 @@ export const TMDB_IMAGE_BASE = {
 };
 
 /**
- * Generates an elegant liquid-glass burgundy SVG placeholder if TMDB has no image.
+ * Generates an elegant liquid-glass sunset SVG placeholder if TMDB has no image.
  */
 export function getPlaceholderImage(title: string, width = 500, height = 750): string {
   const safeTitle = title ? title.replace(/[<>&"]/g, '') : 'Movie Verse';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#1c0712"/>
-        <stop offset="50%" stop-color="#12030a"/>
-        <stop offset="100%" stop-color="#080204"/>
+        <stop offset="0%" stop-color="#1E0A04"/>
+        <stop offset="50%" stop-color="#120602"/>
+        <stop offset="100%" stop-color="#080301"/>
       </linearGradient>
       <radialGradient id="glow" cx="50%" cy="40%" r="50%">
-        <stop offset="0%" stop-color="#e11d48" stop-opacity="0.25"/>
-        <stop offset="100%" stop-color="#e11d48" stop-opacity="0"/>
+        <stop offset="0%" stop-color="#EA6113" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#EA6113" stop-opacity="0"/>
       </radialGradient>
     </defs>
     <rect width="${width}" height="${height}" fill="url(#bg)"/>
     <circle cx="${width/2}" cy="${height*0.35}" r="${width*0.4}" fill="url(#glow)"/>
-    <rect x="${width*0.1}" y="${height*0.1}" width="${width*0.8}" height="${height*0.8}" rx="24" fill="rgba(255,255,255,0.02)" stroke="rgba(244,63,94,0.15)" stroke-width="2"/>
-    <text x="50%" y="38%" font-family="system-ui, sans-serif" font-weight="800" font-size="28" fill="#fda4af" text-anchor="middle" letter-spacing="4">MOVIE VERSE</text>
-    <text x="50%" y="45%" font-family="system-ui, sans-serif" font-weight="600" font-size="18" fill="#f4eff1" text-anchor="middle">${safeTitle.slice(0, 32)}</text>
-    <text x="50%" y="85%" font-family="system-ui, sans-serif" font-weight="500" font-size="12" fill="#9f1239" text-anchor="middle" letter-spacing="1">DEVELOPER — ESTIAQ MEHEDI</text>
+    <rect x="${width*0.08}" y="${height*0.08}" width="${width*0.84}" height="${height*0.84}" rx="20" fill="rgba(255,255,255,0.02)" stroke="rgba(248,143,34,0.25)" stroke-width="2"/>
+    <text x="50%" y="38%" font-family="system-ui, sans-serif" font-weight="800" font-size="24" fill="#FBB931" text-anchor="middle" letter-spacing="3">MOVIE VERSE</text>
+    <text x="50%" y="46%" font-family="system-ui, sans-serif" font-weight="600" font-size="16" fill="#FFE3B3" text-anchor="middle">${safeTitle.slice(0, 32)}</text>
+    <text x="50%" y="86%" font-family="system-ui, sans-serif" font-weight="500" font-size="11" fill="#F88F22" text-anchor="middle" letter-spacing="1">DEVELOPER — ESTIAQ MEHEDI</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-export function getPosterUrl(posterPath?: string | null, title = ''): string {
-  if (posterPath) {
-    return `${TMDB_IMAGE_BASE.posterW500}${posterPath}`;
+/**
+ * Resolves an optimized TMDB poster URL at the requested width.
+ * Handles:
+ * - relative TMDB paths (e.g. "/abc.jpg")
+ * - full TMDB image URLs (e.g. "https://image.tmdb.org/t/p/w500/abc.jpg" -> dynamically rewrites to requested size)
+ * - data URIs and local asset URLs (preserved as-is)
+ * - null, undefined, or empty values (returns SVG liquid-glass placeholder)
+ */
+export function getOptimizedPosterUrl(
+  posterPathOrUrl?: string | null,
+  size: 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original' = 'w342',
+  title = ''
+): string {
+  if (!posterPathOrUrl || typeof posterPathOrUrl !== 'string' || posterPathOrUrl.trim() === '') {
+    const width = size === 'w92' ? 92 : size === 'w154' ? 154 : size === 'w185' ? 185 : size === 'w500' ? 500 : size === 'w780' ? 780 : 342;
+    const height = Math.round(width * 1.5);
+    return getPlaceholderImage(title, width, height);
   }
-  return getPlaceholderImage(title, 500, 750);
+
+  const cleanPath = posterPathOrUrl.trim();
+
+  // If already a local data URI, blob, or bundled asset path, preserve as-is
+  if (cleanPath.startsWith('data:') || cleanPath.startsWith('blob:') || cleanPath.startsWith('/assets/') || cleanPath.startsWith('./') || cleanPath.startsWith('asset:')) {
+    return cleanPath;
+  }
+
+  // If already a full TMDB URL, rewrite the size segment
+  if (cleanPath.includes('image.tmdb.org/t/p/')) {
+    return cleanPath.replace(/\/t\/p\/[^\/]+/, `/t/p/${size}`);
+  }
+
+  // If it's a relative TMDB path (e.g., "/abc.jpg")
+  if (cleanPath.startsWith('/')) {
+    return `https://image.tmdb.org/t/p/${size}${cleanPath}`;
+  }
+
+  // If it's a non-TMDB external URL, preserve as-is
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
+  }
+
+  // Otherwise treat as TMDB path segment
+  return `https://image.tmdb.org/t/p/${size}/${cleanPath}`;
 }
 
-export function getBackdropUrl(backdropPath?: string | null, title = ''): string {
-  if (backdropPath) {
-    return `${TMDB_IMAGE_BASE.backdropW1280}${backdropPath}`;
+export function getPosterUrl(posterPath?: string | null, title = ''): string {
+  return getOptimizedPosterUrl(posterPath, 'w500', title);
+}
+
+/**
+ * Resolves an optimized TMDB backdrop URL at the requested width.
+ * Handles:
+ * - relative TMDB paths (e.g. "/abc.jpg")
+ * - full TMDB image URLs (e.g. "https://image.tmdb.org/t/p/w1280/abc.jpg" -> dynamically rewrites to requested size)
+ * - data URIs and local asset URLs (preserved as-is)
+ * - null, undefined, or empty values (returns SVG liquid-glass landscape placeholder)
+ */
+export function getBackdropUrl(
+  backdropPathOrUrl?: string | null,
+  title = '',
+  size: 'w300' | 'w780' | 'w1280' | 'original' = 'w1280'
+): string {
+  if (!backdropPathOrUrl || typeof backdropPathOrUrl !== 'string' || backdropPathOrUrl.trim() === '') {
+    const width = size === 'w300' ? 300 : size === 'w780' ? 780 : 1280;
+    const height = Math.round(width * (9 / 16));
+    return getPlaceholderImage(title, width, height);
   }
-  return getPlaceholderImage(title, 1280, 720);
+
+  const cleanPath = backdropPathOrUrl.trim();
+
+  // If already a local data URI, blob, or bundled asset path, preserve as-is
+  if (cleanPath.startsWith('data:') || cleanPath.startsWith('blob:') || cleanPath.startsWith('/assets/') || cleanPath.startsWith('./') || cleanPath.startsWith('asset:')) {
+    return cleanPath;
+  }
+
+  // If already a full TMDB URL, rewrite the size segment
+  if (cleanPath.includes('image.tmdb.org/t/p/')) {
+    return cleanPath.replace(/\/t\/p\/[^\/]+/, `/t/p/${size}`);
+  }
+
+  // If it's a relative TMDB path (e.g., "/abc.jpg")
+  if (cleanPath.startsWith('/')) {
+    return `https://image.tmdb.org/t/p/${size}${cleanPath}`;
+  }
+
+  // If it's a non-TMDB external URL, preserve as-is
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    return cleanPath;
+  }
+
+  // Otherwise treat as TMDB path segment
+  return `https://image.tmdb.org/t/p/${size}/${cleanPath}`;
 }
 
 /**
@@ -605,6 +685,33 @@ export const tmdbService = {
     if (!res.ok) return [];
     const data: any = await res.json();
     return data.results || [];
+  },
+
+  /**
+   * Fetch official TMDB watch providers for a movie (e.g. Netflix, Prime Video, Apple TV, Disney+).
+   */
+  async getMovieWatchProviders(id: string | number): Promise<{
+    link?: string;
+    flatrate?: { provider_id: number; provider_name: string; logo_path?: string }[];
+    rent?: { provider_id: number; provider_name: string; logo_path?: string }[];
+    buy?: { provider_id: number; provider_name: string; logo_path?: string }[];
+  } | null> {
+    const numericId = String(id).replace(/\D/g, '');
+    if (!numericId) return null;
+    try {
+      const data = await cachedFetchJson<any>(`/api/tmdb/movie/${numericId}/watch/providers`, 30 * 60 * 1000);
+      const results = data?.results || {};
+      const regionData = results['US'] || results['BD'] || results['IN'] || results['GB'] || Object.values(results)[0] as any;
+      if (!regionData) return null;
+      return {
+        link: regionData.link,
+        flatrate: regionData.flatrate,
+        rent: regionData.rent,
+        buy: regionData.buy,
+      };
+    } catch {
+      return null;
+    }
   },
 
   /**

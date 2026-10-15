@@ -79,6 +79,8 @@ interface HomeViewProps {
   onSelectMood: (moodId: string | null) => void;
   onOpenTrailer: (movie: Movie) => void;
   onOpenSearch: () => void;
+  onOpenWatch?: (movie: Movie) => void;
+  onViewAll?: (categoryKey: string) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -94,7 +96,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   selectedMoodId,
   onSelectMood,
   onOpenTrailer,
-  onOpenSearch
+  onOpenSearch,
+  onOpenWatch,
+  onViewAll
 }) => {
   // Read initial category from URL hash if available (e.g. #category=hollywood)
   const getInitialCategory = (): HomepageCategory => {

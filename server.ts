@@ -276,6 +276,20 @@ app.get('/api/tmdb/movie/:id/videos', async (req: Request, res: Response) => {
   }
 });
 
+// Official Watch Providers
+app.get('/api/tmdb/movie/:id/watch/providers', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric movie ID required' });
+    }
+    const result = await fetchFromTMDB(`/movie/${id}/watch/providers`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
 // Franchise Collection (Sequels, Prequels & Connected franchise entries)
 app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
   try {
