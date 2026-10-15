@@ -77,6 +77,21 @@ export interface Movie {
   }[];
   writers?: string[];
   language?: string;
+  sources?: PlaybackSource[];
+}
+
+export type PlaybackType = 'embed' | 'mp4' | 'hls' | 'webpage';
+
+export interface PlaybackSource {
+  id: string;
+  name: string;
+  type: PlaybackType;
+  url: string;
+  quality?: '4K' | '1080p' | '720p' | 'Auto';
+  isOfficial?: boolean;
+  requiresExternalLink?: boolean;
+  badge?: string;
+  note?: string;
 }
 
 export interface MovieUniverse {

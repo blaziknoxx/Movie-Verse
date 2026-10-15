@@ -81,6 +81,7 @@ interface CategoryListingViewProps {
   watchlist: string[];
   onToggleWatchlist: (movieId: string, e?: React.MouseEvent) => void;
   onOpenTrailer: (movie: Movie) => void;
+  onOpenWatch?: (movie: Movie) => void;
 }
 
 export const CategoryListingView: React.FC<CategoryListingViewProps> = ({
@@ -89,7 +90,8 @@ export const CategoryListingView: React.FC<CategoryListingViewProps> = ({
   onSelectMovie,
   watchlist,
   onToggleWatchlist,
-  onOpenTrailer
+  onOpenTrailer,
+  onOpenWatch
 }) => {
   const config = CATEGORY_CONFIGS[categoryKey] || {
     key: categoryKey,
@@ -260,6 +262,7 @@ export const CategoryListingView: React.FC<CategoryListingViewProps> = ({
                 isWatchlisted={watchlist.includes(movie.id)}
                 onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
                 onOpenTrailer={onOpenTrailer}
+                onOpenWatch={onOpenWatch}
               />
             ))}
           </div>

@@ -10,6 +10,7 @@ interface MovieCardProps {
   showUniverseTag?: boolean;
   aspectRatio?: 'poster' | 'landscape';
   onOpenTrailer?: (movie: Movie) => void;
+  onOpenWatch?: (movie: Movie) => void;
 }
 
 export const MovieCard: React.FC<MovieCardProps> = ({
@@ -19,7 +20,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   onToggleWatchlist,
   showUniverseTag = true,
   aspectRatio = 'poster',
-  onOpenTrailer
+  onOpenTrailer,
+  onOpenWatch
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -88,15 +90,17 @@ export const MovieCard: React.FC<MovieCardProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (onOpenTrailer) {
+              if (onOpenWatch) {
+                onOpenWatch(movie);
+              } else if (onOpenTrailer) {
                 onOpenTrailer(movie);
               } else {
                 onSelectMovie(movie);
               }
             }}
             className="w-10 h-10 sm:w-11 sm:h-11 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 hover:scale-110 active:scale-95 transition-all pointer-events-auto cursor-pointer"
-            title={`Play Trailer — ${movie.title}`}
-            aria-label={`Play Trailer for ${movie.title}`}
+            title={`Play Movie — ${movie.title}`}
+            aria-label={`Play Movie ${movie.title}`}
           >
             <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white translate-x-0.5" />
           </button>

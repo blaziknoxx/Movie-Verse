@@ -8,6 +8,7 @@ interface HeroBannerProps {
   isWatchlisted: (movieId: string) => boolean;
   onToggleWatchlist: (movieId: string, e: React.MouseEvent) => void;
   onOpenTrailer: (movie: Movie) => void;
+  onOpenWatch?: (movie: Movie) => void;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -15,7 +16,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onSelectMovie,
   isWatchlisted,
   onToggleWatchlist,
-  onOpenTrailer
+  onOpenTrailer,
+  onOpenWatch
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,26 +112,44 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             )}
 
             {/* Action Buttons Row */}
-            <div className="flex items-center gap-2.5 pt-1.5">
-              {/* Prominent Play / Trailer Button */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-1.5">
+              {/* Prominent Play / Watch Movie Button */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onOpenTrailer(currentMovie);
+                  if (onOpenWatch) {
+                    onOpenWatch(currentMovie);
+                  } else {
+                    onOpenTrailer(currentMovie);
+                  }
                 }}
                 className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl sunset-gradient-btn text-white font-bold text-xs sm:text-sm shadow-[0_4px_16px_rgba(234,97,19,0.4)] transition-all active:scale-95"
               >
                 <Play className="w-4 h-4 fill-white" />
-                <span>Play Trailer</span>
+                <span>Watch Movie</span>
+              </button>
+
+              {/* Watch Trailer Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTrailer(currentMovie);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FFE3B3] hover:text-white font-bold text-xs sm:text-sm backdrop-blur-md border border-[#F88F22]/30 transition-all active:scale-95"
+              >
+                <span>Trailer</span>
               </button>
 
               {/* View Details Button */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onSelectMovie(currentMovie);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/10 transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/10 transition-all active:scale-95"
               >
                 <Info className="w-3.5 h-3.5" />
                 <span>Details</span>

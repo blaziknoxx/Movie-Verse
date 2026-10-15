@@ -22,6 +22,8 @@ import { WhereToWatchView } from './components/wheretowatch/WhereToWatchView';
 import { LibraryView } from './components/library/LibraryView';
 import { CineProfileView } from './components/profile/CineProfileView';
 import { CategoryListingView } from './components/listing/CategoryListingView';
+import { TrailerPage } from './components/watch/TrailerPage';
+import { WatchPage } from './components/watch/WatchPage';
 
 import { MovieDetailModal } from './components/detail/MovieDetailModal';
 import { SearchModal } from './components/search/SearchModal';
@@ -30,7 +32,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [listingCategory, setListingCategory] = useState<string>('trending');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  
+  // Dedicated Watch & Trailer states
   const [trailerMovie, setTrailerMovie] = useState<Movie | null>(null);
+  const [trailerMovieId, setTrailerMovieId] = useState<string | undefined>(undefined);
+  const [watchMovie, setWatchMovie] = useState<Movie | null>(null);
+  const [watchMovieId, setWatchMovieId] = useState<string | undefined>(undefined);
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -107,14 +114,32 @@ export default function App() {
         const params = new URLSearchParams(window.location.search);
         const view = params.get('view') || params.get('tab');
         const cat = params.get('category');
+        const mid = params.get('movieId') || params.get('id');
+
         if (view === 'listing' && cat) {
           setListingCategory(cat);
           setActiveTab('listing');
+        } else if (view === 'trailer') {
+          if (mid) {
+            setTrailerMovieId(mid);
+            const cached = storageService.getCachedMovie(mid);
+            if (cached) setTrailerMovie(cached);
+          }
+          setActiveTab('trailer');
+        } else if (view === 'watch') {
+          if (mid) {
+            setWatchMovieId(mid);
+            const cached = storageService.getCachedMovie(mid);
+            if (cached) setWatchMovie(cached);
+          }
+          setActiveTab('watch');
         } else if (view && ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile'].includes(view)) {
           if (view === 'connections') {
             setTargetUniverseId(undefined);
           }
           setActiveTab(view);
+        } else if (!view || view === 'home') {
+          setActiveTab('home');
         }
       } catch {
         // ignore
@@ -177,7 +202,44 @@ export default function App() {
 
   const handleOpenTrailer = (movie: Movie) => {
     setTrailerMovie(movie);
-    setIsTrailerOpen(true);
+    setTrailerMovieId(movie.id);
+    setSelectedMovie(null);
+    setActiveTab('trailer');
+    try {
+      window.history.pushState(
+        { tab: 'trailer', movieId: movie.id },
+        '',
+        `?view=trailer&movieId=${movie.id}`
+      );
+    } catch {
+      // ignore
+    }
+    resetScrollPosition('instant');
+  };
+
+  const handleOpenWatch = (movie: Movie) => {
+    setWatchMovie(movie);
+    setWatchMovieId(movie.id);
+    setSelectedMovie(null);
+    setActiveTab('watch');
+    try {
+      window.history.pushState(
+        { tab: 'watch', movieId: movie.id },
+        '',
+        `?view=watch&movieId=${movie.id}`
+      );
+    } catch {
+      // ignore
+    }
+    resetScrollPosition('instant');
+  };
+
+  const handleBackFromWatchOrTrailer = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      handleNavSelect('home');
+    }
   };
 
   const handleToggleWatchlist = (movieId: string, e?: React.MouseEvent) => {
@@ -271,6 +333,7 @@ export default function App() {
               selectedMoodId={selectedMoodId}
               onSelectMood={setSelectedMoodId}
               onOpenTrailer={handleOpenTrailer}
+              onOpenWatch={handleOpenWatch}
               onOpenSearch={() => setIsSearchOpen(true)}
               onViewAll={handleOpenCategoryListing}
             />
@@ -290,6 +353,33 @@ export default function App() {
               watchlist={watchlist}
               onToggleWatchlist={handleToggleWatchlist}
               onOpenTrailer={handleOpenTrailer}
+              onOpenWatch={handleOpenWatch}
+            />
+          )}
+
+          {activeTab === 'trailer' && (
+            <TrailerPage
+              movie={trailerMovie}
+              movieId={trailerMovieId}
+              onBack={handleBackFromWatchOrTrailer}
+              onSelectMovie={handleSelectMovie}
+              onOpenWatch={handleOpenWatch}
+              isWatchlisted={trailerMovie ? watchlist.includes(trailerMovie.id) : false}
+              onToggleWatchlist={handleToggleWatchlist}
+            />
+          )}
+
+          {activeTab === 'watch' && (
+            <WatchPage
+              movie={watchMovie}
+              movieId={watchMovieId}
+              onBack={handleBackFromWatchOrTrailer}
+              onSelectMovie={handleSelectMovie}
+              onOpenTrailer={handleOpenTrailer}
+              isWatchlisted={watchMovie ? watchlist.includes(watchMovie.id) : false}
+              isWatched={watchMovie ? watched.includes(watchMovie.id) : false}
+              onToggleWatchlist={handleToggleWatchlist}
+              onToggleWatched={handleToggleWatched}
             />
           )}
 
@@ -313,6 +403,7 @@ export default function App() {
               onToggleWatchlist={handleToggleWatchlist}
               initialSeedMovieId={targetSeedMovieId}
               onOpenTrailer={handleOpenTrailer}
+              onOpenWatch={handleOpenWatch}
             />
           )}
 
@@ -323,6 +414,7 @@ export default function App() {
               onToggleWatchlist={handleToggleWatchlist}
               initialSeedMovieId={targetSeedMovieId}
               onOpenTrailer={handleOpenTrailer}
+              onOpenWatch={handleOpenWatch}
             />
           )}
 
@@ -343,6 +435,7 @@ export default function App() {
               onToggleWatched={handleToggleWatched}
               onGoToDiscover={() => setActiveTab('home')}
               onOpenTrailer={handleOpenTrailer}
+              onOpenWatch={handleOpenWatch}
             />
           )}
 
@@ -388,6 +481,7 @@ export default function App() {
         onNavigateToWhereToWatch={handleExploreWhereToWatch}
         onSelectMovie={handleSelectMovie}
         onOpenTrailer={handleOpenTrailer}
+        onOpenWatch={handleOpenWatch}
       />
 
       {/* Official Trailer Playback Modal */}

@@ -35,6 +35,7 @@ interface HomeViewProps {
   selectedMoodId: string | null;
   onSelectMood: (moodId: string | null) => void;
   onOpenTrailer: (movie: Movie) => void;
+  onOpenWatch?: (movie: Movie) => void;
   onOpenSearch: () => void;
   onViewAll: (categoryKey: string) => void;
 }
@@ -54,6 +55,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   selectedMoodId,
   onSelectMood,
   onOpenTrailer,
+  onOpenWatch,
   onOpenSearch,
   onViewAll
 }) => {
@@ -208,6 +210,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           isWatchlisted={(id) => watchlist.includes(id)}
           onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
         />
       ) : isLoading ? (
         <div className="w-full aspect-[16/8] sm:aspect-[21/9] rounded-3xl liquid-glass border border-white/5 animate-pulse flex items-center justify-center">
@@ -388,6 +391,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('trending')}
           totalCount={trendingMovies.length}
           isLoading={isLoading}
@@ -452,6 +456,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       isWatchlisted={watchlist.includes(movie.id)}
                       onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
                       onOpenTrailer={onOpenTrailer}
+                      onOpenWatch={onOpenWatch}
                     />
                   </div>
                 ))}
@@ -475,6 +480,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('popular')}
           totalCount={popularMovies.length}
           isLoading={isLoading}
@@ -492,6 +498,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('tamil')}
           totalCount={tamilMovies.length}
           isLoading={isLoading}
@@ -510,6 +517,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('bangladeshi')}
           totalCount={bangladeshiMovies.length}
           isLoading={isLoading}
@@ -528,6 +536,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('now_playing')}
           totalCount={nowPlayingMovies.length}
           isLoading={isLoading}
@@ -545,6 +554,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('upcoming')}
           totalCount={upcomingMovies.length}
           isLoading={isLoading}
@@ -562,6 +572,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           watchlist={watchlist}
           onToggleWatchlist={onToggleWatchlist}
           onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
           onViewAll={() => onViewAll('top_rated')}
           totalCount={topRatedMovies.length}
           isLoading={isLoading}
@@ -594,6 +605,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   isWatchlisted={true}
                   onToggleWatchlist={(id, e) => onToggleWatchlist(id, e)}
                   onOpenTrailer={onOpenTrailer}
+                  onOpenWatch={onOpenWatch}
                 />
               </div>
             ))}

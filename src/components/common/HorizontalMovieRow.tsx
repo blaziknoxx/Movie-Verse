@@ -26,6 +26,7 @@ interface HorizontalMovieRowProps {
   watchlist: string[];
   onToggleWatchlist: (movieId: string, e: React.MouseEvent) => void;
   onOpenTrailer?: (movie: Movie) => void;
+  onOpenWatch?: (movie: Movie) => void;
   onViewAll?: () => void;
   viewAllLabel?: string;
   totalCount?: number;
@@ -42,6 +43,7 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
   watchlist,
   onToggleWatchlist,
   onOpenTrailer,
+  onOpenWatch,
   onViewAll,
   viewAllLabel,
   totalCount,
@@ -286,6 +288,7 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
                 isWatchlisted={watchlist.includes(movie.id)}
                 onToggleWatchlist={onToggleWatchlist}
                 onOpenTrailer={onOpenTrailer}
+                onOpenWatch={onOpenWatch}
               />
             </div>
           ))}
@@ -303,6 +306,7 @@ export const HorizontalMovieRow: React.FC<HorizontalMovieRowProps> = ({
                 isWatchlisted={watchlist.includes(movie.id)}
                 onToggleWatchlist={onToggleWatchlist}
                 onOpenTrailer={onOpenTrailer}
+                onOpenWatch={onOpenWatch}
               />
             </div>
           ))}

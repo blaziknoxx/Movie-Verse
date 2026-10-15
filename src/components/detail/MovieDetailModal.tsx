@@ -31,6 +31,7 @@ interface MovieDetailModalProps {
   onNavigateToWhereToWatch: (movieId?: string) => void;
   onSelectMovie: (movie: Movie) => void;
   onOpenTrailer: (movie: Movie) => void;
+  onOpenWatch?: (movie: Movie) => void;
 }
 
 export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
@@ -46,7 +47,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onNavigateToVibeMatch,
   onNavigateToWhereToWatch,
   onSelectMovie,
-  onOpenTrailer
+  onOpenTrailer,
+  onOpenWatch
 }) => {
   const [detailedMovie, setDetailedMovie] = useState<Movie | null>(movie);
   const [collectionMovies, setCollectionMovies] = useState<Movie[]>([]);
@@ -208,9 +210,16 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Overlay Center Play Badge if trailer is available */}
+          {/* Overlay Center Play Badge */}
           <div 
-            onClick={() => onOpenTrailer(current)}
+            onClick={() => {
+              onClose();
+              if (onOpenWatch) {
+                onOpenWatch(current);
+              } else {
+                onOpenTrailer(current);
+              }
+            }}
             className="absolute inset-0 flex items-center justify-center cursor-pointer group"
           >
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-2xl shadow-orange-950/80 transform group-hover:scale-110 transition-transform">
@@ -251,14 +260,33 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Prominent Play Button */}
-          <button
-            onClick={() => onOpenTrailer(current)}
-            className="w-full py-3.5 px-6 rounded-2xl sunset-gradient-btn text-white font-bold text-sm sm:text-base shadow-xl flex items-center justify-center gap-2.5 transition-all transform active:scale-[0.98]"
-          >
-            <Play className="w-5 h-5 fill-white text-white" />
-            <span>Watch Official Trailer</span>
-          </button>
+          {/* Action Buttons: Play Full Movie & Watch Official Trailer */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (onOpenWatch) onOpenWatch(current);
+                else onOpenTrailer(current);
+              }}
+              className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
+            >
+              <Play className="w-4 h-4 fill-white text-white" />
+              <span>Watch Full Movie</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenTrailer(current);
+              }}
+              className="w-full py-3.5 px-5 rounded-2xl bg-[#1A0B05] hover:bg-[#281308] text-[#FFE3B3] hover:text-white border border-[#F88F22]/35 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
+            >
+              <Film className="w-4 h-4 text-[#FBB931]" />
+              <span>Watch Official Trailer</span>
+            </button>
+          </div>
 
           {/* Synopsis with Read More / Read Less */}
           <div className="space-y-1.5 text-xs sm:text-sm text-neutral-300 leading-relaxed">
