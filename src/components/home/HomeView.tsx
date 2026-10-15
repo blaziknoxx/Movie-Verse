@@ -356,11 +356,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onOpenTrailer(movie);
+                        if (onOpenWatch) {
+                          onOpenWatch(movie);
+                        } else {
+                          onOpenTrailer(movie);
+                        }
                       }}
                       className="w-10 h-10 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer"
-                      title={`Play Trailer — ${movie.title}`}
-                      aria-label={`Play Trailer for ${movie.title}`}
+                      title={`Watch Movie — ${movie.title}`}
+                      aria-label={`Watch Movie ${movie.title}`}
                     >
                       <Play className="w-4 h-4 fill-white translate-x-0.5" />
                     </button>

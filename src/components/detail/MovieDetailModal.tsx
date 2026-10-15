@@ -120,14 +120,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   if (!movie) return null;
   const current = detailedMovie || movie;
 
-  // NexStream official in-app stream destination
+  // External viewing destinations
   const streamingDestinations = [
     {
-      name: 'NexStream Theater',
-      type: 'Integrated HD Stream',
-      badge: 'Integrated Player',
+      name: 'Where to Watch Options',
+      type: 'External Directory',
+      badge: 'Viewing Options',
       isPick: true,
-      description: 'Stream directly in the Movie Verse Watch Room with NexStream API'
+      description: `Explore HDHub4u search, TMDB streaming guide, and external options for ${current.title}`
     }
   ];
 
@@ -390,14 +390,14 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                       </span>
                       <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FBB931]/20 border border-[#FBB931]/40 text-[#FFE3B3] text-[9px] font-bold">
                         <Flame className="w-2.5 h-2.5 text-[#FBB931]" />
-                        Official Stream
+                        {platform.badge}
                       </span>
                     </div>
                     <div className="text-[10px] text-neutral-300 truncate">{platform.description}</div>
                   </div>
                   <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl sunset-gradient-btn text-white text-[11px] font-bold shrink-0 ml-2">
-                    <Play className="w-3 h-3 fill-white" />
-                    <span>Watch</span>
+                    <Tv className="w-3 h-3 text-white" />
+                    <span>Explore</span>
                   </div>
                 </div>
               ))}

@@ -201,15 +201,24 @@ export default function App() {
   };
 
   const handleOpenTrailer = (movie: Movie) => {
-    setTrailerMovie(movie);
-    setTrailerMovieId(movie.id);
+    const cached = storageService.getCachedMovie(movie.id);
+    const numericTmdbId = movie.tmdbId || (Number(movie.id) ? Number(movie.id) : undefined) || cached?.tmdbId;
+    const resolvedMovie: Movie = {
+      ...movie,
+      ...(numericTmdbId ? { tmdbId: numericTmdbId } : {})
+    };
+    const targetId = numericTmdbId ? String(numericTmdbId) : movie.id;
+
+    setTrailerMovie(resolvedMovie);
+    setTrailerMovieId(targetId);
+    storageService.saveCachedMovie(resolvedMovie);
     setSelectedMovie(null);
     setActiveTab('trailer');
     try {
       window.history.pushState(
-        { tab: 'trailer', movieId: movie.id },
+        { tab: 'trailer', movieId: targetId },
         '',
-        `?view=trailer&movieId=${movie.id}`
+        `?view=trailer&movieId=${targetId}`
       );
     } catch {
       // ignore

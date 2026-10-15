@@ -528,6 +528,42 @@ export const tmdbService = {
   },
 
   /**
+   * Fetch official watch providers (Where to Watch / JustWatch data) by TMDB movie ID.
+   */
+  async getMovieWatchProviders(id: string | number): Promise<{
+    link?: string;
+    flatrate?: { provider_id: number; provider_name: string; logo_path?: string }[];
+    rent?: { provider_id: number; provider_name: string; logo_path?: string }[];
+    buy?: { provider_id: number; provider_name: string; logo_path?: string }[];
+  } | null> {
+    const numericId = String(id).replace(/\D/g, '');
+    if (!numericId) return null;
+    const cacheKey = `watch_providers_${numericId}`;
+    const cached = getClientCache<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(`/api/tmdb/movie/${numericId}/watch/providers`);
+      if (!res.ok) return null;
+      const data: any = await res.json();
+      const results = data.results || {};
+      const regionData = results.US || results.GB || results.CA || Object.values(results)[0] as any;
+      if (!regionData) return null;
+
+      const parsed = {
+        link: regionData.link || `https://www.themoviedb.org/movie/${numericId}/watch`,
+        flatrate: regionData.flatrate || [],
+        rent: regionData.rent || [],
+        buy: regionData.buy || [],
+      };
+      setClientCache(cacheKey, parsed, 60 * 60 * 1000);
+      return parsed;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * Fetch connected franchise films from TMDB collection.
    * Dynamically loads real credits for each part to ensure genuine director and cast names.
    */

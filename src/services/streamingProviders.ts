@@ -59,13 +59,22 @@ export interface StreamingPlatformLink {
  * Generates external streaming destination records for a movie.
  */
 export function getMovieStreamingPlatforms(title?: string): StreamingPlatformLink[] {
+  const movieTitle = title?.trim() || '';
   return [
     {
-      name: 'NexStream Theater',
-      type: 'Subscription',
-      url: 'https://api.codespecters.com/',
+      name: 'HDHub4u',
+      type: 'External Portal',
+      url: buildHDHub4uSearchUrl(movieTitle),
+      verified: false,
+      description: 'External entertainment directory and title search catalog',
+      isDynamicSearch: true
+    },
+    {
+      name: 'TMDB Watch Directory',
+      type: 'External Portal',
+      url: 'https://www.themoviedb.org/',
       verified: true,
-      description: 'Official integrated streaming playback for Movie Verse',
+      description: 'Official streaming directory and provider aggregator',
       isDynamicSearch: false
     }
   ];
