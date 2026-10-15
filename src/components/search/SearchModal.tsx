@@ -79,7 +79,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           });
       }
     } else {
-      if (!preserveQueryOnSelectRef.current) {
+      if (!preserveQueryOnSelectRef.current && !initialQuery) {
         setQuery('');
         setResults([]);
         setCurrentPage(1);
@@ -268,7 +268,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 }}
                 placeholder="Search movies by title, franchise, or keywords..."
                 aria-label="Search movies"
-                className="w-full bg-transparent text-white placeholder-neutral-400 text-sm sm:text-base focus:outline-none"
+                className="w-full bg-transparent text-white placeholder-neutral-400 text-base focus:outline-none"
               />
               {isLoading && (
                 <Loader2 className="w-4 h-4 text-[#FBB931] animate-spin shrink-0 pointer-events-none" />

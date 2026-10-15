@@ -936,7 +936,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                               type="text"
                               value={editCollectionName}
                               onChange={(e) => setEditCollectionName(e.target.value)}
-                              className="px-3 py-1 rounded-xl bg-black/70 border border-[#F88F22] text-white text-sm font-bold"
+                              className="px-3 py-1 rounded-xl bg-black/70 border border-[#F88F22] text-white text-base sm:text-sm font-bold"
                               autoFocus
                             />
                             <button
@@ -1088,7 +1088,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                   placeholder="Paste your Codespecters apikey..."
                   value={profileNexStreamKey}
                   onChange={(e) => setProfileNexStreamKey(e.target.value)}
-                  className="flex-grow px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-[#F88F22]"
+                  className="flex-grow px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/10 text-white text-base sm:text-xs font-mono focus:outline-none focus:border-[#F88F22]"
                   autoComplete="off"
                 />
                 <button
@@ -1278,7 +1278,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                   placeholder="e.g. Rainy Night Noir, Sci-Fi Epics..."
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none focus:border-[#F88F22]"
+                  className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-white text-base sm:text-xs focus:outline-none focus:border-[#F88F22]"
                 />
               </div>
 
@@ -1291,7 +1291,7 @@ export const CineProfileView: React.FC<CineProfileViewProps> = ({
                   value={newCollectionDesc}
                   onChange={(e) => setNewCollectionDesc(e.target.value)}
                   rows={3}
-                  className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none focus:border-[#F88F22]"
+                  className="w-full px-3.5 py-2 rounded-xl bg-black/60 border border-white/10 text-white text-base sm:text-xs focus:outline-none focus:border-[#F88F22]"
                 />
               </div>
             </div>

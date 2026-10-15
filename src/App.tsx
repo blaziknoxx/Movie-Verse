@@ -304,6 +304,7 @@ export default function App() {
       }
       setActiveTab(tab);
       setSelectedMovie(null);
+      setIsSearchOpen(false);
 
       const nextState: NavState = { tab, inApp: true };
       inAppHistoryDepthRef.current += 1;
@@ -333,6 +334,7 @@ export default function App() {
     setListingCategory(categoryKey);
     setActiveTab('listing');
     setSelectedMovie(null);
+    setIsSearchOpen(false);
 
     const nextState: NavState = {
       tab: 'listing',
@@ -471,6 +473,7 @@ export default function App() {
     setTrailerMovieId(targetId);
     storageService.saveCachedMovie(resolvedMovie);
     setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('trailer');
 
     const nextState: NavState = {
@@ -501,6 +504,7 @@ export default function App() {
     setWatchMovieId(targetId);
     storageService.saveCachedMovie(resolvedMovie);
     setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('watch');
 
     const nextState: NavState = {
@@ -561,7 +565,16 @@ export default function App() {
     } else if (movieOrUniverse && movieOrUniverse.id) {
       setTargetUniverseId(movieOrUniverse.id);
     }
+    setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('connections');
+    const nextState: NavState = { tab: 'connections', inApp: true };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
     resetScrollPosition('instant');
   };
 
@@ -569,7 +582,16 @@ export default function App() {
     if (universeId) {
       setTargetUniverseId(universeId);
     }
+    setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('watch-order');
+    const nextState: NavState = { tab: 'watch-order', inApp: true };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
     resetScrollPosition('instant');
   };
 
@@ -577,7 +599,16 @@ export default function App() {
     if (movieId) {
       setTargetSeedMovieId(movieId);
     }
+    setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('same-vibe');
+    const nextState: NavState = { tab: 'same-vibe', inApp: true };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
     resetScrollPosition('instant');
   };
 
@@ -585,7 +616,16 @@ export default function App() {
     if (movieId) {
       setTargetSeedMovieId(movieId);
     }
+    setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('vibe-match');
+    const nextState: NavState = { tab: 'vibe-match', inApp: true };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
     resetScrollPosition('instant');
   };
 
@@ -593,7 +633,16 @@ export default function App() {
     if (movieId) {
       setTargetWatchMovieId(movieId);
     }
+    setSelectedMovie(null);
+    setIsSearchOpen(false);
     setActiveTab('where-to-watch');
+    const nextState: NavState = { tab: 'where-to-watch', inApp: true };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
     resetScrollPosition('instant');
   };
 

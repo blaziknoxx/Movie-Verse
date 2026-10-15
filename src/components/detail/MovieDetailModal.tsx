@@ -206,7 +206,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
           {/* Overlay Center Play Badge */}
           <div 
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (onOpenWatch) {
                 onOpenWatch(current);
               } else {
@@ -257,7 +258,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (onOpenWatch) onOpenWatch(current);
                 else onOpenTrailer(current);
               }}
@@ -269,7 +271,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onOpenTrailer(current);
               }}
               className="w-full py-3.5 px-5 rounded-2xl bg-[#1A0B05] hover:bg-[#281308] text-[#FFE3B3] hover:text-white border border-[#F88F22]/35 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
@@ -310,7 +313,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             {/* Vibe Match Shortcut */}
             <button
               onClick={() => {
-                onClose();
                 onNavigateToVibeMatch(current.id);
               }}
               className="flex flex-col items-center gap-1.5 text-neutral-400 hover:text-white transition-colors"
@@ -333,8 +335,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             {/* Where to Watch Shortcut */}
             <button
               onClick={() => {
-                onClose();
-                onNavigateToWhereToWatch();
+                onNavigateToWhereToWatch(current.id);
               }}
               className="flex flex-col items-center gap-1.5 text-neutral-400 hover:text-white transition-colors"
             >
@@ -488,7 +489,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    onClose();
                     onNavigateToSameVibe(current.id);
                   }}
                   className="text-xs text-[#F88F22] hover:text-[#FBB931] font-semibold shrink-0"
