@@ -18,8 +18,8 @@ import { StreamingSourceSelector } from '../player/StreamingSourceSelector';
 import { MovieCard } from '../discover/MovieCard';
 import { 
   ArrowLeft, Star, Clock, Calendar, Bookmark, Share2, 
-  Film, Sparkles, Clapperboard, CheckCircle2, Shield,
-  ArrowUpRight, Globe, ChevronRight, Play, Check
+  Film, Sparkles, Clapperboard, CheckCircle2,
+  Globe, Play
 } from 'lucide-react';
 import {
   getActiveStreamingProviders,
@@ -335,50 +335,26 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         isReloading={isReloading}
       />
 
-      {/* 4. Redesigned External Destinations & Official Previews with Rich Green Glow */}
-      <div className="space-y-3 pt-1">
+      {/* 4. External Destinations & Official Previews */}
+      <div className="space-y-2.5 pt-1">
         <div className="flex items-center justify-between text-xs px-1">
           <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] text-[#FFE3B3]">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <Sparkles className="w-3.5 h-3.5 text-[#F88F22]" />
             <span>External Destinations & Official Previews</span>
           </div>
-          <span className="text-[10px] text-emerald-300/80 font-medium">Verified links</span>
+          <span className="text-[10px] text-neutral-400">Verified links</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {/* External Action Bar 1: HDHub4u Movie Search */}
           <a
             href={hdhub4uUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 green-card-surface group active:scale-[0.985] text-left"
+            className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/35 flex items-center justify-center text-emerald-300 group-hover:scale-105 group-hover:text-emerald-100 transition-all shrink-0">
-                <Film className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-emerald-100 transition-colors">
-                    HDHub4u
-                  </span>
-                  <span
-                    className="green-verified-badge w-4 h-4 p-0.5 shrink-0"
-                    title="Verified Destination"
-                    aria-label="Verified destination"
-                  >
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-200" />
-                  </span>
-                </div>
-                <div className="text-[11px] text-emerald-200/80 truncate">
-                  Search external catalog on HDHub4u
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-emerald-300 group-hover:text-white text-xs font-semibold shrink-0">
-              <span className="hidden sm:inline text-[11px]">External Search</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </div>
+            <Film className="w-4 h-4 fill-white text-white shrink-0" />
+            <span>HDHub4u</span>
           </a>
 
           {/* External Action Bar 2: MovieLinkBD Directory Index */}
@@ -386,68 +362,20 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             href={movielinkbdUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 green-card-surface group active:scale-[0.985] text-left"
+            className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/35 flex items-center justify-center text-emerald-300 group-hover:scale-105 group-hover:text-emerald-100 transition-all shrink-0">
-                <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-emerald-100 transition-colors">
-                    MovieLinkBD
-                  </span>
-                  <span
-                    className="green-verified-badge w-4 h-4 p-0.5 shrink-0"
-                    title="Verified Directory"
-                    aria-label="Verified directory"
-                  >
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-200" />
-                  </span>
-                </div>
-                <div className="text-[11px] text-emerald-200/80 truncate">
-                  Browse regional media directory index
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-emerald-300 group-hover:text-white text-xs font-semibold shrink-0">
-              <span className="hidden sm:inline text-[11px]">Directory Index</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </div>
+            <Globe className="w-4 h-4 text-white shrink-0" />
+            <span>MovieLinkBD</span>
           </a>
 
           {/* Action Bar 3: Official Studio Trailer */}
           <button
             type="button"
             onClick={() => onOpenTrailer(currentMovie)}
-            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 green-card-surface group active:scale-[0.985] text-left cursor-pointer"
+            className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/35 flex items-center justify-center text-emerald-300 group-hover:scale-105 group-hover:text-emerald-100 transition-all shrink-0">
-                <Clapperboard className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-emerald-100 transition-colors">
-                    Official Trailer
-                  </span>
-                  <span
-                    className="green-verified-badge w-4 h-4 p-0.5 shrink-0"
-                    title="Verified Studio Trailer"
-                    aria-label="Verified trailer"
-                  >
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-200" />
-                  </span>
-                </div>
-                <div className="text-[11px] text-emerald-200/80 truncate">
-                  Watch official studio trailer & teaser cuts
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-emerald-300 group-hover:text-white text-xs font-semibold shrink-0">
-              <span className="hidden sm:inline text-[11px]">Official Video</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </div>
+            <Clapperboard className="w-4 h-4 text-white shrink-0" />
+            <span>Official Trailer</span>
           </button>
         </div>
       </div>
