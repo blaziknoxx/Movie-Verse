@@ -31,15 +31,45 @@ export interface StreamingProviderConfig {
   description?: string;
   supportedLanguages?: string[];
   preferredLanguage?: string;
+  supportsTv?: boolean;
   buildEmbedUrl: (params: ProviderUrlParams) => string;
 }
 
 /**
+ * Builds the dynamic CineSRC movie embed URL for a given TMDB movie ID.
+ * Format: https://cinesrc.st/embed/movie/{tmdbId}
+ */
+export function buildCineSrcMovieUrl(tmdbId: string | number): string {
+  const cleanId = String(tmdbId).trim().replace(/\D/g, '');
+  if (!cleanId) return '';
+  return `https://cinesrc.st/embed/movie/${cleanId}`;
+}
+
+/**
  * Data-driven registry of streaming providers.
- * To add future providers, simply append a configuration object with enabled: true.
- * Initial implementation registers NexStream as the active embedded provider.
+ * Provider Order:
+ * 1. CineSRC — Primary default movie streaming provider
+ * 2. NexStream — High-definition adaptive streaming provider
  */
 export const STREAMING_PROVIDERS: StreamingProviderConfig[] = [
+  {
+    id: 'cinesrc',
+    name: 'CineSRC',
+    badge: '1080p HD',
+    quality: '1080p',
+    isVerified: true,
+    enabled: true,
+    description: 'High-definition cinema stream with fast cloud player',
+    supportsTv: false,
+    buildEmbedUrl: ({ tmdbId, mediaType, season = 1, episode = 1 }: ProviderUrlParams) => {
+      if (mediaType === 'tv') {
+        // CineSRC TV endpoints cannot be confirmed; do not send TV IDs to movie endpoint.
+        // Safely preserve TV playback via verified NexStream TV stream.
+        return buildNexStreamTvUrl(tmdbId, season, episode);
+      }
+      return buildCineSrcMovieUrl(tmdbId);
+    },
+  },
   {
     id: 'nexstream',
     name: 'NexStream',
@@ -49,6 +79,7 @@ export const STREAMING_PROVIDERS: StreamingProviderConfig[] = [
     enabled: true,
     description: 'High-definition cinema stream with adaptive player',
     supportedLanguages: ['en', 'es', 'fr', 'de', 'it', 'hi', 'bn', 'ja', 'ko'],
+    supportsTv: true,
     buildEmbedUrl: ({ tmdbId, mediaType, season = 1, episode = 1 }: ProviderUrlParams) => {
       if (mediaType === 'tv') {
         return buildNexStreamTvUrl(tmdbId, season, episode);
@@ -73,9 +104,9 @@ export function getStreamingProviderById(id: string): StreamingProviderConfig | 
 }
 
 /**
- * Default provider ID used on initial watch page load.
+ * Default provider ID used on initial watch page load for movies.
  */
-export const DEFAULT_STREAMING_PROVIDER_ID = 'nexstream';
+export const DEFAULT_STREAMING_PROVIDER_ID = 'cinesrc';
 
 /**
  * Converts a provider configuration and movie/TV parameters into a PlaybackSource object.
@@ -87,7 +118,7 @@ export function buildPlaybackSourceFromProvider(
 ): PlaybackSource {
   const embedUrl = provider.buildEmbedUrl(params);
   return {
-    id: `provider-${provider.id}${reloadToken ? `-${reloadToken}` : ''}`,
+    id: `provider-${provider.id}-${params.tmdbId}${reloadToken ? `-${reloadToken}` : ''}`,
     name: provider.name,
     type: 'embed',
     url: embedUrl,

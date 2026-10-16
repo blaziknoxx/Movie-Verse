@@ -7,7 +7,7 @@
  * and compact recommendations.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Movie, PlaybackSource } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
@@ -137,21 +137,45 @@ export const WatchPage: React.FC<WatchPageProps> = ({
     }
   }, [movie, movieId]);
 
-  const [selectedProviderId, setSelectedProviderId] = useState<string>(DEFAULT_STREAMING_PROVIDER_ID);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(() => {
+    const isTv = movie?.mediaType === 'tv' || currentMovie?.mediaType === 'tv';
+    return isTv ? 'nexstream' : DEFAULT_STREAMING_PROVIDER_ID;
+  });
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [isReloading, setIsReloading] = useState<boolean>(false);
 
-  // Available data-driven streaming providers (NexStream initially, extensible for future providers)
+  // Available data-driven streaming providers (CineSRC first, NexStream second)
   const availableProviders: StreamingProviderConfig[] = useMemo(() => {
     return getActiveStreamingProviders();
   }, []);
+
+  // Track movie identity to reset to CineSRC default whenever a new movie opens
+  const lastMovieIdRef = useRef<string | number | undefined>(
+    currentMovie ? (currentMovie.tmdbId || currentMovie.id) : undefined
+  );
+
+  useEffect(() => {
+    if (!currentMovie) return;
+    const currentId = currentMovie.tmdbId || currentMovie.id;
+    if (currentId !== lastMovieIdRef.current) {
+      lastMovieIdRef.current = currentId;
+      setSelectedProviderId(
+        currentMovie.mediaType === 'tv' ? 'nexstream' : DEFAULT_STREAMING_PROVIDER_ID
+      );
+      setReloadKey(0);
+    }
+  }, [currentMovie?.id, currentMovie?.tmdbId, currentMovie?.mediaType]);
 
   // Primary in-app playback source: Data-driven provider resolution
   // Memoized strictly to prevent re-render or reset loops on iOS and Android
   const activeSource: PlaybackSource | null = useMemo(() => {
     if (!currentMovie) return null;
     const tmdbId = getTmdbIdFromMovie(currentMovie);
-    const provider = getStreamingProviderById(selectedProviderId) || availableProviders[0];
+    // For TV shows, safely prioritize NexStream since CineSRC TV endpoints cannot be confirmed
+    const effectiveProviderId = (currentMovie.mediaType === 'tv' && selectedProviderId === 'cinesrc')
+      ? 'nexstream'
+      : selectedProviderId;
+    const provider = getStreamingProviderById(effectiveProviderId) || availableProviders[0];
 
     if (provider && tmdbId) {
       return buildPlaybackSourceFromProvider(

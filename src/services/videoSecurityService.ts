@@ -9,6 +9,7 @@
 import { PlaybackSource, PlaybackType, Movie } from '../types/movie';
 import { buildHDHub4uSearchUrl, getMovieLinkBDUrl } from './streamingProviders';
 import { buildNexStreamMovieUrl, NEXSTREAM_CONFIG } from './nexstreamService';
+import { buildCineSrcMovieUrl } from './streamingSourceRegistry';
 import { storageService } from './storageService';
 
 // Strict allowlist for approved in-app iframe embed providers
@@ -26,6 +27,8 @@ const ALLOWED_EMBED_DOMAINS = [
   'www.archive.org',
   'api.codespecters.com',
   'codespecters.com',
+  'cinesrc.st',
+  'www.cinesrc.st',
 ];
 
 export interface ValidationResult {
@@ -186,7 +189,24 @@ export function validatePlaybackUrl(rawUrl: string): ValidationResult {
     }
   }
 
-  // 6. Check for approved NexStream embeds (api.codespecters.com)
+  // 6. Check for approved CineSRC embeds (cinesrc.st)
+  if (
+    hostname === 'cinesrc.st' ||
+    hostname === 'www.cinesrc.st' ||
+    hostname.endsWith('.cinesrc.st')
+  ) {
+    if (pathname.startsWith('/embed/')) {
+      return {
+        isValid: true,
+        sanitizedUrl: parsed.toString(),
+        type: 'embed',
+        providerName: 'CineSRC',
+        canEmbedInIframe: true,
+      };
+    }
+  }
+
+  // 7. Check for approved NexStream embeds (api.codespecters.com)
   if (
     hostname === 'api.codespecters.com' ||
     hostname === 'codespecters.com' ||
@@ -203,7 +223,7 @@ export function validatePlaybackUrl(rawUrl: string): ValidationResult {
     }
   }
 
-  // 7. External webpage links (HDHub4u, MovieLinkBD, external portals)
+  // 8. External webpage links (HDHub4u, MovieLinkBD, external portals)
   // These are valid HTTPS links but CANNOT and MUST NOT be embedded in an iframe.
   return {
     isValid: true,
@@ -271,10 +291,20 @@ export function resolveMoviePlaybackSources(movie: Movie): PlaybackSource[] {
   const sources: PlaybackSource[] = [];
   const tmdbId = getTmdbIdFromMovie(movie);
 
-  // Primary In-App Player: NexStream Embedded Movie Player (Dynamically resolved from TMDB ID)
+  // Primary In-App Players: CineSRC (Default) and NexStream (Alternative)
   if (tmdbId) {
     sources.push({
-      id: 'source-nexstream',
+      id: `source-cinesrc-${tmdbId}`,
+      name: 'CineSRC',
+      type: 'embed',
+      url: buildCineSrcMovieUrl(tmdbId),
+      quality: '1080p',
+      isOfficial: true,
+      badge: 'CineSRC HD',
+      note: `Stream dynamically generated from TMDB ID: ${tmdbId}. Powered by CineSRC engine.`,
+    });
+    sources.push({
+      id: `source-nexstream-${tmdbId}`,
       name: 'NexStream HD Cinema Player',
       type: 'embed',
       url: buildNexStreamMovieUrl(tmdbId),
