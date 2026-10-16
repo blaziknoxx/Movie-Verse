@@ -14,12 +14,20 @@ import { storageService } from '../../services/storageService';
 import { resolveMoviePlaybackSources, getTmdbIdFromMovie } from '../../services/videoSecurityService';
 import { buildHDHub4uSearchUrl, getMovieLinkBDUrl } from '../../services/streamingProviders';
 import { VideoPlayer } from '../player/VideoPlayer';
+import { StreamingSourceSelector } from '../player/StreamingSourceSelector';
 import { MovieCard } from '../discover/MovieCard';
 import { 
   ArrowLeft, Star, Clock, Calendar, Bookmark, Share2, 
   Film, Sparkles, Clapperboard, CheckCircle2, Shield,
-  ArrowUpRight, Globe, ChevronRight, Play
+  ArrowUpRight, Globe, ChevronRight, Play, Check
 } from 'lucide-react';
+import {
+  getActiveStreamingProviders,
+  getStreamingProviderById,
+  buildPlaybackSourceFromProvider,
+  DEFAULT_STREAMING_PROVIDER_ID,
+  StreamingProviderConfig,
+} from '../../services/streamingSourceRegistry';
 
 interface WatchPageProps {
   movie: Movie | null;
@@ -129,12 +137,57 @@ export const WatchPage: React.FC<WatchPageProps> = ({
     }
   }, [movie, movieId]);
 
-  // Primary in-app playback source: NexStream HD Cinema Player (Memoized to prevent remounting)
-  const primarySource: PlaybackSource | null = useMemo(() => {
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(DEFAULT_STREAMING_PROVIDER_ID);
+  const [reloadKey, setReloadKey] = useState<number>(0);
+  const [isReloading, setIsReloading] = useState<boolean>(false);
+
+  // Available data-driven streaming providers (NexStream initially, extensible for future providers)
+  const availableProviders: StreamingProviderConfig[] = useMemo(() => {
+    return getActiveStreamingProviders();
+  }, []);
+
+  // Primary in-app playback source: Data-driven provider resolution
+  // Memoized strictly to prevent re-render or reset loops on iOS and Android
+  const activeSource: PlaybackSource | null = useMemo(() => {
     if (!currentMovie) return null;
-    const sources = resolveMoviePlaybackSources(currentMovie);
-    return sources[0] || null;
-  }, [currentMovie?.id, currentMovie?.tmdbId]);
+    const tmdbId = getTmdbIdFromMovie(currentMovie);
+    const provider = getStreamingProviderById(selectedProviderId) || availableProviders[0];
+
+    if (provider && tmdbId) {
+      return buildPlaybackSourceFromProvider(
+        provider,
+        {
+          tmdbId,
+          mediaType: currentMovie.mediaType,
+          season: 1,
+          episode: 1,
+        },
+        reloadKey
+      );
+    }
+
+    const fallbackSources = resolveMoviePlaybackSources(currentMovie);
+    return fallbackSources[0] || null;
+  }, [
+    currentMovie?.id,
+    currentMovie?.tmdbId,
+    currentMovie?.mediaType,
+    selectedProviderId,
+    reloadKey,
+    availableProviders,
+  ]);
+
+  const handleSelectProvider = (providerId: string) => {
+    if (providerId === selectedProviderId) {
+      // Manual click on current active provider: reload embed stream once without infinite loops
+      setIsReloading(true);
+      setReloadKey((prev) => prev + 1);
+      setTimeout(() => setIsReloading(false), 800);
+    } else {
+      setSelectedProviderId(providerId);
+      setReloadKey(0);
+    }
+  };
 
   // Fetch related movies once currentMovie is available
   useEffect(() => {
@@ -257,14 +310,14 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         </div>
       </div>
 
-      {/* 2. Embedded Video Player: NexStream is the single internal player */}
+      {/* 2. Embedded Video Player: Controlled by active streaming source */}
       <div className="relative w-full space-y-2">
-        {primarySource ? (
+        {activeSource ? (
           <VideoPlayer
-            source={primarySource}
+            source={activeSource}
             title={currentMovie.title}
             posterUrl={currentMovie.backdropUrl || currentMovie.posterUrl}
-            autoPlay={true}
+            autoPlay={false}
           />
         ) : (
           <div className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl flex flex-col items-center justify-center p-6 text-center space-y-3">
@@ -272,36 +325,24 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             <p className="text-sm font-semibold text-[#FFE3B3]">Player stream resolving...</p>
           </div>
         )}
-
-        {primarySource && (
-          <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400">
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-neutral-300 font-medium">NexStream HD Embed Active</span>
-              <span className="hidden sm:inline text-neutral-500">• 1080p Stream</span>
-            </div>
-            <a
-              href={primarySource.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#FBB931] hover:text-[#FFE3B3] transition-colors font-semibold"
-              title="Open stream in dedicated browser tab"
-            >
-              <span>Direct Player</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        )}
       </div>
 
-      {/* 3. Premium Glowing Action Bars: External Viewing Destinations & Official Trailer */}
+      {/* 3. Dedicated Streaming Sources Selector Immediately Below Video Player */}
+      <StreamingSourceSelector
+        providers={availableProviders}
+        selectedProviderId={selectedProviderId}
+        onSelectProvider={handleSelectProvider}
+        isReloading={isReloading}
+      />
+
+      {/* 4. Redesigned External Destinations & Official Previews with Rich Green Glow */}
       <div className="space-y-3 pt-1">
         <div className="flex items-center justify-between text-xs px-1">
           <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] text-[#FFE3B3]">
-            <Sparkles className="w-3.5 h-3.5 text-[#F88F22]" />
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             <span>External Destinations & Official Previews</span>
           </div>
-          <span className="text-[10px] text-neutral-400">Verified links</span>
+          <span className="text-[10px] text-emerald-300/80 font-medium">Verified links</span>
         </div>
 
         <div className="grid grid-cols-1 gap-2.5">
@@ -310,23 +351,32 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             href={hdhub4uUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 bg-gradient-to-r from-[#220F06]/95 via-[#180A04]/90 to-[#120602]/95 border border-[#F88F22]/25 hover:border-[#FBB931]/60 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_24px_rgba(234,97,19,0.3)] transition-all group active:scale-[0.99] text-left"
+            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 green-card-surface group active:scale-[0.985] text-left"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2C1408] border border-[#F88F22]/30 flex items-center justify-center text-[#FBB931] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/35 flex items-center justify-center text-emerald-300 group-hover:scale-105 group-hover:text-emerald-100 transition-all shrink-0">
                 <Film className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
-                  Watch Full Movie
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-emerald-100 transition-colors">
+                    HDHub4u
+                  </span>
+                  <span
+                    className="green-verified-badge w-4 h-4 p-0.5 shrink-0"
+                    title="Verified Destination"
+                    aria-label="Verified destination"
+                  >
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-200" />
+                  </span>
                 </div>
-                <div className="text-[11px] text-neutral-400 truncate">
+                <div className="text-[11px] text-emerald-200/80 truncate">
                   Search external catalog on HDHub4u
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[#FBB931] group-hover:text-white text-xs font-semibold shrink-0">
-              <span className="hidden sm:inline text-[11px]">HDHub4u</span>
+            <div className="flex items-center gap-1.5 text-emerald-300 group-hover:text-white text-xs font-semibold shrink-0">
+              <span className="hidden sm:inline text-[11px]">External Search</span>
               <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </div>
           </a>
@@ -336,22 +386,31 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             href={movielinkbdUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 bg-gradient-to-r from-[#220F06]/95 via-[#180A04]/90 to-[#120602]/95 border border-[#F88F22]/25 hover:border-[#FBB931]/60 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_24px_rgba(234,97,19,0.3)] transition-all group active:scale-[0.99] text-left"
+            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 green-card-surface group active:scale-[0.985] text-left"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2C1408] border border-[#F88F22]/30 flex items-center justify-center text-[#FBB931] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/35 flex items-center justify-center text-emerald-300 group-hover:scale-105 group-hover:text-emerald-100 transition-all shrink-0">
                 <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
-                  MovieLinkBD Directory
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-emerald-100 transition-colors">
+                    MovieLinkBD
+                  </span>
+                  <span
+                    className="green-verified-badge w-4 h-4 p-0.5 shrink-0"
+                    title="Verified Directory"
+                    aria-label="Verified directory"
+                  >
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-200" />
+                  </span>
                 </div>
-                <div className="text-[11px] text-neutral-400 truncate">
+                <div className="text-[11px] text-emerald-200/80 truncate">
                   Browse regional media directory index
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[#FBB931] group-hover:text-white text-xs font-semibold shrink-0">
+            <div className="flex items-center gap-1.5 text-emerald-300 group-hover:text-white text-xs font-semibold shrink-0">
               <span className="hidden sm:inline text-[11px]">Directory Index</span>
               <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </div>
@@ -361,22 +420,31 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           <button
             type="button"
             onClick={() => onOpenTrailer(currentMovie)}
-            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 bg-gradient-to-r from-[#220F06]/95 via-[#180A04]/90 to-[#120602]/95 border border-[#F88F22]/25 hover:border-[#FBB931]/60 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_24px_rgba(234,97,19,0.3)] transition-all group active:scale-[0.99] text-left cursor-pointer"
+            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 green-card-surface group active:scale-[0.985] text-left cursor-pointer"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2C1408] border border-[#F88F22]/30 flex items-center justify-center text-[#FBB931] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/35 flex items-center justify-center text-emerald-300 group-hover:scale-105 group-hover:text-emerald-100 transition-all shrink-0">
                 <Clapperboard className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
-                  Play Official Trailer
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm sm:text-base font-extrabold text-white group-hover:text-emerald-100 transition-colors">
+                    Official Trailer
+                  </span>
+                  <span
+                    className="green-verified-badge w-4 h-4 p-0.5 shrink-0"
+                    title="Verified Studio Trailer"
+                    aria-label="Verified trailer"
+                  >
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-200" />
+                  </span>
                 </div>
-                <div className="text-[11px] text-neutral-400 truncate">
+                <div className="text-[11px] text-emerald-200/80 truncate">
                   Watch official studio trailer & teaser cuts
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[#FBB931] group-hover:text-white text-xs font-semibold shrink-0">
+            <div className="flex items-center gap-1.5 text-emerald-300 group-hover:text-white text-xs font-semibold shrink-0">
               <span className="hidden sm:inline text-[11px]">Official Video</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -452,14 +520,6 @@ export const WatchPage: React.FC<WatchPageProps> = ({
                 {isOverviewExpanded ? 'Show less' : 'Read more synopsis'}
               </button>
             )}
-          </div>
-        )}
-
-        {/* Selected source info banner */}
-        {primarySource?.note && (
-          <div className="pt-2 flex items-start gap-2 p-3 rounded-xl bg-black/40 border border-[#F88F22]/15 text-[11px] text-neutral-400">
-            <Shield className="w-4 h-4 text-[#FBB931] shrink-0 mt-0.5" />
-            <span>{primarySource.note}</span>
           </div>
         )}
       </div>
