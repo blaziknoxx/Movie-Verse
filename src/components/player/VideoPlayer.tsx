@@ -9,7 +9,7 @@
  * - Safe webpage / external directory fallbacks for un-embeddable portals
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Hls from 'hls.js';
 import { PlaybackSource } from '../../types/movie';
 import { validatePlaybackUrl } from '../../services/videoSecurityService';
@@ -54,18 +54,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isSpeedMenuOpen, setIsSpeedMenuOpen] = useState(false);
   const [retryKey, setRetryKey] = useState<number>(0);
 
-  // Validate the URL through security rules
-  const validation = validatePlaybackUrl(source.url);
+  // Validate the URL through security rules (memoized to maintain referential stability)
+  const validation = useMemo(() => validatePlaybackUrl(source.url), [source.url]);
 
-  // Reset player states whenever source changes
-  const resetPlayerState = useCallback(() => {
-    setIsLoading(true);
-    setHasError(false);
-    setErrorMessage(undefined);
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-  }, []);
+  // Track previous source URL to only reset player when source URL actually changes
+  const prevUrlRef = useRef<string>(source.url);
+
+  useEffect(() => {
+    if (prevUrlRef.current !== source.url) {
+      prevUrlRef.current = source.url;
+      setIsLoading(true);
+      setHasError(false);
+      setErrorMessage(undefined);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+    }
+  }, [source.url]);
 
   // Format seconds to mm:ss or hh:mm:ss
   const formatTime = (seconds: number) => {
@@ -111,18 +116,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [isPlaying]);
 
-  // Manage HLS and MP4 video attachments
+  // Manage HLS and MP4 direct video attachments (Embeds manage their own iframe lifecycle)
   useEffect(() => {
-    resetPlayerState();
-
-    // If source is an external webpage that cannot be embedded
-    if (source.type === 'webpage' || !validation.isValid || (source.type === 'embed' && !validation.canEmbedInIframe)) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Embed sources (YouTube / Vimeo) manage their own media loading
-    if (source.type === 'embed') {
+    // If source is embed or external webpage, let the dedicated branches handle rendering
+    if (source.type === 'embed' || source.type === 'webpage' || !validation.isValid || !validation.canEmbedInIframe) {
       return;
     }
 
@@ -220,7 +217,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         hlsRef.current = null;
       }
     };
-  }, [source, autoPlay, resetPlayerState, validation, onSourceError]);
+  }, [source.url, source.type, autoPlay, validation.isValid, validation.canEmbedInIframe, onSourceError]);
 
   // Video event handlers
   const handleCanPlay = () => {
@@ -331,11 +328,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleRetry = () => {
-    resetPlayerState();
+    setHasError(false);
+    setErrorMessage(undefined);
+    setIsLoading(true);
     setRetryKey(prev => prev + 1);
-    if (source.type === 'embed') {
-      setIsLoading(true);
-    } else if (videoRef.current) {
+    if (source.type !== 'embed' && videoRef.current) {
       videoRef.current.load();
       if (autoPlay) {
         videoRef.current.play().catch(() => {});
@@ -348,7 +345,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return (
       <div 
         ref={containerRef}
-        className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl sunset-card-glow"
+        className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl sunset-card-glow min-h-[220px] sm:min-h-[340px]"
       >
         <PlayerErrorState
           title={title}
@@ -366,7 +363,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return (
       <div 
         ref={containerRef}
-        className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl sunset-card-glow"
+        className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl sunset-card-glow min-h-[220px] sm:min-h-[340px]"
       >
         <PlayerErrorState
           title={title}
@@ -381,20 +378,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Case 3: Official Allowlisted Embed (NexStream / YouTube / Vimeo / Archive.org)
   if (source.type === 'embed') {
+    const embedUrl = validation.sanitizedUrl || source.url;
+
     return (
       <div 
         ref={containerRef}
-        className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/30 shadow-[0_16px_50px_rgba(0,0,0,0.95)] sunset-card-glow group"
+        className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/30 shadow-[0_16px_50px_rgba(0,0,0,0.95)] sunset-card-glow group min-h-[220px] sm:min-h-[360px] md:min-h-[460px]"
       >
-        {isLoading && (
+        {/* Loading Overlay: Smooth fade-out without unmounting the iframe underneath */}
+        <div 
+          className={`absolute inset-0 z-20 transition-opacity duration-500 pointer-events-none ${
+            isLoading ? 'opacity-100' : 'opacity-0'
+          }`}
+          aria-hidden={!isLoading}
+        >
           <PlayerLoadingState title={title} sourceName={source.name} />
-        )}
+        </div>
 
         <iframe
           key={`${source.id}-${retryKey}`}
-          src={validation.sanitizedUrl || source.url}
+          src={embedUrl}
           title={`${title} — ${source.name}`}
-          onLoad={() => setIsLoading(false)}
+          onLoad={() => {
+            setIsLoading(false);
+          }}
           onError={() => {
             setIsLoading(false);
             setHasError(true);
@@ -402,6 +409,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
+          referrerPolicy="origin-when-cross-origin"
           className="w-full h-full border-0 relative z-10"
         />
       </div>

@@ -136,6 +136,16 @@ app.get('/api/tmdb/status', (req: Request, res: Response) => {
   });
 });
 
+// NexStream configuration check (never exposes secret tokens)
+app.get('/api/config/nexstream', (req: Request, res: Response) => {
+  const apiKey = (process.env.NEXSTREAM_API_KEY || process.env.VITE_NEXSTREAM_API_KEY || '').trim();
+  res.json({
+    status: 'ok',
+    configured: Boolean(apiKey),
+    apiKey: apiKey || '',
+  });
+});
+
 // Trending movies (week or day)
 app.get('/api/tmdb/trending', async (req: Request, res: Response) => {
   try {

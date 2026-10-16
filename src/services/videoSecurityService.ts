@@ -9,6 +9,7 @@
 import { PlaybackSource, PlaybackType, Movie } from '../types/movie';
 import { buildHDHub4uSearchUrl, getMovieLinkBDUrl } from './streamingProviders';
 import { buildNexStreamMovieUrl, NEXSTREAM_CONFIG } from './nexstreamService';
+import { storageService } from './storageService';
 
 // Strict allowlist for approved in-app iframe embed providers
 const ALLOWED_EMBED_DOMAINS = [
@@ -224,6 +225,16 @@ export function getTmdbIdFromMovie(movie?: Movie | null): number | null {
   if (movie.id && /^\d+$/.test(String(movie.id).trim())) {
     return Number(movie.id);
   }
+  if (movie.id) {
+    try {
+      const cached = storageService.getCachedMovie(movie.id);
+      if (cached?.tmdbId && !isNaN(Number(cached.tmdbId)) && Number(cached.tmdbId) > 0) {
+        return Number(cached.tmdbId);
+      }
+    } catch {
+      // ignore
+    }
+  }
   return null;
 }
 
@@ -239,7 +250,7 @@ export function getYouTubeEmbedUrl(key: string, autoplay = true): string {
 
 /**
  * High-performance, public-domain & creative-commons test media streams
- * for verifying HLS and MP4 playback natively inside the applet.
+ * preserved for testing or fallback reference.
  */
 export const VERIFIED_TEST_STREAMS = {
   // Sintel / Tears of Steel multi-bitrate HLS stream
@@ -252,14 +263,15 @@ export const VERIFIED_TEST_STREAMS = {
 
 /**
  * Resolves all authorized playback sources for a given movie.
- * NexStream is placed first as the primary in-app cinema player, dynamically generated
- * from the movie's authentic TMDB ID.
+ * NexStream is the single embedded player used for internal movie playback,
+ * dynamically resolved from the movie's authentic TMDB ID.
+ * Redundant internal server cards (HLS, MP4, and TMDB Preview embed) have been removed.
  */
 export function resolveMoviePlaybackSources(movie: Movie): PlaybackSource[] {
   const sources: PlaybackSource[] = [];
   const tmdbId = getTmdbIdFromMovie(movie);
 
-  // 1. Primary In-App Player: NexStream Embedded Movie Player (Dynamically resolved from TMDB ID)
+  // Primary In-App Player: NexStream Embedded Movie Player (Dynamically resolved from TMDB ID)
   if (tmdbId) {
     sources.push({
       id: 'source-nexstream',
@@ -273,74 +285,21 @@ export function resolveMoviePlaybackSources(movie: Movie): PlaybackSource[] {
     });
   }
 
-  // 2. Authorized Multi-Bitrate HLS Stream (Auto adaptive bitrate)
-  sources.push({
-    id: 'source-hls-auto',
-    name: 'Movie Verse Stream 1 (HLS Multi-Bitrate)',
-    type: 'hls',
-    url: VERIFIED_TEST_STREAMS.hlsStream,
-    quality: 'Auto',
-    isOfficial: true,
-    badge: 'Adaptive HD',
-    note: 'Authorized HLS live stream with adaptive bitrate and audio synchronization.',
-  });
-
-  // 2. Authorized Direct 1080p MP4 Stream
-  sources.push({
-    id: 'source-mp4-1080p',
-    name: 'Movie Verse Stream 2 (1080p Direct MP4)',
-    type: 'mp4',
-    url: VERIFIED_TEST_STREAMS.directMp4,
-    quality: '1080p',
-    isOfficial: true,
-    badge: '1080p Full HD',
-    note: 'Authorized progressive direct MP4 download stream with hardware acceleration.',
-  });
-
-  // 3. Official YouTube Trailer / Feature Preview Embed
-  if (movie.trailerKey) {
-    sources.push({
-      id: 'source-trailer-embed',
-      name: 'Official Studio Preview (TMDB / YouTube)',
-      type: 'embed',
-      url: getYouTubeEmbedUrl(movie.trailerKey, true),
-      quality: '1080p',
-      isOfficial: true,
-      badge: 'Official Video',
-      note: 'Verified TMDB official video preview embedded via YouTube No-Cookie.',
-    });
-  }
-
-  // 4. Custom movie sources if defined
+  // Preserve any custom sources explicitly defined on the movie object
+  // (filtering out the 3 removed internal test sources if present)
   if (Array.isArray(movie.sources)) {
     for (const customSrc of movie.sources) {
-      if (customSrc && customSrc.url) {
+      if (
+        customSrc &&
+        customSrc.url &&
+        customSrc.id !== 'source-hls-auto' &&
+        customSrc.id !== 'source-mp4-1080p' &&
+        customSrc.id !== 'source-trailer-embed'
+      ) {
         sources.push(customSrc);
       }
     }
   }
-
-  // 5. External Webpage Portals (Cannot be embedded, require Open Original Website)
-  const movieTitle = movie.title || '';
-  sources.push({
-    id: 'source-hdhub4u',
-    name: 'HDHub4u External Portal',
-    type: 'webpage',
-    url: buildHDHub4uSearchUrl(movieTitle),
-    requiresExternalLink: true,
-    badge: 'External Portal',
-    note: `External portal search for "${movieTitle}". Third-party website requiring direct browser navigation.`,
-  });
-
-  sources.push({
-    id: 'source-movielinkbd',
-    name: 'MovieLinkBD Directory Index',
-    type: 'webpage',
-    url: getMovieLinkBDUrl(),
-    requiresExternalLink: true,
-    badge: 'External Directory',
-    note: 'External regional media guide. Third-party website requiring direct browser navigation.',
-  });
 
   return sources;
 }

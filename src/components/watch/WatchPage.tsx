@@ -2,21 +2,23 @@
  * Movie Verse — Full Movie Watch Page Component
  * Developer — Estiaq Mehedi
  * 
- * Production-ready full movie playback experience with multi-source selector,
- * adaptive HLS, direct MP4 streaming, verified external portal links, and compact recommendations.
+ * Production-ready full movie playback experience with NexStream embedded HD player,
+ * premium glowing action bars for external destinations (HDHub4u, MovieLinkBD) and official trailers,
+ * and compact recommendations.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Movie, PlaybackSource } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
-import { resolveMoviePlaybackSources } from '../../services/videoSecurityService';
+import { resolveMoviePlaybackSources, getTmdbIdFromMovie } from '../../services/videoSecurityService';
+import { buildHDHub4uSearchUrl, getMovieLinkBDUrl } from '../../services/streamingProviders';
 import { VideoPlayer } from '../player/VideoPlayer';
-import { PlaybackSourceSelector } from '../player/PlaybackSourceSelector';
 import { MovieCard } from '../discover/MovieCard';
 import { 
   ArrowLeft, Star, Clock, Calendar, Bookmark, Share2, 
-  Film, Sparkles, Tv, Clapperboard, CheckCircle2, Shield 
+  Film, Sparkles, Clapperboard, CheckCircle2, Shield,
+  ArrowUpRight, Globe, ChevronRight, Play
 } from 'lucide-react';
 
 interface WatchPageProps {
@@ -42,31 +44,45 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   onToggleWatchlist,
   onToggleWatched,
 }) => {
-  const [currentMovie, setCurrentMovie] = useState<Movie | null>(movie);
-  const [sources, setSources] = useState<PlaybackSource[]>([]);
-  const [selectedSource, setSelectedSource] = useState<PlaybackSource | null>(null);
+  // Initialize currentMovie immediately if movie or cached movieId is available
+  const [currentMovie, setCurrentMovie] = useState<Movie | null>(() => {
+    if (movie) return movie;
+    if (movieId) {
+      return storageService.getCachedMovie(movieId) || null;
+    }
+    return null;
+  });
+
   const [relatedMovies, setRelatedMovies] = useState<Movie[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [copiedShare, setCopiedShare] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
   // Synchronize movie state from props or from URL movieId
   useEffect(() => {
     if (movie) {
-      setCurrentMovie(movie);
+      setCurrentMovie((prev) => {
+        if (prev && String(prev.id) === String(movie.id) && prev.tmdbId === movie.tmdbId) {
+          return prev;
+        }
+        return movie;
+      });
       return;
     }
 
     if (movieId) {
       const cached = storageService.getCachedMovie(movieId);
       if (cached) {
-        setCurrentMovie(cached);
+        setCurrentMovie((prev) => {
+          if (prev && String(prev.id) === String(cached.id) && prev.tmdbId === cached.tmdbId) {
+            return prev;
+          }
+          return cached;
+        });
         return;
       }
 
       const cleanId = String(movieId).replace(/\D/g, '');
       if (cleanId) {
-        setIsLoading(true);
         tmdbService.getMovieDetails(cleanId)
           .then((loaded) => {
             setCurrentMovie(loaded);
@@ -74,7 +90,6 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           })
           .catch((err) => {
             console.warn('[WatchPage] Error resolving movie from TMDB:', err);
-            // Construct graceful fallback movie model with the requested TMDB ID so player loads dynamically
             const numId = Number(cleanId);
             const isSpidey = cleanId === '969681';
             const fallback: Movie = {
@@ -109,29 +124,27 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             };
             setCurrentMovie(fallback);
             storageService.saveCachedMovie(fallback);
-          })
-          .finally(() => {
-            setIsLoading(false);
           });
       }
     }
   }, [movie, movieId]);
 
-  // Resolve sources and related movies once currentMovie is ready
+  // Primary in-app playback source: NexStream HD Cinema Player (Memoized to prevent remounting)
+  const primarySource: PlaybackSource | null = useMemo(() => {
+    if (!currentMovie) return null;
+    const sources = resolveMoviePlaybackSources(currentMovie);
+    return sources[0] || null;
+  }, [currentMovie?.id, currentMovie?.tmdbId]);
+
+  // Fetch related movies once currentMovie is available
   useEffect(() => {
     if (!currentMovie) return;
 
-    // Resolve playback sources
-    const resolvedSources = resolveMoviePlaybackSources(currentMovie);
-    setSources(resolvedSources);
-    setSelectedSource(resolvedSources[0] || null);
-    setIsLoading(false);
-
-    // Save as recently watched / viewed
+    // Save as recently viewed
     storageService.addRecentMovie(currentMovie.id);
 
-    // Fetch related titles from TMDB
-    const cleanId = String(currentMovie.tmdbId || currentMovie.id).replace(/\D/g, '');
+    const tmdbIdNum = getTmdbIdFromMovie(currentMovie);
+    const cleanId = tmdbIdNum ? String(tmdbIdNum) : String(currentMovie.id).replace(/\D/g, '');
     if (cleanId) {
       tmdbService.getMovieRecommendations(cleanId)
         .then((recs) => {
@@ -141,7 +154,6 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           setRelatedMovies(filtered.slice(0, 5));
         })
         .catch(() => {
-          // Fallback to similar
           tmdbService.getSimilarMovies(cleanId).then((sim) => {
             const filtered = (sim || []).filter(
               (m) => String(m.tmdbId || m.id) !== cleanId
@@ -150,7 +162,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           }).catch(() => {});
         });
     }
-  }, [currentMovie]);
+  }, [currentMovie?.id, currentMovie?.tmdbId]);
 
   const handleShare = () => {
     if (navigator.share && currentMovie) {
@@ -176,6 +188,9 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       </div>
     );
   }
+
+  const hdhub4uUrl = buildHDHub4uSearchUrl(currentMovie.title);
+  const movielinkbdUrl = getMovieLinkBDUrl();
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5 sm:space-y-7 animate-fade-in pb-16">
@@ -242,30 +257,114 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         </div>
       </div>
 
-      {/* 2. Large 16:9 Video Player inside a Premium Glowing Card */}
-      <div className="relative w-full space-y-3">
-        {selectedSource && (
+      {/* 2. Embedded Video Player: NexStream is the single internal player */}
+      <div className="relative w-full">
+        {primarySource ? (
           <VideoPlayer
-            source={selectedSource}
+            source={primarySource}
             title={currentMovie.title}
             posterUrl={currentMovie.backdropUrl || currentMovie.posterUrl}
             autoPlay={true}
           />
-        )}
-
-        {/* 3. Compact Playback Source Selector */}
-        {sources.length > 1 && (
-          <div className="pt-1">
-            <PlaybackSourceSelector
-              sources={sources}
-              selectedSourceId={selectedSource?.id || ''}
-              onSelectSource={(src) => setSelectedSource(src)}
-            />
+        ) : (
+          <div className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl flex flex-col items-center justify-center p-6 text-center space-y-3">
+            <Film className="w-8 h-8 text-[#FBB931] animate-pulse" />
+            <p className="text-sm font-semibold text-[#FFE3B3]">Player stream resolving...</p>
           </div>
         )}
       </div>
 
-      {/* 4. Movie Details, Metadata, Trailer Shortcut, and Synopsis */}
+      {/* 3. Premium Glowing Action Bars: External Viewing Destinations & Official Trailer */}
+      <div className="space-y-3 pt-1">
+        <div className="flex items-center justify-between text-xs px-1">
+          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] text-[#FFE3B3]">
+            <Sparkles className="w-3.5 h-3.5 text-[#F88F22]" />
+            <span>External Destinations & Official Previews</span>
+          </div>
+          <span className="text-[10px] text-neutral-400">Verified links</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2.5">
+          {/* External Action Bar 1: HDHub4u Movie Search */}
+          <a
+            href={hdhub4uUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 bg-gradient-to-r from-[#220F06]/95 via-[#180A04]/90 to-[#120602]/95 border border-[#F88F22]/25 hover:border-[#FBB931]/60 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_24px_rgba(234,97,19,0.3)] transition-all group active:scale-[0.99] text-left"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2C1408] border border-[#F88F22]/30 flex items-center justify-center text-[#FBB931] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+                <Film className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
+                  Watch Full Movie
+                </div>
+                <div className="text-[11px] text-neutral-400 truncate">
+                  Search external catalog on HDHub4u
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[#FBB931] group-hover:text-white text-xs font-semibold shrink-0">
+              <span className="hidden sm:inline text-[11px]">HDHub4u</span>
+              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </div>
+          </a>
+
+          {/* External Action Bar 2: MovieLinkBD Directory Index */}
+          <a
+            href={movielinkbdUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 bg-gradient-to-r from-[#220F06]/95 via-[#180A04]/90 to-[#120602]/95 border border-[#F88F22]/25 hover:border-[#FBB931]/60 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_24px_rgba(234,97,19,0.3)] transition-all group active:scale-[0.99] text-left"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2C1408] border border-[#F88F22]/30 flex items-center justify-center text-[#FBB931] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+                <Globe className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
+                  MovieLinkBD Directory
+                </div>
+                <div className="text-[11px] text-neutral-400 truncate">
+                  Browse regional media directory index
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[#FBB931] group-hover:text-white text-xs font-semibold shrink-0">
+              <span className="hidden sm:inline text-[11px]">Directory Index</span>
+              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </div>
+          </a>
+
+          {/* Action Bar 3: Official Studio Trailer */}
+          <button
+            type="button"
+            onClick={() => onOpenTrailer(currentMovie)}
+            className="w-full p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 bg-gradient-to-r from-[#220F06]/95 via-[#180A04]/90 to-[#120602]/95 border border-[#F88F22]/25 hover:border-[#FBB931]/60 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_24px_rgba(234,97,19,0.3)] transition-all group active:scale-[0.99] text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2C1408] border border-[#F88F22]/30 flex items-center justify-center text-[#FBB931] group-hover:scale-105 group-hover:text-white transition-all shrink-0">
+                <Clapperboard className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-bold text-white group-hover:text-[#FFE3B3] transition-colors truncate">
+                  Play Official Trailer
+                </div>
+                <div className="text-[11px] text-neutral-400 truncate">
+                  Watch official studio trailer & teaser cuts
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[#FBB931] group-hover:text-white text-xs font-semibold shrink-0">
+              <span className="hidden sm:inline text-[11px]">Official Video</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* 4. Movie Details, Metadata, and Synopsis */}
       <div className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-[#140804]/90 border border-[#F88F22]/20 space-y-4 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
@@ -337,10 +436,10 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         )}
 
         {/* Selected source info banner */}
-        {selectedSource?.note && (
+        {primarySource?.note && (
           <div className="pt-2 flex items-start gap-2 p-3 rounded-xl bg-black/40 border border-[#F88F22]/15 text-[11px] text-neutral-400">
             <Shield className="w-4 h-4 text-[#FBB931] shrink-0 mt-0.5" />
-            <span>{selectedSource.note}</span>
+            <span>{primarySource.note}</span>
           </div>
         )}
       </div>
