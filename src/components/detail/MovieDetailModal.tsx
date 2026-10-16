@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Movie } from '../../types/movie';
-import { tmdbService } from '../../services/tmdbService';
+import { tmdbService, getOptimizedPosterUrl } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { 
   ArrowLeft, Star, Bookmark, CheckCircle2, Network, ListOrdered, 
@@ -56,6 +56,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
+  const modalScrollRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!movie) {
@@ -70,6 +71,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     setDetailedMovie(movie);
     setIsOverviewExpanded(false);
     storageService.saveCachedMovie(movie);
+    modalScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
     // Fetch live TMDB details, credits, videos, and recommendations
     const numericId = String(movie.tmdbId || movie.id).replace(/\D/g, '');
@@ -146,7 +148,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/95 backdrop-blur-2xl animate-fade-in text-neutral-200">
+    <div ref={modalScrollRef} className="fixed inset-0 z-[70] overflow-y-auto bg-black/95 backdrop-blur-md animate-fade-in text-neutral-200">
       
       {/* Phone-Framed Screen Container */}
       <div className="relative w-full max-w-2xl mx-auto min-h-screen bg-[#0A0402] pb-24 border-x border-[#F88F22]/15 shadow-2xl">
@@ -157,6 +159,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             src={current.backdropUrl || current.posterUrl}
             alt={current.title}
             className="w-full h-full object-cover object-center"
+            loading="eager"
+            decoding="async"
           />
 
           {/* Cinematic Scrims */}
@@ -202,8 +206,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
           {/* Overlay Center Play Badge */}
           <div 
-            onClick={() => {
-              onClose();
+            onClick={(e) => {
+              e.stopPropagation();
               if (onOpenWatch) {
                 onOpenWatch(current);
               } else {
@@ -254,7 +258,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (onOpenWatch) onOpenWatch(current);
                 else onOpenTrailer(current);
               }}
@@ -266,7 +271,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 onOpenTrailer(current);
               }}
               className="w-full py-3.5 px-5 rounded-2xl bg-[#1A0B05] hover:bg-[#281308] text-[#FFE3B3] hover:text-white border border-[#F88F22]/35 font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
@@ -307,7 +313,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             {/* Vibe Match Shortcut */}
             <button
               onClick={() => {
-                onClose();
                 onNavigateToVibeMatch(current.id);
               }}
               className="flex flex-col items-center gap-1.5 text-neutral-400 hover:text-white transition-colors"
@@ -330,8 +335,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             {/* Where to Watch Shortcut */}
             <button
               onClick={() => {
-                onClose();
-                onNavigateToWhereToWatch();
+                onNavigateToWhereToWatch(current.id);
               }}
               className="flex flex-col items-center gap-1.5 text-neutral-400 hover:text-white transition-colors"
             >
@@ -451,11 +455,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     onClick={() => onSelectMovie(colMovie)}
                     className="w-[110px] sm:w-[130px] shrink-0 cursor-pointer group"
                   >
-                    <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[#F88F22]/50 shadow-md">
+                    <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[#F88F22]/50 shadow-md bg-[#160B05]">
                       <img
-                        src={colMovie.posterUrl}
+                        src={getOptimizedPosterUrl(colMovie.posterUrl, 'w342', colMovie.title)}
                         alt={colMovie.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <div className="text-xs font-semibold text-white group-hover:text-[#FFE3B3] truncate mt-1.5">
@@ -483,7 +489,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    onClose();
                     onNavigateToSameVibe(current.id);
                   }}
                   className="text-xs text-[#F88F22] hover:text-[#FBB931] font-semibold shrink-0"
@@ -499,11 +504,13 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                     onClick={() => onSelectMovie(sim)}
                     className="w-[110px] sm:w-[130px] shrink-0 cursor-pointer group"
                   >
-                    <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[#F88F22]/50 shadow-md">
+                    <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[#F88F22]/50 shadow-md bg-[#160B05]">
                       <img
-                        src={sim.posterUrl}
+                        src={getOptimizedPosterUrl(sim.posterUrl, 'w342', sim.title)}
                         alt={sim.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-[9px] font-bold text-amber-400">
                         ★ {sim.rating ? sim.rating.toFixed(1) : '7.5'}
