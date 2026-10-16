@@ -246,7 +246,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   const movielinkbdUrl = getMovieLinkBDUrl();
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-5 sm:space-y-7 animate-fade-in pb-16">
+    <div className="w-full max-w-5xl mx-auto space-y-3.5 sm:space-y-5 animate-fade-in pb-16">
       {/* 1. Compact Top Bar with Back Button & Movie Verse Branding */}
       <div className="flex items-center justify-between gap-3 pt-1 pb-2 border-b border-[#F88F22]/15">
         <button
@@ -336,7 +336,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       />
 
       {/* 4. External Destinations & Official Previews */}
-      <div className="space-y-2.5 pt-1">
+      <div className="space-y-2 pt-0.5">
         <div className="flex items-center justify-between text-xs px-1">
           <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] text-[#FFE3B3]">
             <Sparkles className="w-3.5 h-3.5 text-[#F88F22]" />
@@ -345,15 +345,15 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           <span className="text-[10px] text-neutral-400">Verified links</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
           {/* External Action Bar 1: HDHub4u Movie Search */}
           <a
             href={hdhub4uUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl sunset-gradient-btn text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
-            <Film className="w-4 h-4 fill-white text-white shrink-0" />
+            <Film className="w-3.5 h-3.5 fill-white text-white shrink-0" />
             <span>HDHub4u</span>
           </a>
 
@@ -362,9 +362,9 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             href={movielinkbdUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl sunset-gradient-btn text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
-            <Globe className="w-4 h-4 text-white shrink-0" />
+            <Globe className="w-3.5 h-3.5 text-white shrink-0" />
             <span>MovieLinkBD</span>
           </a>
 
@@ -372,9 +372,9 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           <button
             type="button"
             onClick={() => onOpenTrailer(currentMovie)}
-            className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl sunset-gradient-btn text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
-            <Clapperboard className="w-4 h-4 text-white shrink-0" />
+            <Clapperboard className="w-3.5 h-3.5 text-white shrink-0" />
             <span>Official Trailer</span>
           </button>
         </div>
