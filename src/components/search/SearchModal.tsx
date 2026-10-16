@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Movie } from '../../types/movie';
+import { MOVIES } from '../../data/moviesData';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService, RecentSearchItem } from '../../services/storageService';
 import { 
@@ -143,11 +144,25 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         }
       } catch (err: any) {
         if (err.name === 'AbortError') return;
-        console.error('[SearchModal] Movie search error:', err);
-        setErrorMsg(err.message || 'Failed to search movie catalog. Please check your connection.');
-        setResults([]);
-        setTotalPages(0);
-        setTotalResults(0);
+        console.warn('[SearchModal] TMDB search error, checking catalog fallback:', err);
+        const q = trimmed.toLowerCase();
+        const matches = MOVIES.filter(m => 
+          m.title.toLowerCase().includes(q) ||
+          String(m.tmdbId).includes(q) ||
+          (m.director && m.director.toLowerCase().includes(q)) ||
+          (Array.isArray(m.cast) && m.cast.some(c => c.toLowerCase().includes(q)))
+        );
+        if (matches.length > 0) {
+          setResults(matches);
+          setTotalPages(1);
+          setTotalResults(matches.length);
+          setErrorMsg(null);
+        } else {
+          setErrorMsg(err.message || 'No matching movies found.');
+          setResults([]);
+          setTotalPages(0);
+          setTotalResults(0);
+        }
       } finally {
         setIsLoading(false);
       }

@@ -37,6 +37,9 @@ const TMDB_TO_UNIVERSE_MAP: Record<number, { universeId: string; universeName: s
   // Cyberpunk & Blade Runner
   335984: { universeId: 'cyber-dystopia', universeName: 'Cybernetic Futures' }, // Blade Runner 2049
   78: { universeId: 'cyber-dystopia', universeName: 'Cybernetic Futures' }, // Blade Runner (1982)
+
+  // Marvel / Spider-Man
+  969681: { universeId: 'marvel-cinematic', universeName: 'Marvel Cinematic Universe' }, // Spider-Man: Brand New Day
 };
 
 // TMDB Genre ID dictionary

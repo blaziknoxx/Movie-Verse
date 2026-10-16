@@ -488,6 +488,38 @@ const INITIAL_RAW_MOVIES: Movie[] = [
     },
     streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
     moodIds: ['dark-gritty', 'action-heavy', 'psychological']
+  },
+  {
+    id: 'spider-man-brand-new-day',
+    tmdbId: 969681,
+    title: 'Spider-Man: Brand New Day',
+    slug: 'spider-man-brand-new-day',
+    year: 2026,
+    duration: '2h 15m',
+    rating: 8.8,
+    genres: ['Action', 'Adventure', 'Sci-Fi'],
+    tagline: 'A brand new day begins for Peter Parker.',
+    overview: 'Peter Parker navigates a new era of street-level challenges, personal redemption, and newfound responsibilities across New York City following the multiverse upheaval.',
+    director: 'Destin Daniel Cretton',
+    cast: ['Tom Holland', 'Zendaya', 'Sadie Sink', 'Mark Ruffalo'],
+    posterUrl: posterCosmos,
+    backdropUrl: heroSciFi,
+    universeId: 'marvel-cinematic',
+    universeName: 'Marvel Cinematic Universe',
+    featured: true,
+    trailerKey: 'mqqft2x_Aa4',
+    vibeTags: ['Acrobatic Stunts', 'Street-Level Vigilance', 'Emotional Heart', 'High-Stakes Action'],
+    vibeProfile: {
+      darkAtmosphere: 5,
+      actionIntensity: 9,
+      psychologicalComplexity: 6,
+      mysterySuspense: 7,
+      emotionalWeight: 8,
+      pacing: 'Propulsive',
+      visualStyle: 'Modern Marvel Cinematic Vibe'
+    },
+    streamingPlatforms: STANDARD_EXTERNAL_PLATFORMS,
+    moodIds: ['action-heavy', 'sci-fi-epic']
   }
 ];
 
