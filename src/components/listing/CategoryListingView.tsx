@@ -36,6 +36,36 @@ export const CATEGORY_CONFIGS: Record<string, CategoryListingConfig> = {
     description: 'The most popular and watched films this week across global cinema.',
     iconType: 'flame'
   },
+  hollywood: {
+    key: 'hollywood',
+    title: 'Hollywood Movies',
+    description: 'Major studio blockbusters, acclaimed American releases, and visionary cinematic achievements.',
+    iconType: 'film'
+  },
+  hindi: {
+    key: 'hindi',
+    title: 'Hindi Movies',
+    description: 'Heartfelt storytelling, blockbuster spectacles, and celebrated Hindi cinema masterpieces.',
+    iconType: 'globe'
+  },
+  animation: {
+    key: 'animation',
+    title: 'Animation Movies',
+    description: 'Breathtaking visual animation, family classics, and masterworks from legendary animation studios.',
+    iconType: 'sparkles'
+  },
+  tamil: {
+    key: 'tamil',
+    title: 'Tamil Movies',
+    description: 'High-octane action, dramatic narratives, and visionary works from Tamil cinema (Kollywood).',
+    iconType: 'globe'
+  },
+  bangladeshi: {
+    key: 'bangladeshi',
+    title: 'Bangladeshi Movies',
+    description: 'Genuine Bangladeshi motion pictures, acclaimed indie stories, and national cinematic milestones (Dhallywood).',
+    iconType: 'globe'
+  },
   popular: {
     key: 'popular',
     title: 'Popular Movies',
@@ -59,18 +89,6 @@ export const CATEGORY_CONFIGS: Record<string, CategoryListingConfig> = {
     title: 'Top Rated Masterpieces',
     description: 'All-time cinematic milestones, critical masterpieces, and legendary films.',
     iconType: 'award'
-  },
-  tamil: {
-    key: 'tamil',
-    title: 'Tamil Cinema (Kollywood)',
-    description: 'High-octane action, dramatic narratives, and visionary works from Tamil cinema.',
-    iconType: 'globe'
-  },
-  bangladeshi: {
-    key: 'bangladeshi',
-    title: 'Bangladeshi Cinema (Dhallywood)',
-    description: 'Genuine Bangladeshi motion pictures, acclaimed indie stories, and national cinematic milestones.',
-    iconType: 'globe'
   }
 };
 
@@ -163,6 +181,8 @@ export const CategoryListingView: React.FC<CategoryListingViewProps> = ({
         return <Clock className="w-5 h-5 text-[#FBB931]" />;
       case 'globe':
         return <Globe2 className="w-5 h-5 text-[#EA6113]" />;
+      case 'sparkles':
+        return <Sparkles className="w-5 h-5 text-[#FBB931]" />;
       default:
         return <Film className="w-5 h-5 text-[#EA6113]" />;
     }

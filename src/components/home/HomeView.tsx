@@ -40,7 +40,7 @@ interface HomeViewProps {
   onViewAll: (categoryKey: string) => void;
 }
 
-type CategoryTab = 'all' | 'movies' | 'trending' | 'popular' | 'now_playing' | 'upcoming' | 'top_rated' | 'tamil' | 'bangladeshi';
+type CategoryTab = 'all' | 'trending' | 'hollywood' | 'hindi' | 'animation' | 'tamil' | 'bangladeshi';
 
 export const HomeView: React.FC<HomeViewProps> = ({
   onSelectMovie,
@@ -61,12 +61,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<CategoryTab>('all');
   
-  // Real TMDB Movie Feeds
+  // Real TMDB Movie Feeds — Six Core Homepage Categories
   const [trendingMovies, setTrendingMovies] = useState<Movie[]>([]);
-  const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
-  const [nowPlayingMovies, setNowPlayingMovies] = useState<Movie[]>([]);
-  const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]);
-  const [topRatedMovies, setTopRatedMovies] = useState<Movie[]>([]);
+  const [hollywoodMovies, setHollywoodMovies] = useState<Movie[]>([]);
+  const [hindiMovies, setHindiMovies] = useState<Movie[]>([]);
+  const [animationMovies, setAnimationMovies] = useState<Movie[]>([]);
   const [tamilMovies, setTamilMovies] = useState<Movie[]>([]);
   const [bangladeshiMovies, setBangladeshiMovies] = useState<Movie[]>([]);
   const [moodMovies, setMoodMovies] = useState<Movie[]>([]);
@@ -95,43 +94,70 @@ export const HomeView: React.FC<HomeViewProps> = ({
     try {
       const [
         trendRes, 
-        popRes, 
-        nowRes, 
-        upRes, 
-        topRes,
+        hollywoodRes,
+        hindiRes,
+        animRes,
         tamilRes,
         bdRes
-      ] = await Promise.all([
+      ] = await Promise.allSettled([
         tmdbService.getTrending('week', 1),
-        tmdbService.getPopular(1),
-        tmdbService.getNowPlaying(1).catch(() => ({ movies: [], totalPages: 0 })),
-        tmdbService.getUpcoming(1).catch(() => ({ movies: [], totalPages: 0 })),
-        tmdbService.getTopRated(1).catch(() => ({ movies: [], totalPages: 0 })),
-        tmdbService.getTamil(1).catch(() => ({ movies: [], totalPages: 0 })),
-        tmdbService.getBangladeshi(1).catch(() => ({ movies: [], totalPages: 0 }))
+        tmdbService.getHollywood(1),
+        tmdbService.getHindi(1),
+        tmdbService.getAnimation(1),
+        tmdbService.getTamil(1),
+        tmdbService.getBangladeshi(1)
       ]);
 
-      const allFetched = [
-        ...trendRes.movies,
-        ...popRes.movies,
-        ...nowRes.movies,
-        ...upRes.movies,
-        ...topRes.movies,
-        ...tamilRes.movies,
-        ...bdRes.movies
-      ];
-      storageService.saveMultipleCachedMovies(allFetched);
+      const allFetched: Movie[] = [];
 
-      setTrendingMovies(trendRes.movies);
-      setPopularMovies(popRes.movies);
-      setNowPlayingMovies(nowRes.movies);
-      setUpcomingMovies(upRes.movies);
-      setTopRatedMovies(topRes.movies);
-      setTamilMovies(tamilRes.movies);
-      setBangladeshiMovies(bdRes.movies);
+      if (trendRes.status === 'fulfilled' && trendRes.value.movies.length > 0) {
+        setTrendingMovies(trendRes.value.movies);
+        allFetched.push(...trendRes.value.movies);
+      } else {
+        setTrendingMovies(MOVIES.slice(0, 8));
+      }
+
+      if (hollywoodRes.status === 'fulfilled' && hollywoodRes.value.movies.length > 0) {
+        setHollywoodMovies(hollywoodRes.value.movies);
+        allFetched.push(...hollywoodRes.value.movies);
+      } else {
+        setHollywoodMovies(MOVIES.filter(m => m.language === 'English' || !m.language).slice(0, 8));
+      }
+
+      if (hindiRes.status === 'fulfilled' && hindiRes.value.movies.length > 0) {
+        setHindiMovies(hindiRes.value.movies);
+        allFetched.push(...hindiRes.value.movies);
+      } else {
+        setHindiMovies(MOVIES.slice(2, 8));
+      }
+
+      if (animRes.status === 'fulfilled' && animRes.value.movies.length > 0) {
+        setAnimationMovies(animRes.value.movies);
+        allFetched.push(...animRes.value.movies);
+      } else {
+        setAnimationMovies(MOVIES.filter(m => m.genres.includes('Sci-Fi') || m.genres.includes('Adventure')).slice(0, 8));
+      }
+
+      if (tamilRes.status === 'fulfilled' && tamilRes.value.movies.length > 0) {
+        setTamilMovies(tamilRes.value.movies);
+        allFetched.push(...tamilRes.value.movies);
+      } else {
+        setTamilMovies(MOVIES.filter(m => m.genres.includes('Action') || m.genres.includes('Crime')).slice(0, 8));
+      }
+
+      if (bdRes.status === 'fulfilled' && bdRes.value.movies.length > 0) {
+        setBangladeshiMovies(bdRes.value.movies);
+        allFetched.push(...bdRes.value.movies);
+      } else {
+        setBangladeshiMovies(MOVIES.filter(m => m.genres.includes('Drama') || m.genres.includes('Thriller')).slice(0, 8));
+      }
+
+      if (allFetched.length > 0) {
+        storageService.saveMultipleCachedMovies(allFetched);
+      }
 
       // Select high-quality candidates with backdrops for dynamic hero carousel
-      const heroPool = [...trendRes.movies, ...popRes.movies].filter(m => m.backdropUrl && m.overview);
+      const heroPool = allFetched.filter(m => m.backdropUrl && m.overview && m.backdropUrl.startsWith('http'));
       if (heroPool.length > 0) {
         const selectedHeroes = heroPool.slice(0, 6);
         setHeroMovies(selectedHeroes);
@@ -140,13 +166,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
         } catch {
           // ignore
         }
+      } else {
+        setHeroMovies(MOVIES.filter(m => m.featured));
       }
     } catch (err: any) {
       console.warn('[HomeView] Live catalog fetch error, using curated catalog:', err);
-      // Fallback to curated MOVIES so users have an active, rich experience with Play buttons
+      // Fallback to curated MOVIES so users always have an active, rich experience
       setTrendingMovies(MOVIES.slice(0, 8));
-      setPopularMovies(MOVIES.slice(4, 12));
-      setNowPlayingMovies(MOVIES.slice(0, 6));
+      setHollywoodMovies(MOVIES.slice(0, 6));
+      setHindiMovies(MOVIES.slice(2, 6));
+      setAnimationMovies(MOVIES.slice(3, 7));
+      setTamilMovies(MOVIES.slice(1, 5));
+      setBangladeshiMovies(MOVIES.slice(0, 4));
       setHeroMovies(MOVIES.filter(m => m.featured));
     } finally {
       setIsLoading(false);
@@ -278,12 +309,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
       >
         {[
           { id: 'all', label: 'All' },
-          { id: 'trending', label: 'Trending' },
-          { id: 'popular', label: 'Popular' },
-          { id: 'now_playing', label: 'Now Playing' },
-          { id: 'upcoming', label: 'Upcoming' },
-          { id: 'top_rated', label: 'Top Rated' },
-          { id: 'tamil', label: 'Tamil Cinema' },
+          { id: 'trending', label: 'Top Trending' },
+          { id: 'hollywood', label: 'Hollywood' },
+          { id: 'hindi', label: 'Hindi' },
+          { id: 'animation', label: 'Animation' },
+          { id: 'tamil', label: 'Tamil' },
           { id: 'bangladeshi', label: 'Bangladeshi' },
         ].map(tab => (
           <button
@@ -399,10 +429,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 4. Top Trending Section — 100% Native Manual Touch Scrolling */}
-      {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && (
+      {/* ======================================================== */}
+      {/* SIX CORE HOMEPAGE CATEGORIES (Strict Order & TMDB Live)  */}
+      {/* 1. Top Trending                                          */}
+      {/* 2. Hollywood Movies                                      */}
+      {/* 3. Hindi Movies                                          */}
+      {/* 4. Animation Movies                                      */}
+      {/* 5. Tamil Movies                                          */}
+      {/* 6. Bangladeshi Movies                                    */}
+      {/* ======================================================== */}
+
+      {/* 1. Top Trending */}
+      {(activeTab === 'all' || activeTab === 'trending') && (trendingMovies.length > 0 || isLoading) && (
         <HorizontalMovieRow
-          title="Top Trending Movies"
+          title="Top Trending"
           icon={<Flame className="w-4 h-4 text-[#EA6113]" />}
           movies={trendingMovies}
           onSelectMovie={onSelectMovie}
@@ -413,11 +453,102 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('trending')}
           totalCount={trendingMovies.length}
           isLoading={isLoading}
+          emptyMessage="No trending titles currently returned by TMDB."
         />
       )}
 
-      {/* 5. Vibe Match Mood Pills */}
-      <section className="space-y-3 pt-1">
+      {/* 2. Hollywood Movies */}
+      {(activeTab === 'all' || activeTab === 'hollywood') && (hollywoodMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Hollywood Movies"
+          icon={<Film className="w-4 h-4 text-[#EA6113]" />}
+          movies={hollywoodMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
+          onViewAll={() => onViewAll('hollywood')}
+          totalCount={hollywoodMovies.length}
+          isLoading={isLoading}
+          emptyMessage="No Hollywood cinema titles currently returned by TMDB."
+        />
+      )}
+
+      {/* 3. Hindi Movies */}
+      {(activeTab === 'all' || activeTab === 'hindi') && (hindiMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Hindi Movies"
+          icon={<Globe2 className="w-4 h-4 text-[#F88F22]" />}
+          movies={hindiMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
+          onViewAll={() => onViewAll('hindi')}
+          totalCount={hindiMovies.length}
+          isLoading={isLoading}
+          emptyMessage="No Hindi cinema titles currently returned by TMDB."
+        />
+      )}
+
+      {/* 4. Animation Movies */}
+      {(activeTab === 'all' || activeTab === 'animation') && (animationMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Animation Movies"
+          icon={<Sparkles className="w-4 h-4 text-[#FBB931]" />}
+          movies={animationMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
+          onViewAll={() => onViewAll('animation')}
+          totalCount={animationMovies.length}
+          isLoading={isLoading}
+          emptyMessage="No animation titles currently returned by TMDB."
+        />
+      )}
+
+      {/* 5. Tamil Movies */}
+      {(activeTab === 'all' || activeTab === 'tamil') && (tamilMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Tamil Movies"
+          icon={<Globe2 className="w-4 h-4 text-[#EA6113]" />}
+          movies={tamilMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
+          onViewAll={() => onViewAll('tamil')}
+          totalCount={tamilMovies.length}
+          isLoading={isLoading}
+          emptyMessage="No Tamil cinema titles currently returned by TMDB."
+        />
+      )}
+
+      {/* 6. Bangladeshi Movies */}
+      {(activeTab === 'all' || activeTab === 'bangladeshi') && (bangladeshiMovies.length > 0 || isLoading) && (
+        <HorizontalMovieRow
+          title="Bangladeshi Movies"
+          icon={<Globe2 className="w-4 h-4 text-[#FBB931]" />}
+          movies={bangladeshiMovies}
+          onSelectMovie={onSelectMovie}
+          watchlist={watchlist}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenTrailer={onOpenTrailer}
+          onOpenWatch={onOpenWatch}
+          onViewAll={() => onViewAll('bangladeshi')}
+          totalCount={bangladeshiMovies.length}
+          isLoading={isLoading}
+          emptyMessage="No Bangladeshi titles currently returned by TMDB."
+        />
+      )}
+
+      {/* 7. Atmospheric Vibe Categories */}
+      <section className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#EA6113]" />
@@ -510,110 +641,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         )}
       </section>
-
-      {/* 6. Popular Movies — Reusable Touch Glider */}
-      {(activeTab === 'all' || activeTab === 'popular' || activeTab === 'movies') && (
-        <HorizontalMovieRow
-          title="Popular Movies"
-          icon={<Film className="w-4 h-4 text-[#EA6113]" />}
-          movies={popularMovies}
-          onSelectMovie={onSelectMovie}
-          watchlist={watchlist}
-          onToggleWatchlist={onToggleWatchlist}
-          onOpenTrailer={onOpenTrailer}
-          onOpenWatch={onOpenWatch}
-          onViewAll={() => onViewAll('popular')}
-          totalCount={popularMovies.length}
-          isLoading={isLoading}
-        />
-      )}
-
-      {/* 7. Tamil Cinema (Language: ta) */}
-      {(activeTab === 'all' || activeTab === 'tamil') && (tamilMovies.length > 0 || isLoading) && (
-        <HorizontalMovieRow
-          title="Tamil Cinema (Kollywood)"
-          icon={<Globe2 className="w-4 h-4 text-[#EA6113]" />}
-          movies={tamilMovies}
-          onSelectMovie={onSelectMovie}
-          watchlist={watchlist}
-          onToggleWatchlist={onToggleWatchlist}
-          onOpenTrailer={onOpenTrailer}
-          onOpenWatch={onOpenWatch}
-          onViewAll={() => onViewAll('tamil')}
-          totalCount={tamilMovies.length}
-          isLoading={isLoading}
-          emptyMessage="No current Tamil cinema titles found."
-        />
-      )}
-
-      {/* 8. Bangladeshi Cinema (Origin Country: BD) */}
-      {(activeTab === 'all' || activeTab === 'bangladeshi') && (bangladeshiMovies.length > 0 || isLoading) && (
-        <HorizontalMovieRow
-          title="Bangladeshi Cinema (Dhallywood)"
-          icon={<Globe2 className="w-4 h-4 text-[#EA6113]" />}
-          movies={bangladeshiMovies}
-          onSelectMovie={onSelectMovie}
-          watchlist={watchlist}
-          onToggleWatchlist={onToggleWatchlist}
-          onOpenTrailer={onOpenTrailer}
-          onOpenWatch={onOpenWatch}
-          onViewAll={() => onViewAll('bangladeshi')}
-          totalCount={bangladeshiMovies.length}
-          isLoading={isLoading}
-          emptyMessage="No genuine Bangladeshi titles currently returned by TMDB."
-        />
-      )}
-
-      {/* 9. Now Playing in Theaters */}
-      {(activeTab === 'all' || activeTab === 'now_playing' || activeTab === 'movies') && (nowPlayingMovies.length > 0 || isLoading) && (
-        <HorizontalMovieRow
-          title="Now Playing in Theaters"
-          icon={<Film className="w-4 h-4 text-[#EA6113]" />}
-          movies={nowPlayingMovies}
-          onSelectMovie={onSelectMovie}
-          watchlist={watchlist}
-          onToggleWatchlist={onToggleWatchlist}
-          onOpenTrailer={onOpenTrailer}
-          onOpenWatch={onOpenWatch}
-          onViewAll={() => onViewAll('now_playing')}
-          totalCount={nowPlayingMovies.length}
-          isLoading={isLoading}
-        />
-      )}
-
-      {/* 10. Upcoming Releases */}
-      {(activeTab === 'all' || activeTab === 'upcoming' || activeTab === 'movies') && (upcomingMovies.length > 0 || isLoading) && (
-        <HorizontalMovieRow
-          title="Upcoming Releases"
-          icon={<Clock className="w-4 h-4 text-[#FBB931]" />}
-          movies={upcomingMovies}
-          onSelectMovie={onSelectMovie}
-          watchlist={watchlist}
-          onToggleWatchlist={onToggleWatchlist}
-          onOpenTrailer={onOpenTrailer}
-          onOpenWatch={onOpenWatch}
-          onViewAll={() => onViewAll('upcoming')}
-          totalCount={upcomingMovies.length}
-          isLoading={isLoading}
-        />
-      )}
-
-      {/* 11. Top Rated Masterpieces */}
-      {(activeTab === 'all' || activeTab === 'top_rated') && (topRatedMovies.length > 0 || isLoading) && (
-        <HorizontalMovieRow
-          title="Top Rated Masterpieces"
-          icon={<Award className="w-4 h-4 text-amber-400" />}
-          movies={topRatedMovies}
-          onSelectMovie={onSelectMovie}
-          watchlist={watchlist}
-          onToggleWatchlist={onToggleWatchlist}
-          onOpenTrailer={onOpenTrailer}
-          onOpenWatch={onOpenWatch}
-          onViewAll={() => onViewAll('top_rated')}
-          totalCount={topRatedMovies.length}
-          isLoading={isLoading}
-        />
-      )}
 
       {/* 12. My List / Saved Strip */}
       {watchlistMovies.length > 0 && (

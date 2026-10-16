@@ -407,19 +407,17 @@ function getPastDateIso(years = 2): string {
   return d.toISOString().split('T')[0];
 }
 
-function filterAndSortRecent(movies: Movie[], today: string): Movie[] {
-  return movies
-    .filter(m => {
-      // Must not be in the future for released movie sections
-      if (m.releaseDate && m.releaseDate > today) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      // Sort strictly by descending release date
-      const dateA = a.releaseDate || `${a.year}-01-01`;
-      const dateB = b.releaseDate || `${b.year}-01-01`;
-      return dateB.localeCompare(dateA);
-    });
+function cleanAndFilterMovies(movies: Movie[], today: string): Movie[] {
+  const seenIds = new Set<string | number>();
+  return movies.filter(m => {
+    if (!m) return false;
+    const key = m.tmdbId || m.id;
+    if (!key || seenIds.has(key)) return false;
+    seenIds.add(key);
+    // Filter out unreleased titles with future release dates
+    if (m.releaseDate && m.releaseDate > today) return false;
+    return true;
+  });
 }
 
 export const tmdbService = {
@@ -439,13 +437,14 @@ export const tmdbService = {
 
   /**
    * Fetch weekly or daily trending movies.
-   * STRICT: Preserves TMDB's actual trending ranking! Does NOT re-sort by release date.
+   * STRICT: Preserves TMDB's actual trending ranking and deduplicates.
    */
   async getTrending(timeWindow: 'day' | 'week' = 'week', page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const url = `/api/tmdb/trending?time_window=${timeWindow}&page=${page}`;
     // 5-minute cache TTL for live trending
     const data = await cachedFetchJson<any>(url, 5 * 60 * 1000);
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = cleanAndFilterMovies(rawMovies, getTodayIso());
     return { movies, totalPages: data.total_pages || 1 };
   },
 
@@ -455,7 +454,8 @@ export const tmdbService = {
   async getPopular(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const url = `/api/tmdb/popular?page=${page}`;
     const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = cleanAndFilterMovies(rawMovies, getTodayIso());
     return { movies, totalPages: data.total_pages || 1 };
   },
 
@@ -468,8 +468,7 @@ export const tmdbService = {
     const url = `/api/tmdb/now_playing?page=${page}`;
     const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
     const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    // Filter out unreleased titles
-    const movies = rawMovies.filter((m: Movie) => !m.releaseDate || m.releaseDate <= today);
+    const movies = cleanAndFilterMovies(rawMovies, today);
     return { movies, totalPages: data.total_pages || 1 };
   },
 
@@ -496,83 +495,98 @@ export const tmdbService = {
   async getTopRated(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const url = `/api/tmdb/top_rated?page=${page}`;
     const data = await cachedFetchJson<any>(url, 30 * 60 * 1000);
-    const movies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+    const movies = cleanAndFilterMovies(rawMovies, getTodayIso());
     return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch recent Hollywood (US productions in English).
+   * Fetch Hollywood Movies (American cinema in English).
    * Filters: with_original_language=en, with_origin_country=US, primary_release_date.lte=today,
-   * primary_release_date.gte=2 years back, sorted by primary_release_date.desc.
+   * sorted by popularity.desc, vote_count.gte=20.
    */
   async getHollywood(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const today = getTodayIso();
-    const pastDate = getPastDateIso(2);
-    const url = `/api/tmdb/discover?with_original_language=en&with_origin_country=US&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=10&page=${page}`;
+    const url = `/api/tmdb/discover?with_original_language=en&with_origin_country=US&sort_by=popularity.desc&primary_release_date.lte=${today}&vote_count.gte=20&page=${page}`;
     const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
     const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    const movies = filterAndSortRecent(rawMovies, today);
+    const movies = cleanAndFilterMovies(rawMovies, today);
     return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch recent Hindi movies.
+   * Fetch Hindi Movies.
    * Filters: with_original_language=hi, primary_release_date.lte=today,
-   * sorted by primary_release_date.desc.
+   * sorted by popularity.desc, vote_count.gte=5.
    */
   async getHindi(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const today = getTodayIso();
-    const pastDate = getPastDateIso(2);
-    const url = `/api/tmdb/discover?with_original_language=hi&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=5&page=${page}`;
+    const url = `/api/tmdb/discover?with_original_language=hi&sort_by=popularity.desc&primary_release_date.lte=${today}&vote_count.gte=5&page=${page}`;
     const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
     const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    const movies = filterAndSortRecent(rawMovies, today);
+    const movies = cleanAndFilterMovies(rawMovies, today);
     return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch recent Animation movies.
-   * Filters: with_genres=16, primary_release_date.lte=today,
-   * sorted by primary_release_date.desc.
+   * Fetch Animation Movies.
+   * Filters: with_genres=16 (Animation), primary_release_date.lte=today,
+   * sorted by popularity.desc, vote_count.gte=10.
    */
   async getAnimation(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const today = getTodayIso();
-    const pastDate = getPastDateIso(2);
-    const url = `/api/tmdb/discover?with_genres=16&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=10&page=${page}`;
+    const url = `/api/tmdb/discover?with_genres=16&sort_by=popularity.desc&primary_release_date.lte=${today}&vote_count.gte=10&page=${page}`;
     const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
     const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    const movies = filterAndSortRecent(rawMovies, today);
+    const movies = cleanAndFilterMovies(rawMovies, today);
     return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch recent Tamil movies.
+   * Fetch Tamil Movies (Kollywood).
    * Filters: with_original_language=ta, primary_release_date.lte=today,
-   * sorted by primary_release_date.desc.
+   * sorted by popularity.desc, vote_count.gte=3.
    */
   async getTamil(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const today = getTodayIso();
-    const pastDate = getPastDateIso(2);
-    const url = `/api/tmdb/discover?with_original_language=ta&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&primary_release_date.gte=${pastDate}&vote_count.gte=3&page=${page}`;
+    const url = `/api/tmdb/discover?with_original_language=ta&sort_by=popularity.desc&primary_release_date.lte=${today}&vote_count.gte=3&page=${page}`;
     const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
     const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    const movies = filterAndSortRecent(rawMovies, today);
+    const movies = cleanAndFilterMovies(rawMovies, today);
     return { movies, totalPages: data.total_pages || 1 };
   },
 
   /**
-   * Fetch recent Bangladeshi movies.
+   * Fetch Bangladeshi Movies (Dhallywood).
    * Filters: with_origin_country=BD, primary_release_date.lte=today,
-   * sorted by primary_release_date.desc.
-   * Note: No artificial vote count threshold to ensure all legitimate releases are preserved.
+   * sorted by popularity.desc. Also supplements with language=bn if page 1 has low count.
    */
   async getBangladeshi(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
     const today = getTodayIso();
-    const url = `/api/tmdb/discover?with_origin_country=BD&sort_by=primary_release_date.desc&primary_release_date.lte=${today}&page=${page}`;
-    const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
-    const rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
-    const movies = filterAndSortRecent(rawMovies, today);
-    return { movies, totalPages: data.total_pages || 1 };
+    const url = `/api/tmdb/discover?with_origin_country=BD&sort_by=popularity.desc&primary_release_date.lte=${today}&page=${page}`;
+    try {
+      const data = await cachedFetchJson<any>(url, 10 * 60 * 1000);
+      let rawMovies = (data.results || []).map((m: any) => normalizeTMDBMovie(m));
+      
+      // If low count on page 1, supplement with original_language=bn
+      if (rawMovies.length < 8 && page === 1) {
+        try {
+          const bnUrl = `/api/tmdb/discover?with_original_language=bn&sort_by=popularity.desc&primary_release_date.lte=${today}&page=1`;
+          const bnData = await cachedFetchJson<any>(bnUrl, 10 * 60 * 1000);
+          const bnMovies = (bnData.results || []).map((m: any) => normalizeTMDBMovie(m));
+          rawMovies = [...rawMovies, ...bnMovies];
+        } catch {
+          // ignore
+        }
+      }
+      const movies = cleanAndFilterMovies(rawMovies, today);
+      return { movies, totalPages: data.total_pages || 1 };
+    } catch {
+      const bnUrl = `/api/tmdb/discover?with_original_language=bn&sort_by=popularity.desc&primary_release_date.lte=${today}&page=${page}`;
+      const bnData = await cachedFetchJson<any>(bnUrl, 10 * 60 * 1000);
+      const movies = cleanAndFilterMovies((bnData.results || []).map((m: any) => normalizeTMDBMovie(m)), today);
+      return { movies, totalPages: bnData.total_pages || 1 };
+    }
   },
 
   /**
