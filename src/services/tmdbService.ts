@@ -576,6 +576,17 @@ export const tmdbService = {
   },
 
   /**
+   * Aliases for regional cinema queries
+   */
+  async getTamilCinema(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    return this.getTamil(page);
+  },
+
+  async getBangladeshiCinema(page = 1): Promise<{ movies: Movie[]; totalPages: number }> {
+    return this.getBangladeshi(page);
+  },
+
+  /**
    * Dispatch to the correct TMDB endpoint based on category ID.
    */
   async getCategoryMovies(category: string, page = 1): Promise<{ movies: Movie[]; totalPages: number }> {

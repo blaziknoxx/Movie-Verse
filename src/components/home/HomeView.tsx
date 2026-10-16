@@ -107,8 +107,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
         tmdbService.getNowPlaying(1).catch(() => ({ movies: [], totalPages: 0 })),
         tmdbService.getUpcoming(1).catch(() => ({ movies: [], totalPages: 0 })),
         tmdbService.getTopRated(1).catch(() => ({ movies: [], totalPages: 0 })),
-        tmdbService.getTamilCinema(1).catch(() => ({ movies: [], totalPages: 0 })),
-        tmdbService.getBangladeshiCinema(1).catch(() => ({ movies: [], totalPages: 0 }))
+        tmdbService.getTamil(1).catch(() => ({ movies: [], totalPages: 0 })),
+        tmdbService.getBangladeshi(1).catch(() => ({ movies: [], totalPages: 0 }))
       ]);
 
       const allFetched = [
