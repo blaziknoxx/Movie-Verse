@@ -46,10 +46,28 @@ export function buildCineSrcMovieUrl(tmdbId: string | number): string {
 }
 
 /**
+ * Builds the dynamic Multiembed movie embed URL for a given TMDB movie ID.
+ * Format: https://multiembed.mov/?video_id={tmdbId}&tmdb=1
+ */
+export function buildMultiembedMovieUrl(tmdbId: string | number): string {
+  const cleanId = String(tmdbId).trim().replace(/\D/g, '');
+  if (!cleanId) return '';
+  try {
+    const url = new URL('https://multiembed.mov/');
+    url.searchParams.set('video_id', cleanId);
+    url.searchParams.set('tmdb', '1');
+    return url.toString();
+  } catch {
+    return `https://multiembed.mov/?video_id=${encodeURIComponent(cleanId)}&tmdb=1`;
+  }
+}
+
+/**
  * Data-driven registry of streaming providers.
  * Provider Order:
  * 1. CineSRC — Primary default movie streaming provider
- * 2. NexStream — High-definition adaptive streaming provider
+ * 2. Multiembed — High-speed multi-source cloud streaming provider
+ * 3. NexStream — High-definition adaptive streaming provider
  */
 export const STREAMING_PROVIDERS: StreamingProviderConfig[] = [
   {
@@ -68,6 +86,23 @@ export const STREAMING_PROVIDERS: StreamingProviderConfig[] = [
         return buildNexStreamTvUrl(tmdbId, season, episode);
       }
       return buildCineSrcMovieUrl(tmdbId);
+    },
+  },
+  {
+    id: 'multiembed',
+    name: 'Multiembed',
+    badge: '1080p HD',
+    quality: '1080p',
+    isVerified: true,
+    enabled: true,
+    description: 'High-speed multi-source cinema stream with cloud player',
+    supportsTv: false,
+    buildEmbedUrl: ({ tmdbId, mediaType, season = 1, episode = 1 }: ProviderUrlParams) => {
+      if (mediaType === 'tv') {
+        // Multiembed TV support not independently verified; preserve TV playback via verified NexStream TV stream.
+        return buildNexStreamTvUrl(tmdbId, season, episode);
+      }
+      return buildMultiembedMovieUrl(tmdbId);
     },
   },
   {

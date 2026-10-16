@@ -9,7 +9,7 @@
 import { PlaybackSource, PlaybackType, Movie } from '../types/movie';
 import { buildHDHub4uSearchUrl, getMovieLinkBDUrl } from './streamingProviders';
 import { buildNexStreamMovieUrl, NEXSTREAM_CONFIG } from './nexstreamService';
-import { buildCineSrcMovieUrl } from './streamingSourceRegistry';
+import { buildCineSrcMovieUrl, buildMultiembedMovieUrl } from './streamingSourceRegistry';
 import { storageService } from './storageService';
 
 // Strict allowlist for approved in-app iframe embed providers
@@ -29,6 +29,8 @@ const ALLOWED_EMBED_DOMAINS = [
   'codespecters.com',
   'cinesrc.st',
   'www.cinesrc.st',
+  'multiembed.mov',
+  'www.multiembed.mov',
 ];
 
 export interface ValidationResult {
@@ -206,7 +208,30 @@ export function validatePlaybackUrl(rawUrl: string): ValidationResult {
     }
   }
 
-  // 7. Check for approved NexStream embeds (api.codespecters.com)
+  // 7. Check for approved Multiembed embeds (multiembed.mov)
+  if (
+    hostname === 'multiembed.mov' ||
+    hostname === 'www.multiembed.mov' ||
+    hostname.endsWith('.multiembed.mov')
+  ) {
+    const videoId = parsed.searchParams.get('video_id');
+    const cleanId = videoId ? videoId.trim().replace(/\D/g, '') : '';
+    if (cleanId) {
+      // Re-construct sanitized canonical URL preserving tmdb=1
+      const sanitized = new URL('https://multiembed.mov/');
+      sanitized.searchParams.set('video_id', cleanId);
+      sanitized.searchParams.set('tmdb', '1');
+      return {
+        isValid: true,
+        sanitizedUrl: sanitized.toString(),
+        type: 'embed',
+        providerName: 'Multiembed',
+        canEmbedInIframe: true,
+      };
+    }
+  }
+
+  // 8. Check for approved NexStream embeds (api.codespecters.com)
   if (
     hostname === 'api.codespecters.com' ||
     hostname === 'codespecters.com' ||
@@ -291,7 +316,7 @@ export function resolveMoviePlaybackSources(movie: Movie): PlaybackSource[] {
   const sources: PlaybackSource[] = [];
   const tmdbId = getTmdbIdFromMovie(movie);
 
-  // Primary In-App Players: CineSRC (Default) and NexStream (Alternative)
+  // Primary In-App Players: CineSRC (Default), Multiembed, and NexStream
   if (tmdbId) {
     sources.push({
       id: `source-cinesrc-${tmdbId}`,
@@ -302,6 +327,16 @@ export function resolveMoviePlaybackSources(movie: Movie): PlaybackSource[] {
       isOfficial: true,
       badge: 'CineSRC HD',
       note: `Stream dynamically generated from TMDB ID: ${tmdbId}. Powered by CineSRC engine.`,
+    });
+    sources.push({
+      id: `source-multiembed-${tmdbId}`,
+      name: 'Multiembed',
+      type: 'embed',
+      url: buildMultiembedMovieUrl(tmdbId),
+      quality: '1080p',
+      isOfficial: true,
+      badge: 'Multiembed HD',
+      note: `Stream dynamically generated from TMDB ID: ${tmdbId}. Powered by Multiembed engine.`,
     });
     sources.push({
       id: `source-nexstream-${tmdbId}`,

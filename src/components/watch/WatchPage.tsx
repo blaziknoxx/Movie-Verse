@@ -144,7 +144,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [isReloading, setIsReloading] = useState<boolean>(false);
 
-  // Available data-driven streaming providers (CineSRC first, NexStream second)
+  // Available data-driven streaming providers (CineSRC first, Multiembed second, NexStream third)
   const availableProviders: StreamingProviderConfig[] = useMemo(() => {
     return getActiveStreamingProviders();
   }, []);
@@ -171,8 +171,8 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   const activeSource: PlaybackSource | null = useMemo(() => {
     if (!currentMovie) return null;
     const tmdbId = getTmdbIdFromMovie(currentMovie);
-    // For TV shows, safely prioritize NexStream since CineSRC TV endpoints cannot be confirmed
-    const effectiveProviderId = (currentMovie.mediaType === 'tv' && selectedProviderId === 'cinesrc')
+    // For TV shows, safely prioritize NexStream since CineSRC/Multiembed TV endpoints cannot be confirmed
+    const effectiveProviderId = (currentMovie.mediaType === 'tv' && (selectedProviderId === 'cinesrc' || selectedProviderId === 'multiembed'))
       ? 'nexstream'
       : selectedProviderId;
     const provider = getStreamingProviderById(effectiveProviderId) || availableProviders[0];
