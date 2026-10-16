@@ -12,7 +12,7 @@ import { Movie, PlaybackSource } from '../../types/movie';
 import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { resolveMoviePlaybackSources, getTmdbIdFromMovie } from '../../services/videoSecurityService';
-import { buildHDHub4uSearchUrl, getMovieLinkBDUrl } from '../../services/streamingProviders';
+import { buildHDHub4uSearchUrl, buildMovieLinkBDSearchUrl, getMovieLinkBDUrl } from '../../services/streamingProviders';
 import { VideoPlayer } from '../player/VideoPlayer';
 import { StreamingSourceSelector } from '../player/StreamingSourceSelector';
 import { MovieCard } from '../discover/MovieCard';
@@ -243,7 +243,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   }
 
   const hdhub4uUrl = buildHDHub4uSearchUrl(currentMovie.title);
-  const movielinkbdUrl = getMovieLinkBDUrl();
+  const movielinkbdUrl = buildMovieLinkBDSearchUrl(currentMovie.title);
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-3.5 sm:space-y-5 animate-fade-in pb-16">
@@ -357,11 +357,13 @@ export const WatchPage: React.FC<WatchPageProps> = ({
             <span>HDHub4u</span>
           </a>
 
-          {/* External Action Bar 2: MovieLinkBD Directory Index */}
+          {/* External Action Bar 2: MovieLinkBD Directory Search */}
           <a
             href={movielinkbdUrl}
             target="_blank"
             rel="noopener noreferrer"
+            title={`Search "${currentMovie.title}" on MovieLinkBD`}
+            aria-label={`Search ${currentMovie.title} on MovieLinkBD`}
             className="w-full py-2.5 px-4 rounded-xl sunset-gradient-btn text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-[0.98] cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5 text-white shrink-0" />

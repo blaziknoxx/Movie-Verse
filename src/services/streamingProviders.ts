@@ -12,7 +12,8 @@
 import { Movie, WhereToWatchSite } from '../types/movie';
 
 export const HDHUB4U_BASE_URL = 'https://new7.hdhub4u.cl/';
-export const MOVIELINKBD_BASE_URL = 'https://movielinkbd.tv/';
+export const MOVIELINKBD_BASE_URL = 'https://rn4ngh.movielinkbd.at/';
+export const MOVIELINKBD_SEARCH_BASE_URL = 'https://rn4ngh.movielinkbd.at/search';
 
 /**
  * Builds the dynamic HDHub4u search URL for a given movie title.
@@ -37,12 +38,34 @@ export function buildHDHub4uSearchUrl(title?: string): string {
 }
 
 /**
- * MovieLinkBD destination resolver.
- * Since MovieLinkBD relies on opaque internal movie hashes (e.g., mKs_fixdvmrced2szvz3ps5vuwtnfa)
- * and does not expose a public title-search endpoint or API, we safely fall back to the
- * verified homepage directory rather than fabricating IDs or appending unsupported paths.
+ * Builds the dynamic MovieLinkBD search URL for a given movie or TV title.
+ * Pattern: https://rn4ngh.movielinkbd.at/search?q={encoded title}
+ * Safe encoding handles spaces (%20), colons (%3A), hyphens, apostrophes, and unicode characters.
+ * Example: Spider-Man: No Way Home -> https://rn4ngh.movielinkbd.at/search?q=Spider-Man%3A%20No%20Way%20Home
  */
-export function getMovieLinkBDUrl(): string {
+export function buildMovieLinkBDSearchUrl(title?: string): string {
+  const cleanTitle = title?.trim();
+  if (!cleanTitle) {
+    return MOVIELINKBD_BASE_URL;
+  }
+
+  try {
+    const url = new URL(MOVIELINKBD_SEARCH_BASE_URL);
+    url.searchParams.set('q', cleanTitle);
+    return url.toString().replace(/\+/g, '%20');
+  } catch {
+    return `${MOVIELINKBD_SEARCH_BASE_URL}?q=${encodeURIComponent(cleanTitle)}`;
+  }
+}
+
+/**
+ * MovieLinkBD destination resolver.
+ * When a title is supplied, dynamically resolves to the universal search query URL.
+ */
+export function getMovieLinkBDUrl(title?: string): string {
+  if (title && title.trim()) {
+    return buildMovieLinkBDSearchUrl(title);
+  }
   return MOVIELINKBD_BASE_URL;
 }
 
@@ -163,7 +186,7 @@ export function evaluateProviderForMovie(
   }
 
   if (isMovieLinkBD) {
-    const targetUrl = MOVIELINKBD_BASE_URL;
+    const targetUrl = hasMovie ? buildMovieLinkBDSearchUrl(movieTitle) : MOVIELINKBD_BASE_URL;
 
     if (hasMovie && isSouthAsianLang) {
       // For South Asian / Bengali language movies, MovieLinkBD is a strong regional specialist
@@ -175,15 +198,15 @@ export function evaluateProviderForMovie(
         isRecommended: true,
         badgeLabel: 'Regional Focus',
         badgeStyle: 'regional',
-        matchReason: `Regional cinema specialist for South Asian & Bengali titles. MovieLinkBD catalogs local releases via its curated homepage index.`,
-        actionLabel: `Browse MovieLinkBD Directory`,
-        status: 'fallback-index',
+        matchReason: `Regional cinema specialist for South Asian & Bengali titles. Dynamic title search enabled for "${movieTitle}".`,
+        actionLabel: `Search on MovieLinkBD`,
+        status: 'direct-search',
         features: [
           'Bengali & South Asian Cinema Specialization',
-          'Curated Regional Media Catalog',
-          'Homepage Directory Fallback'
+          'Direct Title Search (/search?q=...)',
+          'Curated Regional Catalog'
         ],
-        destinationNote: 'MovieLinkBD utilizes internal opaque content hashes; search on homepage to locate verified regional streams.'
+        destinationNote: 'Navigates directly to universal search results on MovieLinkBD.'
       };
     } else if (hasMovie) {
       // General global movie (e.g. Hollywood / Sci-Fi / Nolan)
@@ -195,15 +218,15 @@ export function evaluateProviderForMovie(
         isRecommended: false,
         badgeLabel: 'Search on Site',
         badgeStyle: 'neutral',
-        matchReason: `Homepage directory fallback. MovieLinkBD utilizes proprietary internal content IDs that cannot be derived without an official search API.`,
-        actionLabel: `Search on MovieLinkBD (Directory)`,
-        status: 'fallback-index',
+        matchReason: `Direct title search query generated for "${movieTitle}" on MovieLinkBD.`,
+        actionLabel: `Search on MovieLinkBD`,
+        status: 'direct-search',
         features: [
+          'Direct Title Search (/search?q=...)',
           'South Asian & International Index',
-          'Opaque Content Hash Architecture',
-          'Manual Search on Destination Required'
+          'Instant Search Results'
         ],
-        destinationNote: 'Links directly to the verified homepage directory index. No movie IDs are fabricated.'
+        destinationNote: 'Navigates directly to universal search results on MovieLinkBD.'
       };
     } else {
       return {
@@ -214,15 +237,15 @@ export function evaluateProviderForMovie(
         isRecommended: false,
         badgeLabel: 'Search on Site',
         badgeStyle: 'neutral',
-        matchReason: 'Regional media guide and South Asian cinema directory. Manual navigation via homepage.',
+        matchReason: 'Regional media guide and South Asian cinema directory. Select a movie to generate a direct search query.',
         actionLabel: 'Visit MovieLinkBD',
         status: 'fallback-index',
         features: [
           'Regional Cinema Directory',
           'Bengali & South Asian Media',
-          'Homepage Directory Index'
+          'Universal Search Ready'
         ],
-        destinationNote: 'General directory index. Movie Verse does not claim verified availability on external sites.'
+        destinationNote: 'General directory index. Select a title to enable direct search.'
       };
     }
   }
