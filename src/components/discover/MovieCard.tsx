@@ -1,7 +1,7 @@
 import React, { useState, memo } from 'react';
 import { Movie } from '../../types/movie';
 import { Bookmark, Star, Film, Play } from 'lucide-react';
-import { getOptimizedPosterUrl, getBackdropUrl } from '../../services/tmdbService';
+import { getPosterThumbnailUrl } from '../../services/tmdbService';
 
 interface MovieCardProps {
   movie: Movie;
@@ -14,7 +14,7 @@ interface MovieCardProps {
   onOpenWatch?: (movie: Movie) => void;
 }
 
-export const MovieCard: React.FC<MovieCardProps> = memo(({
+const MovieCardComponent: React.FC<MovieCardProps> = ({
   movie,
   onSelectMovie,
   isWatchlisted,
@@ -28,29 +28,29 @@ export const MovieCard: React.FC<MovieCardProps> = memo(({
 
   const isLandscape = aspectRatio === 'landscape';
 
-  // Efficient image resolution: w342 for posters, w780 for landscape thumbnails on mobile
-  const resolvedImgUrl = isLandscape
-    ? (movie.backdropUrl ? getBackdropUrl(movie.backdropUrl, movie.title, 'w780') : getOptimizedPosterUrl(movie.posterUrl, 'w342', movie.title))
-    : getOptimizedPosterUrl(movie.posterUrl, 'w342', movie.title);
+  // Compute optimized thumbnail for portrait cards to cut memory & network bandwidth
+  const imageSource = isLandscape && movie.backdropUrl
+    ? movie.backdropUrl
+    : (movie.posterUrl?.includes('w500') ? movie.posterUrl.replace('/w500/', '/w342/') : movie.posterUrl);
 
   return (
     <div
       onClick={() => onSelectMovie(movie)}
-      className="group sunset-card-glow relative flex flex-col cursor-pointer transition-transform duration-300 active:scale-[0.98] min-w-0 w-full select-none"
+      className="group sunset-card-glow animate-card-in relative flex flex-col cursor-pointer transition-transform duration-200 active:scale-[0.98] min-w-0 w-full select-none"
     >
-      {/* Poster Media Box with Sunset Ambient Neon Lighting */}
+      {/* Poster Media Box with Sunset Ambient Lighting */}
       <div 
-        className={`relative w-full rounded-2xl overflow-hidden bg-[#160A05] border border-[#F88F22]/20 group-hover:border-[#FBB931]/60 shadow-lg group-hover:shadow-[0_0_24px_rgba(248,143,34,0.35)] transition-all z-10 ${
+        className={`relative w-full rounded-2xl overflow-hidden bg-[#160A05] border border-[#F88F22]/20 group-hover:border-[#FBB931]/60 shadow-lg group-hover:shadow-[0_0_20px_rgba(248,143,34,0.3)] transition-all z-10 ${
           isLandscape ? 'aspect-[16/10]' : 'aspect-[2/3]'
         }`}
       >
         {!imgError ? (
           <img
-            src={resolvedImgUrl}
+            src={imageSource}
             alt={movie.title}
             referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             decoding="async"
           />
@@ -79,7 +79,7 @@ export const MovieCard: React.FC<MovieCardProps> = memo(({
               e.stopPropagation();
               onToggleWatchlist(movie.id, e);
             }}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all pointer-events-auto cursor-pointer ${
+            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all pointer-events-auto ${
               isWatchlisted
                 ? 'bg-gradient-to-r from-[#EA6113] to-[#F88F22] text-white shadow-[0_0_14px_rgba(234,97,19,0.7)]'
                 : 'bg-black/65 backdrop-blur-md text-neutral-300 hover:text-white hover:bg-black/85 border border-[#F88F22]/20'
@@ -131,6 +131,15 @@ export const MovieCard: React.FC<MovieCardProps> = memo(({
       </div>
     </div>
   );
-});
+};
 
-MovieCard.displayName = 'MovieCard';
+export const MovieCard = memo(MovieCardComponent, (prev, next) => {
+  return (
+    prev.movie.id === next.movie.id &&
+    prev.isWatchlisted === next.isWatchlisted &&
+    prev.aspectRatio === next.aspectRatio &&
+    prev.movie.title === next.movie.title &&
+    prev.movie.rating === next.movie.rating &&
+    prev.movie.posterUrl === next.movie.posterUrl
+  );
+});
