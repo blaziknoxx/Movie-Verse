@@ -72,6 +72,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [source.url]);
 
+  // For embed sources (NexStream, YouTube, Vimeo), set a fallback timer
+  // to ensure the loading overlay NEVER blocks the user on mobile / Android
+  // even if third-party assets, adblockers, or fonts delay the iframe's onload event.
+  useEffect(() => {
+    if (source.type === 'embed') {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [source.type, source.url, retryKey]);
+
   // Format seconds to mm:ss or hh:mm:ss
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || seconds <= 0) return '00:00';
@@ -385,15 +397,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ref={containerRef}
         className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/30 shadow-[0_16px_50px_rgba(0,0,0,0.95)] sunset-card-glow group min-h-[220px] sm:min-h-[360px] md:min-h-[460px]"
       >
-        {/* Loading Overlay: Smooth fade-out without unmounting the iframe underneath */}
-        <div 
-          className={`absolute inset-0 z-20 transition-opacity duration-500 pointer-events-none ${
-            isLoading ? 'opacity-100' : 'opacity-0'
-          }`}
-          aria-hidden={!isLoading}
-        >
-          <PlayerLoadingState title={title} sourceName={source.name} />
-        </div>
+        {/* 
+          Loading Overlay:
+          - Rendered only while isLoading is true.
+          - Once loading finishes or timeout expires, completely unmounted from the DOM
+            so that Android Chrome can deliver native touch events and UserActivation directly to the iframe.
+        */}
+        {isLoading && (
+          <div 
+            className="absolute inset-0 z-20 transition-opacity duration-300 pointer-events-none"
+            aria-hidden={!isLoading}
+          >
+            <PlayerLoadingState title={title} sourceName={source.name} />
+          </div>
+        )}
 
         <iframe
           key={`${source.id}-${retryKey}`}
@@ -407,10 +424,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             setHasError(true);
             setErrorMessage('Embed player failed to initialize. Please check network connection or retry.');
           }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-          allowFullScreen
+          allow="autoplay *; fullscreen *; encrypted-media *; picture-in-picture *; clipboard-write *; screen-wake-lock *; web-share *; accelerometer *; gyroscope *"
+          allowFullScreen={true}
           referrerPolicy="origin-when-cross-origin"
+          loading="eager"
           className="w-full h-full border-0 relative z-10"
+          style={{ width: '100%', height: '100%', minHeight: '220px', border: 'none' }}
         />
       </div>
     );

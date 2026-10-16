@@ -17,7 +17,7 @@ export const PlayerLoadingState: React.FC<PlayerLoadingStateProps> = ({
   sourceName
 }) => {
   return (
-    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#1A0B05] via-[#100602] to-[#080301] text-center overflow-hidden select-none">
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#1A0B05]/95 via-[#100602]/95 to-[#080301]/95 text-center overflow-hidden select-none pointer-events-none">
       {/* Ambient background glow ring */}
       <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-[#EA6113]/25 via-[#F88F22]/15 to-transparent blur-3xl pointer-events-none animate-pulse" />
 

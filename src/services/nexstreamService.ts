@@ -8,10 +8,29 @@
 
 const STORAGE_KEY = 'movieverse_nexstream_api_key';
 
+/**
+ * Generates the active NexStream demo key matching the official Codespecters algorithm.
+ * Synchronizes with Codespecters' 5-minute hash window so test playback works consistently across devices.
+ */
+export function getDynamicDemoKey(): string {
+  try {
+    const timeWindow = Math.floor(Date.now() / 300000);
+    const str = 'NEXSTREAM' + timeWindow;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'DEMO_' + Math.abs(hash).toString(16).padEnd(8, '0');
+  } catch {
+    return 'DEMO_36cce954';
+  }
+}
+
 const DEFAULT_API_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any).VITE_NEXSTREAM_API_KEY) ||
   (typeof process !== 'undefined' && process.env && process.env.VITE_NEXSTREAM_API_KEY) ||
-  'DEMO_36cce954';
+  '';
 
 export const NEXSTREAM_CONFIG = {
   baseUrl: 'https://api.codespecters.com/embed',
@@ -20,22 +39,43 @@ export const NEXSTREAM_CONFIG = {
   domain: 'api.codespecters.com',
 };
 
+// Check server-side config on client startup
+if (typeof window !== 'undefined') {
+  fetch('/api/config/nexstream')
+    .then((r) => r.json())
+    .then((data: any) => {
+      if (data?.configured && data?.apiKey) {
+        NEXSTREAM_CONFIG.apiKey = String(data.apiKey).trim();
+      }
+    })
+    .catch(() => {});
+}
+
 export const nexstreamService = {
   /**
-   * Retrieves the configured NexStream API key from localStorage or falls back to default.
+   * Retrieves the configured NexStream API key from localStorage, environment, or active demo window.
    */
   getApiKey(): string {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const stored = window.localStorage.getItem(STORAGE_KEY);
-        if (stored && stored.trim()) {
+        if (stored && stored.trim() && stored.trim() !== 'undefined' && stored.trim() !== 'null') {
           return stored.trim();
         }
       }
     } catch {
       // ignore storage access errors
     }
-    return NEXSTREAM_CONFIG.apiKey || DEFAULT_API_KEY;
+    const envKey =
+      (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any).VITE_NEXSTREAM_API_KEY) ||
+      (typeof process !== 'undefined' && process.env && process.env.VITE_NEXSTREAM_API_KEY);
+    if (envKey && String(envKey).trim()) {
+      return String(envKey).trim();
+    }
+    if (NEXSTREAM_CONFIG.apiKey && NEXSTREAM_CONFIG.apiKey.trim() && NEXSTREAM_CONFIG.apiKey !== 'DEMO_36cce954') {
+      return NEXSTREAM_CONFIG.apiKey.trim();
+    }
+    return getDynamicDemoKey();
   },
 
   /**
@@ -54,7 +94,7 @@ export const nexstreamService = {
     } catch {
       // ignore storage access errors
     }
-    NEXSTREAM_CONFIG.apiKey = trimmed || DEFAULT_API_KEY;
+    NEXSTREAM_CONFIG.apiKey = trimmed;
   },
 
   /**

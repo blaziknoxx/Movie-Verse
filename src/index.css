@@ -65,7 +65,14 @@
 
 .scroll-touch {
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+}
+
+/* Guarantee 100% manual horizontal scrolling without automatic translation or marquee across all platforms */
+.movie-row-track {
+  animation: none !important;
+  transform: none !important;
+  scroll-behavior: auto !important;
 }
 
 /* Custom cinematic Sunset liquid-glass utilities */

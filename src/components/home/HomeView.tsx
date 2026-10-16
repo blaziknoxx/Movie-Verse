@@ -267,7 +267,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* 2. Category Navigation Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-touch py-1 px-1 -mx-1">
+      <div 
+        className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-touch movie-row-track py-1 px-1 -mx-1"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          touchAction: 'pan-x pan-y',
+          scrollBehavior: 'auto',
+        }}
+      >
         {[
           { id: 'all', label: 'All' },
           { id: 'trending', label: 'Trending' },
@@ -331,7 +339,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </span>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+          <div 
+            className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch movie-row-track py-1 select-none"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              touchAction: 'pan-x pan-y',
+              scrollBehavior: 'auto',
+            }}
+          >
             {continueWatchingMovies.slice(0, 6).map((movie, idx) => (
               <div
                 key={movie.id}
@@ -383,7 +399,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </section>
       )}
 
-      {/* 4. Top Trending Section — Fluid Auto-Glide with Native Touch Scrolling */}
+      {/* 4. Top Trending Section — 100% Native Manual Touch Scrolling */}
       {(activeTab === 'all' || activeTab === 'trending' || activeTab === 'movies') && (
         <HorizontalMovieRow
           title="Top Trending Movies"
@@ -397,7 +413,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('trending')}
           totalCount={trendingMovies.length}
           isLoading={isLoading}
-          speed={24}
         />
       )}
 
@@ -416,7 +431,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
         </div>
 
-        <div className="flex gap-2.5 overflow-x-auto no-scrollbar scroll-touch py-1">
+        <div 
+          className="flex gap-2.5 overflow-x-auto no-scrollbar scroll-touch movie-row-track py-1 select-none"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            touchAction: 'pan-x pan-y',
+            scrollBehavior: 'auto',
+          }}
+        >
           {MOODS.map(mood => {
             const isSelected = selectedMoodId === mood.id;
             return (
@@ -443,13 +466,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Live titles discovered for {MOODS.find(m => m.id === selectedMoodId)?.name}:
             </div>
             {isLoadingMood ? (
-              <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+              <div 
+                className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch movie-row-track py-1 select-none"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  touchAction: 'pan-x pan-y',
+                  scrollBehavior: 'auto',
+                }}
+              >
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="w-[120px] aspect-[2/3] rounded-2xl bg-white/5 animate-pulse shrink-0" />
                 ))}
               </div>
             ) : moodMovies.length > 0 ? (
-              <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+              <div 
+                className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch movie-row-track py-1 select-none"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  touchAction: 'pan-x pan-y',
+                  scrollBehavior: 'auto',
+                }}
+              >
                 {moodMovies.map(movie => (
                   <div key={movie.id} className="w-[115px] sm:w-[138px] shrink-0">
                     <MovieCard
@@ -486,7 +525,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('popular')}
           totalCount={popularMovies.length}
           isLoading={isLoading}
-          speed={22}
         />
       )}
 
@@ -504,7 +542,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('tamil')}
           totalCount={tamilMovies.length}
           isLoading={isLoading}
-          speed={20}
           emptyMessage="No current Tamil cinema titles found."
         />
       )}
@@ -523,7 +560,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('bangladeshi')}
           totalCount={bangladeshiMovies.length}
           isLoading={isLoading}
-          speed={18}
           emptyMessage="No genuine Bangladeshi titles currently returned by TMDB."
         />
       )}
@@ -542,7 +578,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('now_playing')}
           totalCount={nowPlayingMovies.length}
           isLoading={isLoading}
-          speed={22}
         />
       )}
 
@@ -560,7 +595,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('upcoming')}
           totalCount={upcomingMovies.length}
           isLoading={isLoading}
-          speed={20}
         />
       )}
 
@@ -578,7 +612,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
           onViewAll={() => onViewAll('top_rated')}
           totalCount={topRatedMovies.length}
           isLoading={isLoading}
-          speed={20}
         />
       )}
 
@@ -595,7 +628,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </span>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch py-1">
+          <div 
+            className="flex gap-3 overflow-x-auto no-scrollbar scroll-touch movie-row-track py-1 select-none"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              touchAction: 'pan-x pan-y',
+              scrollBehavior: 'auto',
+            }}
+          >
             {watchlistMovies.map((movie) => (
               <div 
                 key={movie.id} 

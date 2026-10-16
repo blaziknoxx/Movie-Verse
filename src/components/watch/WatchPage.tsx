@@ -258,7 +258,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
       </div>
 
       {/* 2. Embedded Video Player: NexStream is the single internal player */}
-      <div className="relative w-full">
+      <div className="relative w-full space-y-2">
         {primarySource ? (
           <VideoPlayer
             source={primarySource}
@@ -270,6 +270,26 @@ export const WatchPage: React.FC<WatchPageProps> = ({
           <div className="relative w-full aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden border border-[#F88F22]/25 shadow-2xl flex flex-col items-center justify-center p-6 text-center space-y-3">
             <Film className="w-8 h-8 text-[#FBB931] animate-pulse" />
             <p className="text-sm font-semibold text-[#FFE3B3]">Player stream resolving...</p>
+          </div>
+        )}
+
+        {primarySource && (
+          <div className="flex items-center justify-between px-1 text-[11px] text-neutral-400">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-neutral-300 font-medium">NexStream HD Embed Active</span>
+              <span className="hidden sm:inline text-neutral-500">• 1080p Stream</span>
+            </div>
+            <a
+              href={primarySource.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[#FBB931] hover:text-[#FFE3B3] transition-colors font-semibold"
+              title="Open stream in dedicated browser tab"
+            >
+              <span>Direct Player</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
           </div>
         )}
       </div>
