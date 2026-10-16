@@ -803,8 +803,12 @@ export default function App() {
           )}
         </main>
 
-        {/* Footer */}
-        <Footer onOpenAbout={() => setIsAboutOpen(true)} />
+        {/* Unified Footer System (Full on Home Page, Minimal on all other views) */}
+        <Footer
+          onOpenAbout={() => setIsAboutOpen(true)}
+          onNavigate={handleNavSelect}
+          isHome={activeTab === 'home' && !selectedMovie}
+        />
 
         {/* Mobile Fixed Bottom Navigation Bar matching Reference 1 */}
         <MobileNav
