@@ -17,7 +17,7 @@ import { UNIVERSES } from '../data/moviesData';
 import { getMovieStreamingPlatforms } from './streamingProviders';
 
 // Known TMDB Universe associations mapping (links real TMDB IDs to Movie Verse curated universes)
-const TMDB_TO_UNIVERSE_MAP: Record<number, { universeId: string; universeName: string }> = {
+export const TMDB_TO_UNIVERSE_MAP: Record<number, { universeId: string; universeName: string }> = {
   // Dune Universe
   693134: { universeId: 'dune-universe', universeName: 'The Arrakis Chronicles' }, // Dune Part 2
   438631: { universeId: 'dune-universe', universeName: 'The Arrakis Chronicles' }, // Dune Part 1
@@ -1351,6 +1351,129 @@ function getCuratedPersonFallback(personId: string): PersonDetails | null {
     };
   }
 
+  if (idNum === 1373737) { // Florence Pugh
+    return {
+      id: 1373737,
+      name: 'Florence Pugh',
+      biography: 'Florence Pugh is an English actress known for her dynamic range across prestige drama and major cinema blockbusters. She received an Academy Award nomination for Little Women (2019), and starred as Princess Irulan in Dune: Part Two, Jean Tatlock in Oppenheimer, and Yelena Belova in Marvel\'s Black Widow.',
+      birthday: '1996-01-03',
+      deathday: null,
+      gender: 1,
+      imdbId: 'nm6073955',
+      knownForDepartment: 'Acting',
+      placeOfBirth: 'Oxford, Oxfordshire, England, UK',
+      popularity: 78.4,
+      profileUrl: 'https://image.tmdb.org/t/p/w500/g0m5W4r1F1N0Q2o2K2G0k3G0k.jpg',
+    };
+  }
+
+  if (idNum === 11288) { // Robert Pattinson
+    return {
+      id: 11288,
+      name: 'Robert Pattinson',
+      biography: 'Robert Douglas Thomas Pattinson is an English actor. After beginning his career in big-budget franchise films, he shifted to independent cinema with acclaimed performances before returning to mainstream blockbusters as Bruce Wayne in Matt Reeves\' The Batman (2022) and Neil in Christopher Nolan\'s Tenet (2020).',
+      birthday: '1986-05-13',
+      deathday: null,
+      gender: 2,
+      imdbId: 'nm1500155',
+      knownForDepartment: 'Acting',
+      placeOfBirth: 'London, England, UK',
+      popularity: 68.2,
+      profileUrl: 'https://image.tmdb.org/t/p/w500/pattinson.jpg',
+    };
+  }
+
+  if (idNum === 36427) { // Matt Reeves
+    return {
+      id: 36427,
+      name: 'Matt Reeves',
+      biography: 'Matthew George Reeves is an American film director, producer, and screenwriter. He gained early recognition directing the monster film Cloverfield, followed by the critically acclaimed Dawn of the Planet of the Apes and War for the Planet of the Apes, and the atmospheric noir superhero masterpiece The Batman.',
+      birthday: '1966-04-27',
+      deathday: null,
+      gender: 2,
+      imdbId: 'nm0716274',
+      knownForDepartment: 'Directing',
+      placeOfBirth: 'Rockville Centre, New York, USA',
+      popularity: 38.6,
+      profileUrl: 'https://image.tmdb.org/t/p/w500/reeves.jpg',
+    };
+  }
+
+  if (idNum === 947) { // Hans Zimmer
+    return {
+      id: 947,
+      name: 'Hans Zimmer',
+      biography: 'Hans Florian Zimmer is an acclaimed German film score composer and music producer. Winner of two Academy Awards and four Grammy Awards, he has composed legendary scores for Dune, Dune: Part Two, Interstellar, Inception, The Dark Knight Trilogy, Gladiator, and The Lion King.',
+      birthday: '1957-09-12',
+      deathday: null,
+      gender: 2,
+      imdbId: 'nm0000251',
+      knownForDepartment: 'Sound',
+      placeOfBirth: 'Frankfurt am Main, Hesse, Germany',
+      popularity: 42.5,
+      profileUrl: 'https://image.tmdb.org/t/p/w500/hanszimmer.jpg',
+    };
+  }
+
+  if (idNum === 3895) { // Michael Caine
+    return {
+      id: 3895,
+      name: 'Michael Caine',
+      biography: 'Sir Michael Caine CBE is an iconic English actor with a career spanning seven decades. Known for his distinctive South London accent, he has appeared in over 160 films and won two Academy Awards. A frequent collaborator of Christopher Nolan, he starred in The Dark Knight Trilogy, Inception, Interstellar, and The Prestige.',
+      birthday: '1933-03-14',
+      deathday: null,
+      gender: 2,
+      imdbId: 'nm0000323',
+      knownForDepartment: 'Acting',
+      placeOfBirth: 'Rotherhithe, London, England, UK',
+      popularity: 51.4,
+      profileUrl: 'https://image.tmdb.org/t/p/w500/bVZRMlpjTAO2pmiBoFDUUHZgKnd.jpg',
+    };
+  }
+
+  if (idNum === 1810) { // Heath Ledger
+    return {
+      id: 1810,
+      name: 'Heath Ledger',
+      biography: 'Heath Andrew Ledger was an Australian actor. He gained widespread international critical acclaim for his performance as Ennis Del Mar in Brokeback Mountain (2005) and delivered a transcendent, Academy Award-winning portrayal of the Joker in Christopher Nolan\'s The Dark Knight (2008).',
+      birthday: '1979-04-04',
+      deathday: '2008-01-22',
+      gender: 2,
+      imdbId: 'nm0005132',
+      knownForDepartment: 'Acting',
+      placeOfBirth: 'Perth, Western Australia, Australia',
+      popularity: 44.8,
+      profileUrl: 'https://image.tmdb.org/t/p/w500/5Y9HnYYa9jF2i3p4L5q6Z7.jpg',
+    };
+  }
+
+  // Dynamic lookup: scan curated movie credit lists for this person ID
+  const knownMovieIds = ['693134', '157336', '155', '872585', '414906'];
+  for (const mid of knownMovieIds) {
+    const creds = getCuratedCreditsFallback(mid);
+    if (!creds) continue;
+    const castMatch = creds.cast.find((c) => c.id === idNum);
+    if (castMatch) {
+      return {
+        id: idNum,
+        name: castMatch.name,
+        biography: `${castMatch.name} is a distinguished cinema artist known for starring as ${castMatch.character} in acclaimed film productions.`,
+        knownForDepartment: 'Acting',
+        profileUrl: castMatch.profileUrl || getOptimizedProfileUrl(castMatch.profilePath, 'w500', castMatch.name),
+      };
+    }
+    const crewMatch = creds.crew.find((c) => c.id === idNum);
+    if (crewMatch) {
+      return {
+        id: idNum,
+        name: crewMatch.name,
+        biography: `${crewMatch.name} is a renowned cinematic creator credited as ${crewMatch.job} across landmark productions.`,
+        knownForDepartment: crewMatch.department || 'Production',
+        profileUrl: crewMatch.profileUrl || getOptimizedProfileUrl(crewMatch.profilePath, 'w500', crewMatch.name),
+      };
+    }
+  }
+
   return null;
 }
 
@@ -1403,6 +1526,90 @@ function getCuratedCreditsListFallback(personId: string): PersonCreditsResponse 
       ],
       crew: []
     };
+  }
+
+  if (idNum === 1373737) { // Florence Pugh
+    return {
+      cast: [
+        { id: 693134, title: 'Dune: Part Two', character: 'Princess Irulan', releaseDate: '2024-02-27', year: 2024, voteAverage: 8.6, voteCount: 6500, popularity: 140, posterUrl: getOptimizedPosterUrl('', 'w342', 'Dune: Part Two'), mediaType: 'movie' },
+        { id: 872585, title: 'Oppenheimer', character: 'Jean Tatlock', releaseDate: '2023-07-19', year: 2023, voteAverage: 8.1, voteCount: 8800, popularity: 110, posterUrl: getOptimizedPosterUrl('', 'w342', 'Oppenheimer'), mediaType: 'movie' },
+        { id: 331482, title: 'Little Women', character: 'Amy March', releaseDate: '2019-12-25', year: 2019, voteAverage: 7.9, voteCount: 6100, popularity: 42, posterUrl: getOptimizedPosterUrl('', 'w342', 'Little Women'), mediaType: 'movie' },
+        { id: 530385, title: 'Midsommar', character: 'Dani Ardor', releaseDate: '2019-07-03', year: 2019, voteAverage: 7.2, voteCount: 6800, popularity: 55, posterUrl: getOptimizedPosterUrl('', 'w342', 'Midsommar'), mediaType: 'movie' },
+      ],
+      crew: []
+    };
+  }
+
+  if (idNum === 11288) { // Robert Pattinson
+    return {
+      cast: [
+        { id: 414906, title: 'The Batman', character: 'Bruce Wayne / The Batman', releaseDate: '2022-03-01', year: 2022, voteAverage: 7.7, voteCount: 9600, popularity: 120, posterUrl: getOptimizedPosterUrl('', 'w342', 'The Batman'), mediaType: 'movie' },
+        { id: 577922, title: 'Tenet', character: 'Neil', releaseDate: '2020-08-22', year: 2020, voteAverage: 7.2, voteCount: 9200, popularity: 62, posterUrl: getOptimizedPosterUrl('', 'w342', 'Tenet'), mediaType: 'movie' },
+        { id: 503919, title: 'The Lighthouse', character: 'Ephraim Winslow', releaseDate: '2019-10-18', year: 2019, voteAverage: 7.5, voteCount: 4500, popularity: 40, posterUrl: getOptimizedPosterUrl('', 'w342', 'The Lighthouse'), mediaType: 'movie' },
+      ],
+      crew: []
+    };
+  }
+
+  if (idNum === 36427) { // Matt Reeves
+    return {
+      cast: [],
+      crew: [
+        { id: 414906, title: 'The Batman', job: 'Director', department: 'Directing', releaseDate: '2022-03-01', year: 2022, voteAverage: 7.7, voteCount: 9600, popularity: 120, posterUrl: getOptimizedPosterUrl('', 'w342', 'The Batman'), mediaType: 'movie' },
+        { id: 281338, title: 'War for the Planet of the Apes', job: 'Director', department: 'Directing', releaseDate: '2017-07-11', year: 2017, voteAverage: 7.2, voteCount: 8800, popularity: 65, posterUrl: getOptimizedPosterUrl('', 'w342', 'War for the Planet of the Apes'), mediaType: 'movie' },
+        { id: 119450, title: 'Dawn of the Planet of the Apes', job: 'Director', department: 'Directing', releaseDate: '2014-07-08', year: 2014, voteAverage: 7.3, voteCount: 11000, popularity: 70, posterUrl: getOptimizedPosterUrl('', 'w342', 'Dawn of the Planet of the Apes'), mediaType: 'movie' },
+        { id: 7191, title: 'Cloverfield', job: 'Director', department: 'Directing', releaseDate: '2008-01-15', year: 2008, voteAverage: 6.7, voteCount: 6500, popularity: 45, posterUrl: getOptimizedPosterUrl('', 'w342', 'Cloverfield'), mediaType: 'movie' },
+      ]
+    };
+  }
+
+  // Dynamic lookup: scan curated movies for any titles containing this person
+  const knownMovieCatalog = [
+    { id: 693134, title: 'Dune: Part Two', year: 2024, voteAverage: 8.6, popularity: 140 },
+    { id: 438631, title: 'Dune: Part One', year: 2021, voteAverage: 7.8, popularity: 95 },
+    { id: 157336, title: 'Interstellar', year: 2014, voteAverage: 8.4, popularity: 130 },
+    { id: 872585, title: 'Oppenheimer', year: 2023, voteAverage: 8.1, popularity: 110 },
+    { id: 155, title: 'The Dark Knight', year: 2008, voteAverage: 8.5, popularity: 115 },
+    { id: 414906, title: 'The Batman', year: 2022, voteAverage: 7.7, popularity: 120 },
+  ];
+
+  const matchedCast: PersonCreditItem[] = [];
+  const matchedCrew: PersonCreditItem[] = [];
+
+  for (const m of knownMovieCatalog) {
+    const creds = getCuratedCreditsFallback(String(m.id));
+    if (!creds) continue;
+    const cMatch = creds.cast.find((c) => c.id === idNum);
+    if (cMatch) {
+      matchedCast.push({
+        id: m.id,
+        title: m.title,
+        character: cMatch.character,
+        year: m.year,
+        voteAverage: m.voteAverage,
+        popularity: m.popularity,
+        posterUrl: getOptimizedPosterUrl('', 'w342', m.title),
+        mediaType: 'movie',
+      });
+    }
+    const crMatch = creds.crew.find((c) => c.id === idNum);
+    if (crMatch) {
+      matchedCrew.push({
+        id: m.id,
+        title: m.title,
+        job: crMatch.job,
+        department: crMatch.department,
+        year: m.year,
+        voteAverage: m.voteAverage,
+        popularity: m.popularity,
+        posterUrl: getOptimizedPosterUrl('', 'w342', m.title),
+        mediaType: 'movie',
+      });
+    }
+  }
+
+  if (matchedCast.length > 0 || matchedCrew.length > 0) {
+    return { cast: matchedCast, crew: matchedCrew };
   }
 
   return null;

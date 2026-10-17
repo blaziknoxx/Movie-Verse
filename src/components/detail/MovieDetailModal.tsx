@@ -352,7 +352,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             movieId={current.tmdbId || current.id}
             movieTitle={current.title}
             onSelectPerson={(personId) => {
-              onClose();
               if (onSelectPerson) {
                 onSelectPerson(personId);
               }

@@ -356,6 +356,48 @@ app.get('/api/tmdb/person/:id/combined_credits', async (req: Request, res: Respo
   }
 });
 
+// Person TV Credits
+app.get('/api/tmdb/person/:id/tv_credits', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric person ID required' });
+    }
+    const result = await fetchFromTMDB(`/person/${id}/tv_credits`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Person Images (Portraits & Backdrops)
+app.get('/api/tmdb/person/:id/images', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric person ID required' });
+    }
+    const result = await fetchFromTMDB(`/person/${id}/images`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Person External IDs
+app.get('/api/tmdb/person/:id/external_ids', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric person ID required' });
+    }
+    const result = await fetchFromTMDB(`/person/${id}/external_ids`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
 // Genre list
 app.get('/api/tmdb/genres', async (req: Request, res: Response) => {
   try {

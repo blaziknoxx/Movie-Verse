@@ -45,8 +45,8 @@ interface NavState {
 function parseUrlToNavState(): NavState {
   try {
     const pathname = window.location.pathname;
-    const personPathMatch = pathname.match(/^\/person\/(\d+)/i);
-    if (personPathMatch) {
+    const personPathMatch = pathname.match(/^\/person\/?(\d+)?/i);
+    if (personPathMatch && personPathMatch[1]) {
       return { tab: 'person', personId: personPathMatch[1], inApp: false };
     }
 
@@ -89,12 +89,13 @@ function parseUrlToNavState(): NavState {
 }
 
 function buildUrlFromState(state: NavState): string {
-  const params = new URLSearchParams();
   if (state.tab === 'person') {
-    params.set('view', 'person');
-    if (state.personId) params.set('id', String(state.personId));
-    return `?${params.toString()}`;
+    if (state.personId) {
+      return `/person/${state.personId}`;
+    }
+    return '/person';
   }
+  const params = new URLSearchParams();
   if (state.tab === 'trailer') {
     params.set('view', 'trailer');
     if (state.trailerId) params.set('movieId', state.trailerId);
@@ -808,6 +809,7 @@ export default function App() {
               onToggleWatchlist={handleToggleWatchlist}
               onOpenTrailer={handleOpenTrailer}
               onOpenWatch={handleOpenWatch}
+              onSelectPerson={handleSelectPerson}
             />
           )}
 
