@@ -81,9 +81,9 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
     if (numericId) {
       setIsLoadingDetails(true);
       Promise.all([
-        tmdbService.getMovieDetails(numericId).catch(() => null),
-        tmdbService.getSimilarMovies(numericId).catch(() => []),
-        tmdbService.getMovieRecommendations(numericId).catch(() => [])
+        tmdbService.getMovieDetails(numericId, movie.mediaType).catch(() => null),
+        tmdbService.getSimilarMovies(numericId, movie.mediaType).catch(() => []),
+        tmdbService.getMovieRecommendations(numericId, movie.mediaType).catch(() => [])
       ]).then(async ([details, similar, recommended]) => {
         if (details) {
           const merged: Movie = {
@@ -237,6 +237,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               <span className="px-2 py-0.5 rounded bg-white/10 border border-white/15 text-[10px] font-bold text-[#FFE3B3] uppercase tracking-wider">
                 Ultra HD
               </span>
+              {current.mediaType === 'tv' && (
+                <span className="px-2 py-0.5 rounded bg-[#EA6113]/20 border border-[#F88F22]/40 text-[10px] font-bold text-[#FBB931] uppercase tracking-wider">
+                  TV Series
+                </span>
+              )}
             </div>
 
             {/* Metadata Line */}
@@ -269,7 +274,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               className="w-full py-3.5 px-5 rounded-2xl sunset-gradient-btn text-white font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition-all transform active:scale-[0.98]"
             >
               <Play className="w-4 h-4 fill-white text-white" />
-              <span>Watch Full Movie</span>
+              <span>{current.mediaType === 'tv' ? 'Watch Full Series' : 'Watch Full Movie'}</span>
             </button>
 
             <button

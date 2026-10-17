@@ -392,19 +392,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                   
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenTrailer(movie);
-                      }}
-                      className="w-10 h-10 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer"
-                      title={`Play Trailer — ${movie.title}`}
-                      aria-label={`Play Trailer for ${movie.title}`}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <div
+                      className="w-10 h-10 rounded-full sunset-gradient-btn text-white flex items-center justify-center shadow-lg transform scale-95 group-hover:scale-100 transition-all pointer-events-none"
+                      aria-hidden="true"
                     >
                       <Play className="w-4 h-4 fill-white translate-x-0.5" />
-                    </button>
+                    </div>
                   </div>
 
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">

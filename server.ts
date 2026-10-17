@@ -300,6 +300,78 @@ app.get('/api/tmdb/movie/:id/watch/providers', async (req: Request, res: Respons
   }
 });
 
+// TV Show Details
+app.get('/api/tmdb/tv/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV show ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Show Credits
+app.get('/api/tmdb/tv/:id/credits', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV show ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}/credits`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Show Videos (Trailers & Teasers)
+app.get('/api/tmdb/tv/:id/videos', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV show ID required' });
+    }
+    const result = await fetchFromTMDB(`/tv/${id}/videos`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Show Similar
+app.get('/api/tmdb/tv/:id/similar', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV show ID required' });
+    }
+    const page = req.query.page || '1';
+    const result = await fetchFromTMDB(`/tv/${id}/similar`, { page });
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// TV Show Recommendations
+app.get('/api/tmdb/tv/:id/recommendations', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric TV show ID required' });
+    }
+    const page = req.query.page || '1';
+    const result = await fetchFromTMDB(`/tv/${id}/recommendations`, { page });
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
 // Franchise Collection (Sequels, Prequels & Connected franchise entries)
 app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
   try {

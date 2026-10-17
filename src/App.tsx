@@ -34,6 +34,7 @@ interface NavState {
   tab: string;
   category?: string;
   movieId?: string;
+  mediaType?: 'movie' | 'tv';
   watchId?: string;
   trailerId?: string;
   personId?: string | number;
@@ -53,8 +54,9 @@ function parseUrlToNavState(): NavState {
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view') || params.get('tab') || 'home';
     const cat = params.get('category') || undefined;
-    const mid = params.get('movieId') || params.get('id') || undefined;
-    const movieParam = params.get('movie') || undefined;
+    const tvParam = params.get('tv') || params.get('tvId') || undefined;
+    const mid = params.get('movieId') || params.get('id') || tvParam || undefined;
+    const movieParam = params.get('movie') || tvParam || undefined;
     const searchParam = params.get('search') || params.get('q') || undefined;
     const isSearch = params.has('search') || params.has('q');
 
@@ -70,15 +72,25 @@ function parseUrlToNavState(): NavState {
       return { tab: 'watch', watchId: mid || movieParam, inApp: false };
     }
     if (view === 'listing') {
-      return { tab: 'listing', category: cat || 'trending', movieId: movieParam, inApp: false };
+      const isTv = Boolean(tvParam);
+      return { 
+        tab: 'listing', 
+        category: cat || 'trending', 
+        movieId: movieParam || mid, 
+        mediaType: isTv ? 'tv' : undefined,
+        inApp: false 
+      };
     }
 
     const validTabs = ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile', 'person'];
     const tab = validTabs.includes(view) ? view : 'home';
+    const isTv = Boolean(tvParam) || view === 'tv' || params.has('tv');
+    const resolvedMovieId = movieParam || mid;
 
     return {
       tab,
-      movieId: movieParam || (view === 'home' && mid ? mid : undefined),
+      movieId: resolvedMovieId,
+      mediaType: isTv ? 'tv' : undefined,
       searchOpen: isSearch,
       searchQuery: searchParam || '',
       inApp: false,
@@ -109,14 +121,24 @@ function buildUrlFromState(state: NavState): string {
   if (state.tab === 'listing') {
     params.set('view', 'listing');
     if (state.category) params.set('category', state.category);
-    if (state.movieId) params.set('movie', state.movieId);
+    if (state.movieId) {
+      if (state.mediaType === 'tv') {
+        params.set('tv', state.movieId);
+      } else {
+        params.set('movie', state.movieId);
+      }
+    }
     return `?${params.toString()}`;
   }
   if (state.tab !== 'home') {
     params.set('tab', state.tab);
   }
   if (state.movieId) {
-    params.set('movie', state.movieId);
+    if (state.mediaType === 'tv') {
+      params.set('tv', state.movieId);
+    } else {
+      params.set('movie', state.movieId);
+    }
   }
   if (state.searchOpen) {
     params.set('search', state.searchQuery || '');
@@ -270,7 +292,7 @@ export default function App() {
           if (cached) {
             setSelectedMovie(cached);
           } else {
-            tmdbService.getMovieDetails(state.movieId).then(m => setSelectedMovie(m)).catch(() => {});
+            tmdbService.getMovieDetails(state.movieId, state.mediaType).then(m => setSelectedMovie(m)).catch(() => {});
           }
         } else {
           setSelectedMovie(null);
@@ -304,7 +326,7 @@ export default function App() {
       if (cached) {
         setSelectedMovie(cached);
       } else {
-        tmdbService.getMovieDetails(init.movieId).then(m => setSelectedMovie(m)).catch(() => {});
+        tmdbService.getMovieDetails(init.movieId, init.mediaType).then(m => setSelectedMovie(m)).catch(() => {});
       }
     }
     if (init.watchId) {
@@ -429,6 +451,7 @@ export default function App() {
       tab: activeTab,
       category: activeTab === 'listing' ? listingCategory : undefined,
       movieId: movie.id,
+      mediaType: movie.mediaType,
       searchOpen: isSearchOpen,
       searchQuery: activeSearchQuery,
       inApp: true,

@@ -286,10 +286,14 @@ function formatRuntime(minutes?: number | null): string {
 export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   const id = String(raw.id);
   const numericId = Number(raw.id);
-  const title = raw.title || raw.original_title || 'Untitled';
-  const year = raw.release_date ? parseInt(raw.release_date.slice(0, 4), 10) : 2024;
+  const isTv = raw.media_type === 'tv' || Boolean(raw.first_air_date) || raw.number_of_seasons !== undefined;
+  const title = raw.title || raw.name || raw.original_title || raw.original_name || 'Untitled';
+  const rawDate = raw.release_date || raw.first_air_date || '';
+  const year = rawDate ? parseInt(rawDate.slice(0, 4), 10) : 2024;
   const rating = raw.vote_average ? Number(raw.vote_average.toFixed(1)) : 0;
-  const duration = formatRuntime(raw.runtime);
+  const duration = isTv
+    ? (raw.number_of_seasons ? `${raw.number_of_seasons} Season${raw.number_of_seasons > 1 ? 's' : ''}` : 'TV Series')
+    : formatRuntime(raw.runtime);
 
   // Extract genres
   let genres: string[] = [];
@@ -298,7 +302,7 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
   } else if (Array.isArray(raw.genre_ids)) {
     genres = raw.genre_ids.map((gid: number) => TMDB_GENRES[gid]).filter(Boolean);
   }
-  if (genres.length === 0) genres = ['Cinema'];
+  if (genres.length === 0) genres = isTv ? ['TV Drama'] : ['Cinema'];
 
   // Extract Cast and Crew (Dynamically resolved from credits response)
   let director = '';
@@ -413,7 +417,8 @@ export function normalizeTMDBMovie(raw: any, credits?: any): Movie {
     },
     streamingPlatforms: getMovieStreamingPlatforms(title),
     moodIds,
-    releaseDate: raw.release_date
+    releaseDate: rawDate,
+    mediaType: isTv ? 'tv' : 'movie'
   };
 }
 
@@ -729,20 +734,35 @@ export const tmdbService = {
   },
 
   /**
-   * Fetch detailed movie information including credits and official trailers.
+   * Fetch detailed movie or TV information including credits and official trailers.
    */
-  async getMovieDetails(id: string | number): Promise<Movie> {
+  async getMovieDetails(id: string | number, mediaType?: 'movie' | 'tv'): Promise<Movie> {
     const numericId = String(id).replace(/\D/g, '');
-    const [detailsRes, creditsRes, videosRes] = await Promise.all([
-      fetch(`/api/tmdb/movie/${numericId}`),
-      fetch(`/api/tmdb/movie/${numericId}/credits`).catch(() => null),
-      fetch(`/api/tmdb/movie/${numericId}/videos`).catch(() => null)
-    ]);
+    const isTv = mediaType === 'tv';
+    const primaryType = isTv ? 'tv' : 'movie';
+    const fallbackType = isTv ? 'movie' : 'tv';
+
+    let detailsRes = await fetch(`/api/tmdb/${primaryType}/${numericId}`);
+    let activeType = primaryType;
+
+    // Graceful fallback to the other media type if first returns 404 and mediaType wasn't forced
+    if (!detailsRes.ok && detailsRes.status === 404 && !mediaType) {
+      const altRes = await fetch(`/api/tmdb/${fallbackType}/${numericId}`);
+      if (altRes.ok) {
+        detailsRes = altRes;
+        activeType = fallbackType;
+      }
+    }
 
     if (!detailsRes.ok) {
       const errorJson: any = await detailsRes.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Failed to fetch movie details for ID ${id}`);
+      throw new Error(errorJson.error || `Failed to fetch details for ${activeType} ID ${id}`);
     }
+
+    const [creditsRes, videosRes] = await Promise.all([
+      fetch(`/api/tmdb/${activeType}/${numericId}/credits`).catch(() => null),
+      fetch(`/api/tmdb/${activeType}/${numericId}/videos`).catch(() => null)
+    ]);
 
     const detailsData: any = await detailsRes.json();
     let creditsData: any = null;
@@ -761,6 +781,9 @@ export const tmdbService = {
     }
 
     const movie = normalizeTMDBMovie(detailsData, creditsData);
+    if (activeType === 'tv') {
+      movie.mediaType = 'tv';
+    }
     if (trailerKey) {
       movie.trailerKey = trailerKey;
     }
@@ -768,11 +791,15 @@ export const tmdbService = {
   },
 
   /**
-   * Fetch official trailers / videos for a movie.
+   * Fetch official trailers / videos for a movie or TV show.
    */
-  async getMovieVideos(id: string | number): Promise<{ key: string; name: string; site: string; type: string }[]> {
+  async getMovieVideos(id: string | number, mediaType?: 'movie' | 'tv'): Promise<{ key: string; name: string; site: string; type: string }[]> {
     const numericId = String(id).replace(/\D/g, '');
-    const res = await fetch(`/api/tmdb/movie/${numericId}/videos`);
+    const type = mediaType === 'tv' ? 'tv' : 'movie';
+    let res = await fetch(`/api/tmdb/${type}/${numericId}/videos`);
+    if (!res.ok && !mediaType && type === 'movie') {
+      res = await fetch(`/api/tmdb/tv/${numericId}/videos`);
+    }
     if (!res.ok) return [];
     const data: any = await res.json();
     return data.results || [];
@@ -854,22 +881,30 @@ export const tmdbService = {
   },
 
   /**
-   * Fetch similar movies by TMDB ID.
+   * Fetch similar movies or TV shows by TMDB ID.
    */
-  async getSimilarMovies(id: string | number, page = 1): Promise<Movie[]> {
+  async getSimilarMovies(id: string | number, mediaType?: 'movie' | 'tv', page = 1): Promise<Movie[]> {
     const numericId = String(id).replace(/\D/g, '');
-    const res = await fetch(`/api/tmdb/movie/${numericId}/similar?page=${page}`);
+    const type = mediaType === 'tv' ? 'tv' : 'movie';
+    let res = await fetch(`/api/tmdb/${type}/${numericId}/similar?page=${page}`);
+    if (!res.ok && !mediaType && type === 'movie') {
+      res = await fetch(`/api/tmdb/tv/${numericId}/similar?page=${page}`);
+    }
     if (!res.ok) return [];
     const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
   },
 
   /**
-   * Fetch recommended movies by TMDB ID.
+   * Fetch recommended movies or TV shows by TMDB ID.
    */
-  async getMovieRecommendations(id: string | number, page = 1): Promise<Movie[]> {
+  async getMovieRecommendations(id: string | number, mediaType?: 'movie' | 'tv', page = 1): Promise<Movie[]> {
     const numericId = String(id).replace(/\D/g, '');
-    const res = await fetch(`/api/tmdb/movie/${numericId}/recommendations?page=${page}`);
+    const type = mediaType === 'tv' ? 'tv' : 'movie';
+    let res = await fetch(`/api/tmdb/${type}/${numericId}/recommendations?page=${page}`);
+    if (!res.ok && !mediaType && type === 'movie') {
+      res = await fetch(`/api/tmdb/tv/${numericId}/recommendations?page=${page}`);
+    }
     if (!res.ok) return [];
     const data: any = await res.json();
     return (data.results || []).map((m: any) => normalizeTMDBMovie(m));
