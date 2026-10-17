@@ -71,6 +71,7 @@ export interface Movie {
   };
   trailerKey?: string;
   detailedCast?: {
+    id?: number;
     name: string;
     character: string;
     profileUrl?: string;
@@ -80,6 +81,76 @@ export interface Movie {
   sources?: PlaybackSource[];
   mediaType?: 'movie' | 'tv';
   seasonsCount?: number;
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profilePath?: string | null;
+  profileUrl?: string;
+  order?: number;
+  knownForDepartment?: string;
+  gender?: number;
+}
+
+export interface CrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profilePath?: string | null;
+  profileUrl?: string;
+  gender?: number;
+}
+
+export interface MovieCredits {
+  id: number;
+  cast: CastMember[];
+  crew: CrewMember[];
+}
+
+export interface PersonDetails {
+  id: number;
+  name: string;
+  alsoKnownAs?: string[];
+  biography?: string;
+  birthday?: string | null;
+  deathday?: string | null;
+  gender?: number;
+  homepage?: string | null;
+  imdbId?: string | null;
+  knownForDepartment?: string;
+  placeOfBirth?: string | null;
+  popularity?: number;
+  profilePath?: string | null;
+  profileUrl?: string;
+}
+
+export interface PersonCreditItem {
+  id: number;
+  title: string;
+  character?: string;
+  job?: string;
+  department?: string;
+  releaseDate?: string;
+  year?: number;
+  posterPath?: string | null;
+  posterUrl?: string;
+  backdropPath?: string | null;
+  backdropUrl?: string;
+  voteAverage?: number;
+  voteCount?: number;
+  popularity?: number;
+  overview?: string;
+  mediaType?: 'movie' | 'tv';
+  genreIds?: number[];
+  genres?: string[];
+}
+
+export interface PersonCreditsResponse {
+  cast: PersonCreditItem[];
+  crew: PersonCreditItem[];
 }
 
 export type PlaybackType = 'embed' | 'mp4' | 'hls' | 'webpage';

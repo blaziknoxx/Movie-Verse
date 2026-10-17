@@ -25,6 +25,7 @@ import { CineProfileView } from './components/profile/CineProfileView';
 import { CategoryListingView } from './components/listing/CategoryListingView';
 import { TrailerPage } from './components/watch/TrailerPage';
 import { WatchPage } from './components/watch/WatchPage';
+import { PersonDetailView } from './components/person/PersonDetailView';
 
 import { MovieDetailModal } from './components/detail/MovieDetailModal';
 import { SearchModal } from './components/search/SearchModal';
@@ -35,6 +36,7 @@ interface NavState {
   movieId?: string;
   watchId?: string;
   trailerId?: string;
+  personId?: string | number;
   searchOpen?: boolean;
   searchQuery?: string;
   inApp?: boolean;
@@ -42,6 +44,12 @@ interface NavState {
 
 function parseUrlToNavState(): NavState {
   try {
+    const pathname = window.location.pathname;
+    const personPathMatch = pathname.match(/^\/person\/(\d+)/i);
+    if (personPathMatch) {
+      return { tab: 'person', personId: personPathMatch[1], inApp: false };
+    }
+
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view') || params.get('tab') || 'home';
     const cat = params.get('category') || undefined;
@@ -49,6 +57,11 @@ function parseUrlToNavState(): NavState {
     const movieParam = params.get('movie') || undefined;
     const searchParam = params.get('search') || params.get('q') || undefined;
     const isSearch = params.has('search') || params.has('q');
+
+    if (view === 'person' || params.has('personId')) {
+      const pid = params.get('personId') || params.get('id') || mid;
+      return { tab: 'person', personId: pid, inApp: false };
+    }
 
     if (view === 'trailer') {
       return { tab: 'trailer', trailerId: mid || movieParam, inApp: false };
@@ -60,7 +73,7 @@ function parseUrlToNavState(): NavState {
       return { tab: 'listing', category: cat || 'trending', movieId: movieParam, inApp: false };
     }
 
-    const validTabs = ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile'];
+    const validTabs = ['home', 'connections', 'watch-order', 'vibe-match', 'same-vibe', 'where-to-watch', 'library', 'profile', 'person'];
     const tab = validTabs.includes(view) ? view : 'home';
 
     return {
@@ -77,6 +90,11 @@ function parseUrlToNavState(): NavState {
 
 function buildUrlFromState(state: NavState): string {
   const params = new URLSearchParams();
+  if (state.tab === 'person') {
+    params.set('view', 'person');
+    if (state.personId) params.set('id', String(state.personId));
+    return `?${params.toString()}`;
+  }
   if (state.tab === 'trailer') {
     params.set('view', 'trailer');
     if (state.trailerId) params.set('movieId', state.trailerId);
@@ -112,6 +130,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>(initialState.tab);
   const [listingCategory, setListingCategory] = useState<string>(initialState.category || 'trending');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | number | undefined>(initialState.personId);
   
   // Dedicated Watch & Trailer states
   const [trailerMovie, setTrailerMovie] = useState<Movie | null>(null);
@@ -196,12 +215,22 @@ export default function App() {
         setListingCategory(state.category);
       }
 
+      // Handle Person View
+      if (nextTab === 'person') {
+        setSelectedPersonId(state.personId);
+        setSelectedMovie(null);
+        setWatchMovie(null);
+        setWatchMovieId(undefined);
+        setTrailerMovie(null);
+        setTrailerMovieId(undefined);
+      }
       // Handle Watch View
-      if (nextTab === 'watch') {
+      else if (nextTab === 'watch') {
         const wid = state.watchId || state.movieId;
         setWatchMovieId(wid);
         setTrailerMovie(null);
         setTrailerMovieId(undefined);
+        setSelectedPersonId(undefined);
         if (wid) {
           const cached = storageService.getCachedMovie(wid);
           if (cached) setWatchMovie(cached);
@@ -217,6 +246,7 @@ export default function App() {
         setTrailerMovieId(tid);
         setWatchMovie(null);
         setWatchMovieId(undefined);
+        setSelectedPersonId(undefined);
         if (tid) {
           const cached = storageService.getCachedMovie(tid);
           if (cached) setTrailerMovie(cached);
@@ -232,6 +262,7 @@ export default function App() {
         setWatchMovieId(undefined);
         setTrailerMovie(null);
         setTrailerMovieId(undefined);
+        setSelectedPersonId(undefined);
 
         if (state.movieId) {
           const cached = storageService.getCachedMovie(state.movieId);
@@ -291,7 +322,7 @@ export default function App() {
   }, []);
 
   const handleNavSelect = (tab: string) => {
-    if (tab === activeTab && !selectedMovie) {
+    if (tab === activeTab && !selectedMovie && !selectedPersonId) {
       // Tapping already-selected tab smoothly returns to top
       resetScrollPosition('smooth');
     } else {
@@ -304,6 +335,7 @@ export default function App() {
       }
       setActiveTab(tab);
       setSelectedMovie(null);
+      setSelectedPersonId(undefined);
       setIsSearchOpen(false);
 
       const nextState: NavState = { tab, inApp: true };
@@ -323,6 +355,37 @@ export default function App() {
       } else {
         resetScrollPosition('instant');
       }
+    }
+  };
+
+  const handleSelectPerson = (personId: string | number) => {
+    const currentKey = activeTab === 'listing' ? `listing_${listingCategory}` : activeTab;
+    scrollPositionsRef.current[currentKey] = window.scrollY || document.documentElement.scrollTop || 0;
+
+    setSelectedPersonId(personId);
+    setSelectedMovie(null);
+    setIsSearchOpen(false);
+    setActiveTab('person');
+
+    const nextState: NavState = {
+      tab: 'person',
+      personId,
+      inApp: true,
+    };
+    inAppHistoryDepthRef.current += 1;
+    try {
+      window.history.pushState(nextState, '', buildUrlFromState(nextState));
+    } catch {
+      // ignore
+    }
+    resetScrollPosition('instant');
+  };
+
+  const handleBackFromPerson = () => {
+    if (inAppHistoryDepthRef.current > 0) {
+      window.history.back();
+    } else {
+      handleNavSelect('home');
     }
   };
 
@@ -717,6 +780,7 @@ export default function App() {
               onOpenWatch={handleOpenWatch}
               isWatchlisted={trailerMovie ? watchlist.includes(trailerMovie.id) : false}
               onToggleWatchlist={handleToggleWatchlist}
+              onSelectPerson={handleSelectPerson}
             />
           )}
 
@@ -731,6 +795,19 @@ export default function App() {
               isWatched={watchMovie ? watched.includes(watchMovie.id) : false}
               onToggleWatchlist={handleToggleWatchlist}
               onToggleWatched={handleToggleWatched}
+              onSelectPerson={handleSelectPerson}
+            />
+          )}
+
+          {activeTab === 'person' && selectedPersonId && (
+            <PersonDetailView
+              personId={selectedPersonId}
+              onBack={handleBackFromPerson}
+              onSelectMovie={handleSelectMovie}
+              watchlist={watchlist}
+              onToggleWatchlist={handleToggleWatchlist}
+              onOpenTrailer={handleOpenTrailer}
+              onOpenWatch={handleOpenWatch}
             />
           )}
 
@@ -837,6 +914,7 @@ export default function App() {
         onSelectMovie={handleSelectMovie}
         onOpenTrailer={handleOpenTrailer}
         onOpenWatch={handleOpenWatch}
+        onSelectPerson={handleSelectPerson}
       />
 
       {/* Official Trailer Playback Modal */}

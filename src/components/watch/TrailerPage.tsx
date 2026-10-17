@@ -17,6 +17,7 @@ import { tmdbService } from '../../services/tmdbService';
 import { storageService } from '../../services/storageService';
 import { getYouTubeEmbedUrl } from '../../services/videoSecurityService';
 import { MovieCard } from '../discover/MovieCard';
+import { CastSection } from '../cast/CastSection';
 import { 
   ArrowLeft, Star, Clock, Calendar, Bookmark, Share2, 
   Play, Film, Sparkles, ExternalLink, Clapperboard, 
@@ -31,6 +32,7 @@ interface TrailerPageProps {
   onOpenWatch: (movie: Movie) => void;
   isWatchlisted: boolean;
   onToggleWatchlist: (movieId: string, e?: React.MouseEvent) => void;
+  onSelectPerson?: (personId: number) => void;
 }
 
 interface TrailerVideo {
@@ -49,6 +51,7 @@ export const TrailerPage: React.FC<TrailerPageProps> = ({
   onOpenWatch,
   isWatchlisted,
   onToggleWatchlist,
+  onSelectPerson,
 }) => {
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(movie);
   const [selectedTrailerKey, setSelectedTrailerKey] = useState<string | null>(null);
@@ -556,6 +559,17 @@ export const TrailerPage: React.FC<TrailerPageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Cinematic Cast & Crew Intelligence Section */}
+      <CastSection
+        movieId={currentMovie.tmdbId || currentMovie.id}
+        movieTitle={currentMovie.title}
+        onSelectPerson={(pid) => {
+          if (onSelectPerson) {
+            onSelectPerson(pid);
+          }
+        }}
+      />
 
       {/* 5. Compact "More Like This" Recommendations */}
       {relatedMovies.length > 0 && (

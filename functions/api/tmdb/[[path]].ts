@@ -170,7 +170,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
 
     if (tmdbResponse.ok) {
-      const maxAge = canonicalEndpoint.includes('/movie/') ? 1800 : 300;
+      const maxAge = canonicalEndpoint.includes('/movie/') || canonicalEndpoint.includes('/person/') ? 1800 : 300;
       responseHeaders.set('Cache-Control', `public, max-age=${maxAge}`);
     } else {
       responseHeaders.set('Cache-Control', 'no-store');

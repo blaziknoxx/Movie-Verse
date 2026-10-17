@@ -15,6 +15,7 @@ import {
   Tv, ExternalLink, Sparkles, User, Calendar, Clock, Film,
   Loader2, ThumbsUp, Play, Share2, Eye, ChevronRight, Shield, Info, Flame
 } from 'lucide-react';
+import { CastSection } from '../cast/CastSection';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -31,6 +32,7 @@ interface MovieDetailModalProps {
   onSelectMovie: (movie: Movie) => void;
   onOpenTrailer: (movie: Movie) => void;
   onOpenWatch?: (movie: Movie) => void;
+  onSelectPerson?: (personId: number) => void;
 }
 
 export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
@@ -47,7 +49,8 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onNavigateToWhereToWatch,
   onSelectMovie,
   onOpenTrailer,
-  onOpenWatch
+  onOpenWatch,
+  onSelectPerson
 }) => {
   const [detailedMovie, setDetailedMovie] = useState<Movie | null>(movie);
   const [collectionMovies, setCollectionMovies] = useState<Movie[]>([]);
@@ -344,17 +347,17 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             </button>
           </div>
 
-          {/* Director & Lead Cast Chips */}
-          <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-400 font-semibold w-16 shrink-0">Director:</span>
-              <span className="text-white font-medium">{current.director}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-neutral-400 font-semibold w-16 shrink-0">Cast:</span>
-              <span className="text-neutral-300 line-clamp-1">{current.cast.join(', ')}</span>
-            </div>
-          </div>
+          {/* Cinematic Cast & Crew Intelligence Section */}
+          <CastSection
+            movieId={current.tmdbId || current.id}
+            movieTitle={current.title}
+            onSelectPerson={(personId) => {
+              onClose();
+              if (onSelectPerson) {
+                onSelectPerson(personId);
+              }
+            }}
+          />
 
           {/* Where to Watch Verified External Destinations */}
           <div className="space-y-2.5">

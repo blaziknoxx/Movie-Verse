@@ -28,6 +28,7 @@ import {
   DEFAULT_STREAMING_PROVIDER_ID,
   StreamingProviderConfig,
 } from '../../services/streamingSourceRegistry';
+import { CastSection } from '../cast/CastSection';
 
 interface WatchPageProps {
   movie: Movie | null;
@@ -39,6 +40,7 @@ interface WatchPageProps {
   isWatched: boolean;
   onToggleWatchlist: (movieId: string, e?: React.MouseEvent) => void;
   onToggleWatched: (movieId: string, movieObj?: Movie) => void;
+  onSelectPerson?: (personId: number) => void;
 }
 
 export const WatchPage: React.FC<WatchPageProps> = ({
@@ -51,6 +53,7 @@ export const WatchPage: React.FC<WatchPageProps> = ({
   isWatched,
   onToggleWatchlist,
   onToggleWatched,
+  onSelectPerson,
 }) => {
   // Initialize currentMovie immediately if movie or cached movieId is available
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(() => {
@@ -478,7 +481,18 @@ export const WatchPage: React.FC<WatchPageProps> = ({
         )}
       </div>
 
-      {/* 5. Compact Related Movies Section */}
+      {/* 5. Cinematic Cast & Crew Intelligence Section */}
+      <CastSection
+        movieId={currentMovie.tmdbId || currentMovie.id}
+        movieTitle={currentMovie.title}
+        onSelectPerson={(pid) => {
+          if (onSelectPerson) {
+            onSelectPerson(pid);
+          }
+        }}
+      />
+
+      {/* 6. Compact Related Movies Section */}
       {relatedMovies.length > 0 && (
         <div className="space-y-3.5 pt-2">
           <div className="flex items-center justify-between">

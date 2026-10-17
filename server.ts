@@ -110,8 +110,8 @@ async function fetchFromTMDB(endpoint: string, queryParams: Record<string, any> 
   }
 
   const data = await response.json();
-  // Cache for 5 mins for lists, 30 mins for details & genres
-  const ttl = endpoint.includes('/genre/') || endpoint.includes('/movie/') && !endpoint.includes('popular')
+  // Cache for 5 mins for lists, 30 mins for details, persons & genres
+  const ttl = endpoint.includes('/genre/') || (endpoint.includes('/movie/') && !endpoint.includes('popular')) || endpoint.includes('/person/')
     ? 30 * 60 * 1000
     : 5 * 60 * 1000;
   setCache(cacheKey, data, ttl);
@@ -308,6 +308,48 @@ app.get('/api/tmdb/collection/:id', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Valid numeric collection ID required' });
     }
     const result = await fetchFromTMDB(`/collection/${id}`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Person Details (Real TMDB Biographical & Professional Data)
+app.get('/api/tmdb/person/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric person ID required' });
+    }
+    const result = await fetchFromTMDB(`/person/${id}`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Person Movie Credits
+app.get('/api/tmdb/person/:id/movie_credits', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric person ID required' });
+    }
+    const result = await fetchFromTMDB(`/person/${id}/movie_credits`);
+    res.json(result.data);
+  } catch (err: any) {
+    handleProxyError(res, err);
+  }
+});
+
+// Person Combined Credits (Movies & TV Shows)
+app.get('/api/tmdb/person/:id/combined_credits', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Valid numeric person ID required' });
+    }
+    const result = await fetchFromTMDB(`/person/${id}/combined_credits`);
     res.json(result.data);
   } catch (err: any) {
     handleProxyError(res, err);
